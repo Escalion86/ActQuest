@@ -23,20 +23,54 @@ export const buildGameTeamPaymentsSummary = ({
       .map((team) => [toStringId(team?._id ?? team?.id), team])
       .filter(([teamId]) => Boolean(teamId)),
   )
-  const paymentsByGameTeamId = new Map(
-    (Array.isArray(paymentTotals) ? paymentTotals : [])
-      .map((item) => [
-        toStringId(item?._id ?? item?.gameTeamId),
-        {
-          totalPaid: Math.max(0, toNumber(item?.totalPaid, 0)),
-          transactionsCount: Math.max(
-            0,
-            Math.floor(toNumber(item?.transactionsCount, 0)),
-          ),
-        },
-      ])
-      .filter(([gameTeamId]) => Boolean(gameTeamId)),
-  )
+  const paymentsByGameTeamId = new Map()
+
+  for (const item of Array.isArray(paymentTotals) ? paymentTotals : []) {
+    const groupId = item?._id
+    const gameTeamId = toStringId(
+      groupId && typeof groupId === 'object'
+        ? groupId.gameTeamId
+        : item?.gameTeamId ?? groupId,
+    )
+    if (!gameTeamId) continue
+
+    const userId = toStringId(
+      groupId && typeof groupId === 'object' ? groupId.userId : item?.userId,
+    )
+    const totalPaid = Math.max(0, toNumber(item?.totalPaid, 0))
+    const totalDiscount = Math.max(0, toNumber(item?.totalDiscount, 0))
+    const totalCredited = Math.max(
+      0,
+      toNumber(item?.totalCredited, totalPaid + totalDiscount),
+    )
+    const transactionsCount = Math.max(
+      0,
+      Math.floor(toNumber(item?.transactionsCount, 0)),
+    )
+    const current = paymentsByGameTeamId.get(gameTeamId) ?? {
+      totalPaid: 0,
+      totalDiscount: 0,
+      totalCredited: 0,
+      transactionsCount: 0,
+      members: new Map(),
+    }
+
+    current.totalPaid += totalPaid
+    current.totalDiscount += totalDiscount
+    current.totalCredited += totalCredited
+    current.transactionsCount += transactionsCount
+    if (userId) {
+      current.members.set(userId, {
+        userId,
+        totalPaid,
+        totalDiscount,
+        totalCredited,
+        transactionsCount,
+        isPaid: totalCredited > 0,
+      })
+    }
+    paymentsByGameTeamId.set(gameTeamId, current)
+  }
 
   const entries = (Array.isArray(gameTeams) ? gameTeams : [])
     .map((gameTeam) => {
@@ -47,8 +81,28 @@ export const buildGameTeamPaymentsSummary = ({
       const team = teamsById.get(teamId)
       const payment = paymentsByGameTeamId.get(gameTeamId) ?? {
         totalPaid: 0,
+        totalDiscount: 0,
+        totalCredited: 0,
         transactionsCount: 0,
+        members: new Map(),
       }
+      const members = Array.isArray(team?.members) ? team.members : []
+      const memberPayments = members
+        .map((member) => {
+          const userId = toStringId(member?.userId ?? member?.user?._id)
+          if (!userId) return null
+          return (
+            payment.members.get(userId) ?? {
+              userId,
+              totalPaid: 0,
+              totalDiscount: 0,
+              totalCredited: 0,
+              transactionsCount: 0,
+              isPaid: false,
+            }
+          )
+        })
+        .filter(Boolean)
 
       return {
         gameTeamId,
@@ -59,8 +113,11 @@ export const buildGameTeamPaymentsSummary = ({
             : 'Без названия',
         paidGame: Boolean(gameTeam?.paidGame),
         totalPaid: payment.totalPaid,
+        totalDiscount: payment.totalDiscount,
+        totalCredited: payment.totalCredited,
         transactionsCount: payment.transactionsCount,
-        members: Array.isArray(team?.members) ? team.members : [],
+        members,
+        memberPayments,
       }
     })
     .filter(Boolean)
@@ -73,6 +130,14 @@ export const buildGameTeamPaymentsSummary = ({
 
   return {
     totalPaid: entries.reduce((sum, item) => sum + item.totalPaid, 0),
+    totalDiscount: entries.reduce(
+      (sum, item) => sum + item.totalDiscount,
+      0,
+    ),
+    totalCredited: entries.reduce(
+      (sum, item) => sum + item.totalCredited,
+      0,
+    ),
     teams: entries,
   }
 }

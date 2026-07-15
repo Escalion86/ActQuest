@@ -25,6 +25,22 @@ const source = {
       clues: [{ contentRich: 'STORY_CLUE_SECRET' }],
     },
   ],
+  storyCharacters: [{ id: 'killer', title: 'HIDDEN_KILLER' }],
+  storyTopics: [{ id: 'secret-topic', title: 'HIDDEN_TOPIC' }],
+  storyInteractions: [
+    {
+      id: 'secret-interaction',
+      responseRich: 'HIDDEN_RESPONSE',
+      effects: { grantsEvidenceIds: ['secret-evidence'] },
+    },
+  ],
+  storyEvidence: [{ id: 'secret-evidence', title: 'HIDDEN_EVIDENCE' }],
+  storyAccusation: {
+    enabled: true,
+    correctCulpritId: 'CORRECT_CULPRIT',
+    correctMotiveId: 'CORRECT_MOTIVE',
+    outcomes: [{ conditions: { culprit: 'correct' } }],
+  },
   prequel: {
     bonusCodes: [{ code: 'PREQUEL_SECRET', value: 10 }],
     penaltyCodes: [{ code: 'PREQUEL_PENALTY_SECRET', value: 10 }],
@@ -44,6 +60,12 @@ for (const secret of [
   'POST_SECRET',
   'STORY_SECRET',
   'STORY_CLUE_SECRET',
+  'HIDDEN_KILLER',
+  'HIDDEN_TOPIC',
+  'HIDDEN_RESPONSE',
+  'HIDDEN_EVIDENCE',
+  'CORRECT_CULPRIT',
+  'CORRECT_MOTIVE',
   'PREQUEL_SECRET',
   'PREQUEL_PENALTY_SECRET',
 ]) {

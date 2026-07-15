@@ -8,6 +8,8 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import InvestigationFlowEditor from '@components/cabinet/story-editor/InvestigationFlowEditor'
+import StoryEndingsEditor from '@components/cabinet/story-editor/StoryEndingsEditor'
 import requestApiJson from '@helpers/requestApiJson'
 
 const TaskRichEditor = dynamic(
@@ -19,6 +21,12 @@ const NODE_CARD = { width: 190, height: 92 }
 const ITEM_CARD = { width: 170, height: 76 }
 const ENDING_CARD = { width: 180, height: 76 }
 const DRAG_CLICK_SUPPRESS_DISTANCE = 4
+const ENDING_TYPE_LABELS = {
+  success: 'Успех',
+  failed: 'Провал',
+  neutral: 'Нейтральная',
+  secret: 'Секретная',
+}
 
 const createId = (prefix) =>
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -38,6 +46,7 @@ const getDefaultEndingPosition = (index) => ({
 
 const emptyGame = {
   storyConfig: {
+    experienceMode: 'quest',
     nodeLabel: 'Локация',
     startMode: 'common',
     hideTotalNodes: true,
@@ -45,11 +54,29 @@ const emptyGame = {
     showInventory: true,
     showScoreToTeam: false,
     showFinalHistoryToTeam: false,
+    investigation: {
+      startNodeId: null,
+      startClockMinutes: 0,
+      deadlineMinutes: 240,
+      defaultTravelTimeMinutes: 10,
+      defaultInteractionTimeMinutes: 10,
+      accusationTimeMinutes: 10,
+      allowFreeReplay: true,
+      showClockToTeam: true,
+      showEvidenceToTeam: true,
+      autoFailOnDeadline: true,
+      revealSolutionAfterFinish: false,
+    },
   },
   storyItems: [],
   storyNodes: [],
   storyEdges: [],
   storyEndings: [],
+  storyCharacters: [],
+  storyTopics: [],
+  storyInteractions: [],
+  storyEvidence: [],
+  storyAccusation: {},
   agents: [],
 }
 
@@ -262,7 +289,7 @@ const StoryReferenceChecklist = ({ label, options, value, onChange }) => {
                   onChange(Array.from(nextIds))
                 }}
               />
-              <span className="truncate">{option.title || option.id}</span>
+              <span className="truncate">{option.title || 'Без названия'}</span>
             </label>
           ))}
         </div>
@@ -383,7 +410,7 @@ const StoryEffectFields = ({ effect, kind, items, nodes, endings, onChange }) =>
           <option value="">Не завершать сюжет</option>
           {endings.map((ending) => (
             <option key={ending.id} value={ending.id}>
-              {ending.title || ending.id}
+              {ending.title || 'Концовка без названия'}
             </option>
           ))}
         </select>
@@ -414,16 +441,160 @@ StoryEffectFields.propTypes = {
   onChange: PropTypes.func.isRequired,
 }
 
+const JsonScenarioField = ({ label, value, expectedType, onChange }) => {
+  const [draft, setDraft] = useState(() => JSON.stringify(value, null, 2))
+  const [jsonError, setJsonError] = useState('')
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    setDraft(JSON.stringify(value, null, 2))
+  }, [value])
+
+  const visibleItems = Array.isArray(value)
+    ? value.filter((item) =>
+        JSON.stringify(item).toLowerCase().includes(search.toLowerCase()),
+      )
+    : []
+
+  const applyJson = () => {
+    try {
+      const parsed = JSON.parse(draft)
+      const valid =
+        expectedType === 'array'
+          ? Array.isArray(parsed)
+          : parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      if (!valid) {
+        throw new Error(
+          expectedType === 'array' ? 'Ожидается JSON-массив.' : 'Ожидается JSON-объект.',
+        )
+      }
+      onChange(parsed)
+      setJsonError('')
+    } catch (parseError) {
+      setJsonError(parseError?.message || 'Некорректный JSON')
+    }
+  }
+
+  return (
+    <details className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+      <summary className="cursor-pointer font-semibold text-slate-800 dark:text-slate-100">
+        {label}{Array.isArray(value) ? ` · ${value.length}` : ''}
+      </summary>
+      {Array.isArray(value) && value.length > 0 ? (
+        <div className="mt-3">
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Фильтр по ID или названию" className={fieldClassName} />
+          <div className="mt-2 max-h-28 space-y-1 overflow-y-auto text-xs text-slate-500">
+            {visibleItems.slice(0, 30).map((item, index) => (
+              <p key={item?.id || index}>{item?.title || item?.label || 'Без названия'}</p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={12} spellCheck={false} className={`${fieldClassName} mt-3 font-mono text-xs`} />
+      {jsonError ? <p className="mt-2 text-sm text-rose-600">{jsonError}</p> : null}
+      <button type="button" onClick={applyJson} className="mt-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white">Применить JSON</button>
+    </details>
+  )
+}
+
+JsonScenarioField.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.array, PropTypes.object]).isRequired,
+  expectedType: PropTypes.oneOf(['array', 'object']).isRequired,
+  onChange: PropTypes.func.isRequired,
+}
+
+const InvestigationEditorSection = ({ game, updateGame }) => {
+  const investigation = {
+    ...emptyGame.storyConfig.investigation,
+    ...(game?.storyConfig?.investigation || {}),
+  }
+  const setInvestigationField = (field, value) =>
+    updateGame((previous) => ({
+      ...previous,
+      storyConfig: {
+        ...previous.storyConfig,
+        investigation: {
+          ...previous.storyConfig?.investigation,
+          [field]: value,
+        },
+      },
+    }))
+  const numberFields = [
+    ['startClockMinutes', 'Старт, минут от начала суток'],
+    ['deadlineMinutes', 'Дедлайн, минут'],
+    ['defaultTravelTimeMinutes', 'Переход, минут'],
+    ['defaultInteractionTimeMinutes', 'Взаимодействие, минут'],
+    ['accusationTimeMinutes', 'Обвинение, минут'],
+  ]
+
+  return (
+    <section className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-500/30 dark:bg-violet-500/5">
+      <h2 className="font-semibold text-slate-900 dark:text-slate-100">Настройки расследования</h2>
+      <p className="mt-1 text-xs text-slate-500">Основные справочники редактируются через визуальные окна над картой логики. JSON ниже оставлен для точечной диагностики и сложных массовых правок.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-1 text-sm">Стартовая локация
+          <select value={investigation.startNodeId || ''} onChange={(event) => setInvestigationField('startNodeId', event.target.value || null)} className={fieldClassName}>
+            <option value="">Выберите локацию</option>
+            {normalizeArray(game?.storyNodes).map((node) => <option key={node.id} value={node.id}>{node.title || 'Локация без названия'}</option>)}
+          </select>
+        </label>
+        {numberFields.map(([field, label]) => (
+          <label key={field} className="grid gap-1 text-sm">{label}
+            <input type="number" min="0" value={investigation[field] ?? ''} onChange={(event) => setInvestigationField(field, event.target.value === '' ? null : Number(event.target.value))} className={fieldClassName} />
+          </label>
+        ))}
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {[
+          ['allowFreeReplay', 'Бесплатное повторное воспроизведение'],
+          ['showClockToTeam', 'Показывать игровые часы'],
+          ['showEvidenceToTeam', 'Показывать доску доказательств'],
+          ['autoFailOnDeadline', 'Автофинал по дедлайну'],
+          ['revealSolutionAfterFinish', 'Раскрывать решение после финала'],
+        ].map(([field, label]) => (
+          <label key={field} className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={Boolean(investigation[field])} onChange={(event) => setInvestigationField(field, event.target.checked)} />{label}
+          </label>
+        ))}
+      </div>
+      <details className="mt-4 rounded-xl border border-dashed border-slate-300 p-3 dark:border-slate-700">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-600 dark:text-slate-300">
+          Расширенный режим: редактирование JSON
+        </summary>
+        <div className="mt-3 space-y-3">
+          {[
+            ['Персонажи', 'storyCharacters'],
+            ['Темы', 'storyTopics'],
+            ['Взаимодействия', 'storyInteractions'],
+            ['Доказательства', 'storyEvidence'],
+          ].map(([label, field]) => (
+            <JsonScenarioField key={field} label={label} value={normalizeArray(game?.[field])} expectedType="array" onChange={(value) => updateGame((previous) => ({ ...previous, [field]: value }))} />
+          ))}
+          <JsonScenarioField label="Финальное обвинение и варианты исхода" value={game?.storyAccusation && typeof game.storyAccusation === 'object' ? game.storyAccusation : {}} expectedType="object" onChange={(value) => updateGame((previous) => ({ ...previous, storyAccusation: value }))} />
+        </div>
+      </details>
+    </section>
+  )
+}
+
+InvestigationEditorSection.propTypes = {
+  game: PropTypes.object.isRequired,
+  updateGame: PropTypes.func.isRequired,
+}
+
 const StoryEditorPageClient = ({ session: _session }) => {
   const searchParams = useSearchParams()
   const gameId = searchParams.get('gameId') || ''
   const canvasRef = useRef(null)
   const suppressNextNodeClickRef = useRef(false)
   const suppressNextItemClickRef = useRef(false)
+  const suppressNextEndingClickRef = useRef(false)
   const [game, setGame] = useState(null)
   const [selectedNodeId, setSelectedNodeId] = useState('')
   const [selectedItemId, setSelectedItemId] = useState('')
   const [selectedEndingId, setSelectedEndingId] = useState('')
+  const [isEndingsEditorOpen, setIsEndingsEditorOpen] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState('')
   const [editingItemId, setEditingItemId] = useState('')
   const [connectSource, setConnectSource] = useState(null)
@@ -438,10 +609,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
   const endings = normalizeArray(game?.storyEndings)
   const edges = normalizeArray(game?.storyEdges)
   const editingNode = nodes.find((node) => node.id === editingNodeId) || null
-  const selectedItem = items.find((item) => item.id === selectedItemId) || null
   const editingItem = items.find((item) => item.id === editingItemId) || null
-  const selectedEnding =
-    endings.find((ending) => ending.id === selectedEndingId) || null
 
   const agents = useMemo(
     () =>
@@ -487,6 +655,10 @@ const StoryEditorPageClient = ({ session: _session }) => {
         storyConfig: {
           ...emptyGame.storyConfig,
           ...(json.data?.game?.storyConfig || {}),
+          investigation: {
+            ...emptyGame.storyConfig.investigation,
+            ...(json.data?.game?.storyConfig?.investigation || {}),
+          },
         },
       }
       const nextEdges = sanitizeEdges(
@@ -830,6 +1002,9 @@ const StoryEditorPageClient = ({ session: _session }) => {
     if (dragState?.type === 'item' && dragState?.hasDragged) {
       suppressNextItemClickRef.current = true
     }
+    if (dragState?.type === 'ending' && dragState?.hasDragged) {
+      suppressNextEndingClickRef.current = true
+    }
     setDragState(null)
   }, [dragState])
 
@@ -855,6 +1030,11 @@ const StoryEditorPageClient = ({ session: _session }) => {
           storyNodes,
           storyEdges,
           storyEndings: game.storyEndings,
+          storyCharacters: game.storyCharacters,
+          storyTopics: game.storyTopics,
+          storyInteractions: game.storyInteractions,
+          storyEvidence: game.storyEvidence,
+          storyAccusation: game.storyAccusation,
         }),
       })
       if (!json?.success) {
@@ -866,6 +1046,10 @@ const StoryEditorPageClient = ({ session: _session }) => {
         storyConfig: {
           ...emptyGame.storyConfig,
           ...(json.data?.game?.storyConfig || {}),
+          investigation: {
+            ...emptyGame.storyConfig.investigation,
+            ...(json.data?.game?.storyConfig?.investigation || {}),
+          },
         },
       }
       setGame({
@@ -976,11 +1160,10 @@ const StoryEditorPageClient = ({ session: _session }) => {
             </button>
             <button
               type="button"
-              onClick={addEnding}
-              disabled={isScenarioLocked}
-              className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => setIsEndingsEditorOpen(true)}
+              className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10"
             >
-              Добавить концовку
+              Концовки · {endings.length}
             </button>
           </div>
           <button
@@ -1016,17 +1199,37 @@ const StoryEditorPageClient = ({ session: _session }) => {
           </div>
         ) : null}
 
+        {game?.storyConfig?.experienceMode === 'investigation' ? (
+          <InvestigationFlowEditor
+            game={game}
+            gameId={gameId}
+            updateGame={updateGame}
+            disabled={isScenarioLocked}
+          />
+        ) : null}
+
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900">
               <span className="font-semibold text-slate-900 dark:text-slate-100">
                 Граф сценария
               </span>
-              <span className="text-slate-500 dark:text-slate-400">
-                {connectSource
-                  ? 'Нажмите на левую точку локации, чтобы завершить связь'
-                  : 'Правая точка - выход, левая точка локации - вход'}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-slate-500 dark:text-slate-400">
+                  {connectSource
+                    ? 'Нажмите на левую точку локации, чтобы завершить связь'
+                    : 'Правая точка — выход, левая точка локации — вход'}
+                </span>
+                {connectSource ? (
+                  <button
+                    type="button"
+                    onClick={() => setConnectSource(null)}
+                    className="rounded-lg border border-rose-300 px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/40 dark:text-rose-200 dark:hover:bg-rose-500/10"
+                  >
+                    Отменить связь
+                  </button>
+                ) : null}
+              </div>
             </div>
             <div
               ref={canvasRef}
@@ -1182,7 +1385,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
                         title="Выход локации"
                       />
                       <span className="block truncate text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {node.title || node.id}
+                        {node.title || 'Локация без названия'}
                       </span>
                       <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
                         {node.visibility?.startVisible
@@ -1265,7 +1468,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
                         title="Выход предмета"
                       />
                       <span className="block truncate text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {item.title || item.id}
+                        {item.title || 'Предмет без названия'}
                       </span>
                       <span className="mt-1 block text-xs text-emerald-700 dark:text-emerald-200">
                         Предмет
@@ -1281,10 +1484,19 @@ const StoryEditorPageClient = ({ session: _session }) => {
                       key={ending.id}
                       role="button"
                       tabIndex={0}
-                      onClick={() => setSelectedEndingId(ending.id)}
+                      onClick={(event) => {
+                        if (suppressNextEndingClickRef.current) {
+                          event.preventDefault()
+                          suppressNextEndingClickRef.current = false
+                          return
+                        }
+                        setSelectedEndingId(ending.id)
+                        setIsEndingsEditorOpen(true)
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           setSelectedEndingId(ending.id)
+                          setIsEndingsEditorOpen(true)
                         }
                       }}
                       onPointerDown={(event) => {
@@ -1315,13 +1527,13 @@ const StoryEditorPageClient = ({ session: _session }) => {
                       }}
                     >
                       <span className="block truncate text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {ending.title || ending.id}
+                        {ending.title || 'Концовка без названия'}
                       </span>
                       <span className="mt-1 block text-xs text-violet-700 dark:text-violet-200">
                         Концовка
                       </span>
                       <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
-                        {ending.type || 'success'}
+                        {ENDING_TYPE_LABELS[ending.type] || 'Тип не указан'}
                       </span>
                     </div>
                   )
@@ -1336,6 +1548,25 @@ const StoryEditorPageClient = ({ session: _session }) => {
                 Настройки
               </h2>
               <div className="mt-3 grid gap-3">
+                <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+                  Формат story-игры
+                  <select
+                    value={game?.storyConfig?.experienceMode || 'quest'}
+                    onChange={(event) =>
+                      updateGame((prev) => ({
+                        ...prev,
+                        storyConfig: {
+                          ...prev.storyConfig,
+                          experienceMode: event.target.value,
+                        },
+                      }))
+                    }
+                    className={fieldClassName}
+                  >
+                    <option value="quest">Сюжетный квест</option>
+                    <option value="investigation">Цифровое расследование</option>
+                  </select>
+                </label>
                 <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
                   Название блока
                   <input
@@ -1416,263 +1647,29 @@ const StoryEditorPageClient = ({ session: _session }) => {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-                  Связи
-                </h2>
-                {connectSource ? (
-                  <button
-                    type="button"
-                    onClick={() => setConnectSource(null)}
-                    className="text-sm font-semibold text-rose-600"
-                  >
-                    Отмена
-                  </button>
-                ) : null}
-              </div>
-              <div className="mt-3 grid gap-2">
-                {edges.length > 0 ? (
-                  edges.map((edge) => {
-                    const sourceLabel = edge.fromItemId
-                      ? itemsById.get(edge.fromItemId)?.title || edge.fromItemId
-                      : nodesById.get(edge.fromNodeId)?.title || edge.fromNodeId
-                    const targetLabel =
-                      nodesById.get(edge.toNodeId)?.title || edge.toNodeId
-                    return (
-                      <div
-                        key={edge.id}
-                        className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800/60"
-                      >
-                        <span className="min-w-0 truncate text-slate-700 dark:text-slate-200">
-                          {sourceLabel} {'->'} {targetLabel}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeEdge(edge.id)}
-                          className="shrink-0 text-xs font-semibold text-rose-600"
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Связей пока нет. Нажмите правую точку локации или предмета,
-                    затем левую точку целевой локации.
-                  </p>
-                )}
-              </div>
-            </section>
+            {game?.storyConfig?.experienceMode === 'investigation' ? (
+              <InvestigationEditorSection game={game} updateGame={updateGame} />
+            ) : null}
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-                  Предмет
-                </h2>
-                {selectedItem ? (
-                  <button
-                    type="button"
-                    onClick={() => removeItem(selectedItem.id)}
-                    className="text-sm font-semibold text-rose-600"
-                  >
-                    Удалить
-                  </button>
-                ) : null}
-              </div>
-              {selectedItem ? (
-                <div className="mt-3 grid gap-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {selectedItem.title || selectedItem.id}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {selectedItem.consumableOnUse
-                        ? 'Расходуется после применения'
-                        : 'Остается в инвентаре'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingItemId(selectedItem.id)}
-                    className="rounded-xl border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
-                  >
-                    Редактировать предмет
-                  </button>
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-slate-500">
-                  Выберите предмет на схеме.
-                </p>
-              )}
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-                  Концовки
-                </h2>
-                {selectedEnding ? (
-                  <button
-                    type="button"
-                    onClick={() => removeEnding(selectedEnding.id)}
-                    className="text-sm font-semibold text-rose-600"
-                  >
-                    Удалить
-                  </button>
-                ) : null}
-              </div>
-              <select
-                value={selectedEndingId}
-                onChange={(event) => setSelectedEndingId(event.target.value)}
-                className={`mt-3 w-full ${fieldClassName}`}
-              >
-                <option value="">Выберите концовку</option>
-                {endings.map((ending) => (
-                  <option key={ending.id} value={ending.id}>
-                    {ending.title || ending.id}
-                  </option>
-                ))}
-              </select>
-              {selectedEnding ? (
-                <div className="mt-3 grid gap-2">
-                  <input
-                    value={selectedEnding.title || ''}
-                    onChange={(event) =>
-                      updateEnding(selectedEnding.id, (ending) => ({
-                        ...ending,
-                        title: event.target.value,
-                      }))
-                    }
-                    placeholder="Название концовки"
-                    className={fieldClassName}
-                  />
-                  <select
-                    value={selectedEnding.type || 'success'}
-                    onChange={(event) =>
-                      updateEnding(selectedEnding.id, (ending) => ({
-                        ...ending,
-                        type: event.target.value,
-                      }))
-                    }
-                    className={fieldClassName}
-                  >
-                    <option value="success">Успех</option>
-                    <option value="failed">Провал</option>
-                    <option value="neutral">Нейтральная</option>
-                    <option value="secret">Секретная</option>
-                  </select>
-                  <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedEnding.manualOnly)}
-                      onChange={(event) => {
-                        const manualOnly = event.target.checked
-                        updateGame((prev) => ({
-                          ...prev,
-                          storyEndings: normalizeArray(prev.storyEndings).map(
-                            (ending) =>
-                              ending.id === selectedEnding.id
-                                ? { ...ending, manualOnly }
-                                : ending,
-                          ),
-                          storyNodes: manualOnly
-                            ? normalizeArray(prev.storyNodes).map((node) => ({
-                                ...node,
-                                codes: normalizeArray(node.codes).map(
-                                  (code) => ({
-                                    ...code,
-                                    endingId:
-                                      code.endingId === selectedEnding.id
-                                        ? null
-                                        : code.endingId,
-                                  }),
-                                ),
-                                actions: normalizeArray(node.actions).map(
-                                  (action) => ({
-                                    ...action,
-                                    endingId:
-                                      action.endingId === selectedEnding.id
-                                        ? null
-                                        : action.endingId,
-                                  }),
-                                ),
-                              }))
-                            : prev.storyNodes,
-                        }))
-                      }}
-                    />
-                    Только ручное завершение организатором
-                  </label>
-                  <TaskRichEditor
-                    value={selectedEnding.descriptionRich || ''}
-                    directory={`games/${gameId || 'draft'}/story/endings/${selectedEnding.id}/description/editor`}
-                    contentMaxHeight="320px"
-                    placeholder="Описание финала. Можно использовать форматирование и медиа."
-                    onChange={({ html, media }) =>
-                      updateEnding(selectedEnding.id, (ending) => ({
-                        ...ending,
-                        descriptionRich: typeof html === 'string' ? html : '',
-                        media: Array.isArray(media) ? media : [],
-                      }))
-                    }
-                  />
-                  <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-                    Минимум баллов
-                    <input
-                      type="number"
-                      value={selectedEnding.conditions?.minScore ?? ''}
-                      onChange={(event) =>
-                        updateEnding(selectedEnding.id, (ending) => ({
-                          ...ending,
-                          conditions: {
-                            ...ending.conditions,
-                            minScore:
-                              event.target.value === ''
-                                ? null
-                                : Number(event.target.value) || 0,
-                          },
-                        }))
-                      }
-                      placeholder="Без ограничения"
-                      className={fieldClassName}
-                    />
-                  </label>
-                  <StoryReferenceChecklist
-                    label="Требует предметы"
-                    options={items}
-                    value={selectedEnding.conditions?.requiredItemIds}
-                    onChange={(requiredItemIds) =>
-                      updateEnding(selectedEnding.id, (ending) => ({
-                        ...ending,
-                        conditions: {
-                          ...ending.conditions,
-                          requiredItemIds,
-                        },
-                      }))
-                    }
-                  />
-                  <StoryReferenceChecklist
-                    label="Требует завершённые локации"
-                    options={nodes}
-                    value={selectedEnding.conditions?.requiredCompletedNodeIds}
-                    onChange={(requiredCompletedNodeIds) =>
-                      updateEnding(selectedEnding.id, (ending) => ({
-                        ...ending,
-                        conditions: {
-                          ...ending.conditions,
-                          requiredCompletedNodeIds,
-                        },
-                      }))
-                    }
-                  />
-                </div>
-              ) : null}
-            </section>
           </aside>
         </div>
       </div>
+
+      {game ? (
+        <StoryEndingsEditor
+          isOpen={isEndingsEditorOpen}
+          onClose={() => setIsEndingsEditorOpen(false)}
+          game={game}
+          gameId={gameId}
+          selectedEndingId={selectedEndingId}
+          onSelectEnding={setSelectedEndingId}
+          onAddEnding={addEnding}
+          onRemoveEnding={removeEnding}
+          onUpdateEnding={updateEnding}
+          updateGame={updateGame}
+          disabled={isScenarioLocked}
+        />
+      ) : null}
 
       {editingNode ? (
         <Modal

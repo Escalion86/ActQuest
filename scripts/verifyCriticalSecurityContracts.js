@@ -40,6 +40,12 @@ requireText('app/api/[location]/games/check/[id]/route.js', [
 requireText('app/api/[location]/games/[id]/route.js', [
   'sanitizeGameForPublicRead',
   'canManageGame({ session: req.session',
+  'protectStoryScenarioUpdate',
+])
+requireText('helpers/protectStoryScenarioUpdate.js', [
+  'STORY_SCENARIO_FIELDS',
+  'STORY_SCENARIO_FIELDS.forEach',
+  'delete safeUpdate[field]',
 ])
 requireText('helpers/sanitizeGameForPublicRead.js', [
   'codes: []',
@@ -96,6 +102,8 @@ requireText('server/webGameProcess.js', [
   'retryable: true',
   'staleState: true',
 ])
+requireText('server/gameProcessLock.js', ["returnDocument: 'after'"])
+forbidText('server/gameProcessLock.js', ['new: true'])
 requireText('schemas/gamesTeamsSchema.js', [
   'gameProcessLock',
   'expiresAt',
@@ -104,6 +112,9 @@ for (const storyMutationRoute of [
   'app/api/cabinet/games/[gameId]/story/code/route.js',
   'app/api/cabinet/games/[gameId]/story/action/route.js',
   'app/api/cabinet/games/[gameId]/story/clue/route.js',
+  'app/api/cabinet/games/[gameId]/story/travel/route.js',
+  'app/api/cabinet/games/[gameId]/story/interaction/route.js',
+  'app/api/cabinet/games/[gameId]/story/accusation/route.js',
 ]) {
   requireText(storyMutationRoute, ['runLockedStoryMutation'])
 }
@@ -111,6 +122,14 @@ requireText('app/api/cabinet/_lib/storyApi.js', [
   'runLockedStoryMutation',
   "'gameProcessLock.token': lock.token",
   'matchedCount !== 1',
+  'buildTeamInvestigationStatePayload',
+  'upgradeInvestigationProgress',
+])
+requireText('helpers/sanitizeGameForPublicRead.js', [
+  'storyInteractions: []',
+  'storyEvidence: []',
+  'storyCharacters: []',
+  'storyTopics: []',
 ])
 requireText('app/api/cabinet/admin/story-control/_lib.js', [
   'runLockedStoryMutation',
@@ -121,6 +140,7 @@ requireText('app/api/cabinet/games/route.js', [
   'Создание story-игр пока доступно только разработчику',
 ])
 requireText('server/getTeamGameTaskState.js', [
+  'buildStoryClientConfig',
   'resolveTeamMembershipForIdentity',
   'webGameProcess',
 ])
@@ -157,3 +177,4 @@ console.log('- публичные ответы не содержат прави�
 console.log('- внешние прокси и телефонная верификация защищены')
 console.log('- основной web-маршрут ввода кодов сохранён')
 console.log('- создание story-игр ограничено ролью dev')
+console.log('- story-сценарий изменяется только через специализированный редактор')

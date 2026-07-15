@@ -85,11 +85,23 @@ const sanitizeGameForPublicRead = (game) => {
         : []
   ).map((item) => sanitizePrequel(item))
   const prequel = prequels[0] || sanitizePrequel(source.prequel)
+  const storyAccusation = source?.storyAccusation || {}
 
   return {
     ...source,
     tasks,
     storyNodes,
+    storyCharacters: [],
+    storyTopics: [],
+    storyInteractions: [],
+    storyEvidence: [],
+    storyAccusation: {
+      enabled: storyAccusation?.enabled === true,
+      minSelectableEvidence:
+        Number(storyAccusation?.minSelectableEvidence) || 0,
+      maxSelectableEvidence:
+        Number(storyAccusation?.maxSelectableEvidence) || 0,
+    },
     prequel,
     prequels,
   }

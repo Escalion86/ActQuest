@@ -24,6 +24,7 @@ import { canAssignGameOrganizer } from '@helpers/gameOrganizer'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 import { canManageGame } from '@server/gameHistory/gameManageAccess'
 import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
+import protectStoryScenarioUpdate from '@helpers/protectStoryScenarioUpdate'
 
 const buildResetPayload = ({
   clearTimeAddings = true,
@@ -400,6 +401,9 @@ const normalizeAgentNotificationsForWrite = (value = {}) => ({
 const normalizeShowTasksAudience = (value) =>
   value === 'participants' ? 'participants' : 'all'
 
+const normalizePaymentMode = (value) =>
+  value === 'participant' ? 'participant' : 'team'
+
 const buildHistoryActorFromSession = (session) => ({
   userId:
     session?.user?.globalUserId ??
@@ -675,7 +679,9 @@ const execute = (request, params) =>
         const shouldUpdateParticipantsMetrics =
           nextStatusNormalized === 'closed' && previousStatus !== 'closed'
 
-        const updateData = { ...updatePayload, status: resolvedStatus }
+        const updateData = protectStoryScenarioUpdate({
+          updateData: { ...updatePayload, status: resolvedStatus },
+        })
 
         const hasAgentsUpdate = Object.prototype.hasOwnProperty.call(
           updateData,
@@ -720,6 +726,10 @@ const execute = (request, params) =>
           updateData.showTasksAudience = normalizeShowTasksAudience(
             updateData.showTasksAudience,
           )
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'paymentMode')) {
+          updateData.paymentMode = normalizePaymentMode(updateData.paymentMode)
         }
 
         if (Array.isArray(updateData.tasks)) {

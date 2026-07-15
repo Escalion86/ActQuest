@@ -4,6 +4,7 @@ const VALID_PAYMENT_METHODS = new Set([
   'transfer',
   'invoice',
   'coupon',
+  'discount',
   'card',
   'remittance',
 ])
@@ -61,10 +62,15 @@ export const recalculateUserBonusBalance = async ({ db, userId }) => {
 }
 
 export const buildTransactionPayload = (input = {}) => {
-  const direction = VALID_DIRECTIONS.has(input.direction) ? input.direction : null
   const paymentMethod = VALID_PAYMENT_METHODS.has(input.paymentMethod)
     ? input.paymentMethod
     : null
+  const direction =
+    paymentMethod === 'discount'
+      ? 'income'
+      : VALID_DIRECTIONS.has(input.direction)
+        ? input.direction
+        : null
   const amount = Math.max(0, toNumber(input.amount, 0))
   const status = VALID_STATUSES.has(input.status) ? input.status : 'completed'
   const userId = normalizeNullableString(input.userId)
@@ -78,7 +84,7 @@ export const buildTransactionPayload = (input = {}) => {
   const paidAt = input.paidAt ? new Date(input.paidAt) : null
   const affectsUserBalance =
     input.affectsUserBalance === undefined
-      ? !teamId && !gameTeamId
+      ? paymentMethod !== 'discount' && !teamId && !gameTeamId
       : input.affectsUserBalance !== false
 
   if (!direction) throw new Error('Некорректное направление транзакции')
@@ -273,5 +279,3 @@ export const redeemCoupon = async ({ db, data }) => {
 
   return redeemed
 }
-
-

@@ -20,6 +20,7 @@ import RichTaskContentView from '@components/game/RichTaskContentView'
 import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
 import LinkedMessageText from '@components/game/LinkedMessageText'
 import Modal from '@components/Modal'
+import StoryInvestigationProcess from './story/StoryInvestigationProcess'
 
 const PHOTO_ANSWER_ACCEPT_TYPES =
   'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/*'
@@ -2640,13 +2641,19 @@ function GameTeamPage({
 
             {isStoryGame &&
             ['started', 'finished', 'closed'].includes(status) &&
-            !error ? (
-              <StoryQuestProcess
-                gameId={gameId}
-                teamId={teamId}
-                isActive={isStoryGame}
-              />
-            ) : null}
+            !error ? game?.storyConfig?.experienceMode === 'investigation' ? (
+                <StoryInvestigationProcess
+                  gameId={gameId}
+                  teamId={teamId}
+                  isActive={isStoryGame}
+                />
+              ) : (
+                <StoryQuestProcess
+                  gameId={gameId}
+                  teamId={teamId}
+                  isActive={isStoryGame}
+                />
+              ) : null}
 
             {shouldShowCurrentTaskBlock ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">

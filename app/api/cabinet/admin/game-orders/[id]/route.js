@@ -58,7 +58,7 @@ export async function PATCH(request, { params }) {
 
     const GameOrders = db.model('GameOrders')
     const updated = await GameOrders.findByIdAndUpdate(id, updates, {
-      new: true,
+      returnDocument: 'after',
     }).lean()
 
     if (!updated) {

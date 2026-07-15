@@ -591,6 +591,10 @@ const normalizeGameForCabinet = (game) => {
     seasonName: ensureString(game.seasonName, ''),
     type: normalizeGameType(game?.type),
     storyConfig: {
+      experienceMode:
+        game?.storyConfig?.experienceMode === 'investigation'
+          ? 'investigation'
+          : 'quest',
       nodeLabel: ensureString(game?.storyConfig?.nodeLabel, 'Локация'),
       startMode:
         game?.storyConfig?.startMode === 'individual' ? 'individual' : 'common',
@@ -602,11 +606,32 @@ const normalizeGameForCabinet = (game) => {
         game?.storyConfig?.showFinalHistoryToTeam,
         false,
       ),
+      investigation:
+        game?.storyConfig?.investigation &&
+        typeof game.storyConfig.investigation === 'object'
+          ? JSON.parse(JSON.stringify(game.storyConfig.investigation))
+          : {},
     },
     storyItems: normalizeStoryItems(game.storyItems),
     storyNodes: normalizeStoryNodes(game.storyNodes),
     storyEdges: normalizeStoryEdges(game.storyEdges),
     storyEndings: normalizeStoryEndings(game.storyEndings),
+    storyCharacters: Array.isArray(game.storyCharacters)
+      ? JSON.parse(JSON.stringify(game.storyCharacters))
+      : [],
+    storyTopics: Array.isArray(game.storyTopics)
+      ? JSON.parse(JSON.stringify(game.storyTopics))
+      : [],
+    storyInteractions: Array.isArray(game.storyInteractions)
+      ? JSON.parse(JSON.stringify(game.storyInteractions))
+      : [],
+    storyEvidence: Array.isArray(game.storyEvidence)
+      ? JSON.parse(JSON.stringify(game.storyEvidence))
+      : [],
+    storyAccusation:
+      game.storyAccusation && typeof game.storyAccusation === 'object'
+        ? JSON.parse(JSON.stringify(game.storyAccusation))
+        : {},
     description: ensureString(game.description, ''),
     descriptionRich: ensureString(game.descriptionRich, ''),
     descriptionMedia: normalizeTaskMedia(game.descriptionMedia),
@@ -656,6 +681,7 @@ const normalizeGameForCabinet = (game) => {
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),
     maxTeamPlayers: ensureNullableNumber(game.maxTeamPlayers),
+    paymentMode: game.paymentMode === 'participant' ? 'participant' : 'team',
     prices: normalizePrices(game.prices),
     finances: normalizeFinances(game.finances),
     tasks: normalizeTasks(game.tasks),

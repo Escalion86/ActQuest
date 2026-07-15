@@ -24,6 +24,15 @@ const buildAdminGamePayload = (game) => ({
   storyNodes: Array.isArray(game?.storyNodes) ? game.storyNodes : [],
   storyEdges: Array.isArray(game?.storyEdges) ? game.storyEdges : [],
   storyEndings: Array.isArray(game?.storyEndings) ? game.storyEndings : [],
+  storyCharacters: Array.isArray(game?.storyCharacters)
+    ? game.storyCharacters
+    : [],
+  storyTopics: Array.isArray(game?.storyTopics) ? game.storyTopics : [],
+  storyInteractions: Array.isArray(game?.storyInteractions)
+    ? game.storyInteractions
+    : [],
+  storyEvidence: Array.isArray(game?.storyEvidence) ? game.storyEvidence : [],
+  storyAccusation: game?.storyAccusation || {},
 })
 
 export async function GET(request) {

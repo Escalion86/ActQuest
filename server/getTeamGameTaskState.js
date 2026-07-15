@@ -21,6 +21,7 @@ import {
   resolveForceClueCost,
   resolveRequiredMainCodesCount,
 } from '@helpers/classicGameRules'
+import buildStoryClientConfig from '@helpers/buildStoryClientConfig'
 
 const isGameTaskDebugEnabled =
   process.env.GAME_TASK_DEBUG === '1' || process.env.SESSION_DEBUG === '1'
@@ -326,6 +327,7 @@ const safeSerializeGameForClient = (game) => {
     showFinishingPlace: Boolean(game.showFinishingPlace),
     image: game.image || null,
     tasksCount: Array.isArray(game.tasks) ? game.tasks.length : 0,
+    storyConfig: buildStoryClientConfig(game),
   }
 }
 

@@ -50,7 +50,7 @@ export const acquireGameProcessLock = async ({
           },
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     )
 
     const gameTeam = await toLeanResult(query)

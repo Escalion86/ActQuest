@@ -374,6 +374,251 @@ export const getStoryReachabilityReport = (game) => {
   }
 }
 
+const getInvestigationValidationErrors = (game) => {
+  if (game?.storyConfig?.experienceMode !== 'investigation') return []
+
+  const errors = []
+  const config = game?.storyConfig?.investigation || {}
+  const nodes = Array.isArray(game?.storyNodes) ? game.storyNodes : []
+  const items = Array.isArray(game?.storyItems) ? game.storyItems : []
+  const endings = Array.isArray(game?.storyEndings) ? game.storyEndings : []
+  const characters = Array.isArray(game?.storyCharacters)
+    ? game.storyCharacters
+    : []
+  const topics = Array.isArray(game?.storyTopics) ? game.storyTopics : []
+  const interactions = Array.isArray(game?.storyInteractions)
+    ? game.storyInteractions
+    : []
+  const evidence = Array.isArray(game?.storyEvidence) ? game.storyEvidence : []
+  const accusation = game?.storyAccusation || {}
+  const motives = Array.isArray(accusation?.motives) ? accusation.motives : []
+  const outcomes = Array.isArray(accusation?.outcomes)
+    ? accusation.outcomes
+    : []
+
+  ;[
+    ['персонажей расследования', characters],
+    ['тем расследования', topics],
+    ['взаимодействий расследования', interactions],
+    ['доказательств расследования', evidence],
+    ['мотивов расследования', motives],
+    ['исходов обвинения', outcomes],
+  ].forEach(([label, values]) => appendStoryIdErrors({ errors, label, values }))
+
+  const makeIds = (values) =>
+    new Set(values.map((item) => normalizeStoryId(item?.id)).filter(Boolean))
+  const nodeIds = makeIds(nodes)
+  const itemIds = makeIds(items)
+  const endingIds = makeIds(endings)
+  const characterIds = makeIds(characters)
+  const topicIds = makeIds(topics)
+  const interactionIds = makeIds(interactions)
+  const evidenceIds = makeIds(evidence)
+  const motiveIds = makeIds(motives)
+  const startNodeId = normalizeStoryId(config?.startNodeId)
+  const deadlineMinutes = Number(config?.deadlineMinutes)
+
+  if (!startNodeId || !nodeIds.has(startNodeId)) {
+    errors.push('Расследование: выберите существующую стартовую локацию.')
+  }
+  if (!Number.isFinite(deadlineMinutes) || deadlineMinutes <= 0) {
+    errors.push('Расследование: дедлайн должен быть положительным числом минут.')
+  }
+
+  characters.forEach((character, index) => {
+    const label = `Персонаж ${index + 1}`
+    if (!normalizeStoryId(character?.title)) {
+      errors.push(`${label}: не указано имя.`)
+    }
+    const defaultNodeId = normalizeStoryId(character?.defaultNodeId)
+    if (defaultNodeId && !nodeIds.has(defaultNodeId)) {
+      errors.push(`${label}: локация «${defaultNodeId}» не существует.`)
+    }
+  })
+  topics.forEach((topic, index) => {
+    if (!normalizeStoryId(topic?.title)) {
+      errors.push(`Тема ${index + 1}: не указано название.`)
+    }
+  })
+  evidence.forEach((item, index) => {
+    if (!normalizeStoryId(item?.title)) {
+      errors.push(`Доказательство ${index + 1}: не указано название.`)
+    }
+  })
+
+  const interactionCombinations = new Set()
+  interactions.forEach((interaction, index) => {
+    const label = `Взаимодействие ${index + 1}`
+    const locationId = normalizeStoryId(interaction?.locationId)
+    const characterId = normalizeStoryId(interaction?.characterId)
+    const topicId = normalizeStoryId(interaction?.topicId)
+    if (!nodeIds.has(locationId)) {
+      errors.push(`${label}: локация «${locationId}» не существует.`)
+    }
+    if (characterId && !characterIds.has(characterId)) {
+      errors.push(`${label}: персонаж «${characterId}» не существует.`)
+    }
+    if (topicId && !topicIds.has(topicId)) {
+      errors.push(`${label}: тема «${topicId}» не существует.`)
+    }
+    if (!normalizeStoryId(interaction?.label)) {
+      errors.push(`${label}: не указано название.`)
+    }
+    const timeCost = Number(interaction?.timeCostMinutes)
+    if (!Number.isFinite(timeCost) || timeCost < 0) {
+      errors.push(`${label}: стоимость времени должна быть неотрицательным числом.`)
+    }
+    const combination = [
+      locationId,
+      characterId,
+      topicId,
+      normalizeStoryId(interaction?.kind) || 'question',
+    ].join(':')
+    if (interaction?.repeatable !== true && interactionCombinations.has(combination)) {
+      errors.push(`${label}: сочетание локации, персонажа, темы и типа дублируется.`)
+    }
+    interactionCombinations.add(combination)
+
+    const references = [
+      ['requiredItemIds', itemIds, 'предмет'],
+      ['requiredEvidenceIds', evidenceIds, 'доказательство'],
+      ['requiredTopicIds', topicIds, 'тема'],
+      ['requiredCharacterIds', characterIds, 'персонаж'],
+      ['requiredInteractionIds', interactionIds, 'взаимодействие'],
+    ]
+    references.forEach(([field, allowedIds, referenceLabel]) =>
+      validateStoryReferences({
+        errors,
+        values: interaction?.conditions?.[field],
+        allowedIds,
+        label: `${label}, ${referenceLabel}`,
+      }),
+    )
+    ;[
+      ['grantsItemIds', itemIds, 'выдаваемый предмет'],
+      ['consumesItemIds', itemIds, 'расходуемый предмет'],
+      ['grantsEvidenceIds', evidenceIds, 'открываемое доказательство'],
+      ['unlocksNodeIds', nodeIds, 'открываемая локация'],
+      ['unlocksCharacterIds', characterIds, 'открываемый персонаж'],
+      ['unlocksTopicIds', topicIds, 'открываемая тема'],
+    ].forEach(([field, allowedIds, referenceLabel]) =>
+      validateStoryReferences({
+        errors,
+        values: interaction?.effects?.[field],
+        allowedIds,
+        label: `${label}, ${referenceLabel}`,
+      }),
+    )
+    const endingId = normalizeStoryId(interaction?.effects?.endingId)
+    if (endingId && !endingIds.has(endingId)) {
+      errors.push(`${label}: концовка «${endingId}» не существует.`)
+    }
+    const hasAudio = (Array.isArray(interaction?.media)
+      ? interaction.media
+      : []
+    ).some((media) => media?.type === 'audio')
+    if (hasAudio && !normalizeStoryId(interaction?.responseRich)) {
+      errors.push(`${label}: для аудио обязателен текстовый ответ.`)
+    }
+  })
+
+  if (accusation?.enabled !== true) {
+    errors.push('Расследование: включите финальное обвинение.')
+    return errors
+  }
+  const requiredNodeId = normalizeStoryId(accusation?.requiredNodeId)
+  const unlockTopicId = normalizeStoryId(accusation?.unlockTopicId)
+  if (!nodeIds.has(requiredNodeId)) {
+    errors.push('Обвинение: финальная локация не существует.')
+  }
+  if (!topicIds.has(unlockTopicId)) {
+    errors.push('Обвинение: финальная тема не существует.')
+  }
+  validateStoryReferences({
+    errors,
+    values: accusation?.culpritCharacterIds,
+    allowedIds: characterIds,
+    label: 'Обвинение, подозреваемый',
+  })
+  validateStoryReferences({
+    errors,
+    values: accusation?.availability?.requiredEvidenceIds,
+    allowedIds: evidenceIds,
+    label: 'Обвинение, обязательное доказательство',
+  })
+  validateStoryReferences({
+    errors,
+    values: accusation?.availability?.requiredInteractionIds,
+    allowedIds: interactionIds,
+    label: 'Обвинение, обязательное взаимодействие',
+  })
+  const correctCulpritId = normalizeStoryId(accusation?.correctCulpritId)
+  const correctMotiveId = normalizeStoryId(accusation?.correctMotiveId)
+  if (
+    !(Array.isArray(accusation?.culpritCharacterIds)
+      ? accusation.culpritCharacterIds
+      : []
+    )
+      .map(normalizeStoryId)
+      .includes(correctCulpritId)
+  ) {
+    errors.push('Обвинение: правильный подозреваемый отсутствует в вариантах.')
+  }
+  if (!motiveIds.has(correctMotiveId)) {
+    errors.push('Обвинение: правильный мотив отсутствует в вариантах.')
+  }
+  ;['fallbackEndingId', 'timeoutEndingId'].forEach((field) => {
+    const endingId = normalizeStoryId(accusation?.[field])
+    if (!endingIds.has(endingId)) {
+      errors.push(`Обвинение: концовка «${endingId || field}» не существует.`)
+    }
+  })
+  outcomes.forEach((outcome, index) => {
+    const label = `Исход обвинения ${index + 1}`
+    const endingId = normalizeStoryId(outcome?.endingId)
+    if (!endingIds.has(endingId)) {
+      errors.push(`${label}: концовка «${endingId}» не существует.`)
+    }
+    validateStoryReferences({
+      errors,
+      values: outcome?.conditions?.requiredEvidenceIds,
+      allowedIds: evidenceIds,
+      label,
+    })
+  })
+
+  const obtainableEvidenceIds = new Set(
+    interactions.flatMap((interaction) =>
+      Array.isArray(interaction?.effects?.grantsEvidenceIds)
+        ? interaction.effects.grantsEvidenceIds.map(normalizeStoryId)
+        : [],
+    ),
+  )
+  const requiredOutcomeEvidenceIds = new Set(
+    outcomes.flatMap((outcome) =>
+      Array.isArray(outcome?.conditions?.requiredEvidenceIds)
+        ? outcome.conditions.requiredEvidenceIds.map(normalizeStoryId)
+        : [],
+    ),
+  )
+  requiredOutcomeEvidenceIds.forEach((id) => {
+    if (id && !obtainableEvidenceIds.has(id)) {
+      errors.push(`Расследование: доказательство «${id}» нельзя получить.`)
+    }
+  })
+  const hasSuccessOutcome = outcomes.some((outcome) => {
+    const ending = endings.find(
+      (item) => normalizeStoryId(item?.id) === normalizeStoryId(outcome?.endingId),
+    )
+    return ending && ['success', 'secret'].includes(ending?.type)
+  })
+  if (!hasSuccessOutcome) {
+    errors.push('Расследование: отсутствует достижимый успешный исход обвинения.')
+  }
+
+  return errors
+}
+
 export const getStoryValidationErrors = (game) => {
   const errors = []
   const nodes = Array.isArray(game?.storyNodes) ? game.storyNodes : []
@@ -568,16 +813,20 @@ export const getStoryValidationErrors = (game) => {
     })
   })
 
-  const reachability = getStoryReachabilityReport(game)
-  if (reachability.unreachableNodeIds.length > 0) {
-    errors.push(
-      `Недостижимые story-локации: ${reachability.unreachableNodeIds.join(', ')}.`,
-    )
-  }
-  if (reachability.unreachableEndingIds.length > 0) {
-    errors.push(
-      `Недостижимые концовки story-квеста: ${reachability.unreachableEndingIds.join(', ')}.`,
-    )
+  if (game?.storyConfig?.experienceMode === 'investigation') {
+    errors.push(...getInvestigationValidationErrors(game))
+  } else {
+    const reachability = getStoryReachabilityReport(game)
+    if (reachability.unreachableNodeIds.length > 0) {
+      errors.push(
+        `Недостижимые story-локации: ${reachability.unreachableNodeIds.join(', ')}.`,
+      )
+    }
+    if (reachability.unreachableEndingIds.length > 0) {
+      errors.push(
+        `Недостижимые концовки story-квеста: ${reachability.unreachableEndingIds.join(', ')}.`,
+      )
+    }
   }
 
   return errors

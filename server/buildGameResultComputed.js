@@ -1005,6 +1005,26 @@ const buildStoryTeamResult = ({ team, gameTeam, game }) => {
     (item) => toStringId(item?.id) === endingId,
   )
   const inventory = Array.isArray(progress?.inventory) ? progress.inventory : []
+  const investigationMode =
+    game?.storyConfig?.experienceMode === 'investigation'
+  const evidenceById = new Map(
+    (Array.isArray(game?.storyEvidence) ? game.storyEvidence : []).map((item) => [
+      toStringId(item?.id),
+      item,
+    ]),
+  )
+  const accusation = progress?.accusation || {}
+  const accusedCharacter = (Array.isArray(game?.storyCharacters)
+    ? game.storyCharacters
+    : []
+  ).find((item) => toStringId(item?.id) === toStringId(accusation?.culpritId))
+  const selectedMotive = (Array.isArray(game?.storyAccusation?.motives)
+    ? game.storyAccusation.motives
+    : []
+  ).find((item) => toStringId(item?.id) === toStringId(accusation?.motiveId))
+  const selectedEvidenceIds = Array.isArray(accusation?.evidenceIds)
+    ? accusation.evidenceIds.map(toStringId).filter(Boolean)
+    : []
 
   return {
     teamId,
@@ -1037,6 +1057,65 @@ const buildStoryTeamResult = ({ team, gameTeam, game }) => {
               ? ending.descriptionRich
               : '',
           media: Array.isArray(ending?.media) ? ending.media : [],
+        }
+      : null,
+    investigation: investigationMode
+      ? {
+          currentNodeId: toStringId(progress?.currentNodeId) || null,
+          elapsedMinutes: Math.max(0, Number(progress?.elapsedMinutes) || 0),
+          deadlineMinutes:
+            game?.storyConfig?.investigation?.deadlineMinutes ?? null,
+          accusation: accusation?.submittedAt
+            ? {
+                submittedAt: toDate(accusation.submittedAt)?.toISOString() || null,
+                submittedAtMinute: accusation?.submittedAtMinute ?? null,
+                culpritId: toStringId(accusation?.culpritId) || null,
+                culpritTitle:
+                  typeof accusedCharacter?.title === 'string'
+                    ? accusedCharacter.title
+                    : '',
+                motiveId: toStringId(accusation?.motiveId) || null,
+                motiveTitle:
+                  typeof selectedMotive?.title === 'string'
+                    ? selectedMotive.title
+                    : '',
+                evidenceIds: selectedEvidenceIds,
+                outcomeId: toStringId(accusation?.outcomeId) || null,
+              }
+            : null,
+          selectedEvidence:
+            game?.storyConfig?.investigation?.showEvidenceToTeam === false
+              ? []
+              : selectedEvidenceIds
+                  .map((id) => evidenceById.get(id))
+                  .filter(Boolean)
+                  .map((item) => ({
+                    id: toStringId(item?.id),
+                    title: typeof item?.title === 'string' ? item.title : '',
+                    descriptionRich:
+                      typeof item?.descriptionRich === 'string'
+                        ? item.descriptionRich
+                        : '',
+                  })),
+          discoveredEvidenceCount: Array.isArray(
+            progress?.discoveredEvidenceIds,
+          )
+            ? progress.discoveredEvidenceIds.length
+            : 0,
+          usedInteractionCount: Array.isArray(progress?.usedInteractionIds)
+            ? progress.usedInteractionIds.length
+            : 0,
+          journalEntryCount: Array.isArray(progress?.journal)
+            ? progress.journal.length
+            : 0,
+          solution: game?.storyConfig?.investigation?.revealSolutionAfterFinish
+            ? {
+                culpritId:
+                  toStringId(game?.storyAccusation?.correctCulpritId) || null,
+                motiveId:
+                  toStringId(game?.storyAccusation?.correctMotiveId) || null,
+              }
+            : null,
         }
       : null,
     prequel: getPrequelResult(game, gameTeam),
@@ -1076,6 +1155,10 @@ const buildStoryGameResult = ({
       generatedAt: new Date().toISOString(),
       summary: {
         scoringMode: 'story',
+        experienceMode:
+          game?.storyConfig?.experienceMode === 'investigation'
+            ? 'investigation'
+            : 'quest',
         teamsCount: sortedTeams.length,
         participantsCount: teamsUsers.length,
         outOfCompetitionTeamsCount: outOfCompetitionTeams.length,

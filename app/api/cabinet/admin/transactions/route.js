@@ -29,6 +29,58 @@ const checkAccess = async () => {
   return { ok: true, session }
 }
 
+const attachDiscountToGameRegistration = async ({ db, payload }) => {
+  if (
+    payload?.paymentMethod !== 'discount' ||
+    !payload?.gameId ||
+    !payload?.userId ||
+    payload?.gameTeamId
+  ) {
+    return payload
+  }
+
+  const TeamsUsers = db.model('TeamsUsers')
+  const GamesTeams = db.model('GamesTeams')
+  const memberships = await TeamsUsers.find({ userId: String(payload.userId) })
+    .select({ teamId: 1 })
+    .lean()
+  const teamIds = memberships
+    .map((item) => String(item?.teamId || '').trim())
+    .filter(Boolean)
+  const gameTeams = teamIds.length
+    ? await GamesTeams.find({
+        gameId: String(payload.gameId),
+        teamId: { $in: teamIds },
+      })
+        .select({ _id: 1, teamId: 1 })
+        .limit(2)
+        .lean()
+    : []
+
+  if (gameTeams.length === 0) {
+    throw new Error('Пользователь не зарегистрирован на выбранную игру')
+  }
+  if (gameTeams.length > 1) {
+    throw new Error(
+      'Пользователь зарегистрирован на игру в нескольких командах. Добавьте скидку через финансы нужной команды.',
+    )
+  }
+  const [gameTeam] = gameTeams
+
+  return {
+    ...payload,
+    direction: 'income',
+    teamId: String(gameTeam.teamId),
+    gameTeamId: String(gameTeam._id),
+    affectsUserBalance: false,
+    meta: {
+      ...(payload.meta && typeof payload.meta === 'object' ? payload.meta : {}),
+      teamPayment: true,
+      adminGameDiscount: true,
+    },
+  }
+}
+
 export async function GET(request) {
   const access = await checkAccess()
   if (!access.ok) {
@@ -108,7 +160,10 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const payload = body?.data ?? body ?? {}
+    const payload = await attachDiscountToGameRegistration({
+      db,
+      payload: body?.data ?? body ?? {},
+    })
     const created = await createTransaction({ db, data: payload })
     return NextResponse.json({ success: true, data: created }, { status: 201 })
   } catch (error) {

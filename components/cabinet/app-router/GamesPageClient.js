@@ -846,39 +846,6 @@ const buildUpdatePayload = (game) => {
     name: game.name,
     dateStart: game.dateStart ? new Date(game.dateStart).toISOString() : null,
     type: game.type,
-    storyConfig:
-      game.storyConfig && typeof game.storyConfig === 'object'
-        ? {
-            nodeLabel:
-              typeof game.storyConfig.nodeLabel === 'string' &&
-              game.storyConfig.nodeLabel.trim()
-                ? game.storyConfig.nodeLabel.trim()
-                : 'Локация',
-            startMode:
-              game.storyConfig.startMode === 'individual'
-                ? 'individual'
-                : 'common',
-            hideTotalNodes: game.storyConfig.hideTotalNodes !== false,
-            hideTotalItems: game.storyConfig.hideTotalItems !== false,
-            showInventory: game.storyConfig.showInventory !== false,
-            showScoreToTeam: Boolean(game.storyConfig.showScoreToTeam),
-            showFinalHistoryToTeam: Boolean(
-              game.storyConfig.showFinalHistoryToTeam,
-            ),
-          }
-        : undefined,
-    storyItems: Array.isArray(game.storyItems)
-      ? JSON.parse(JSON.stringify(game.storyItems))
-      : [],
-    storyNodes: Array.isArray(game.storyNodes)
-      ? JSON.parse(JSON.stringify(game.storyNodes))
-      : [],
-    storyEdges: Array.isArray(game.storyEdges)
-      ? JSON.parse(JSON.stringify(game.storyEdges))
-      : [],
-    storyEndings: Array.isArray(game.storyEndings)
-      ? JSON.parse(JSON.stringify(game.storyEndings))
-      : [],
     description:
       typeof game.description === 'string'
         ? game.description
@@ -1041,6 +1008,7 @@ const buildUpdatePayload = (game) => {
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
     maxTeamPlayers: toNullableNumber(game.maxTeamPlayers),
+    paymentMode: game.paymentMode === 'participant' ? 'participant' : 'team',
     prices,
     finances,
     tasks: tasksWithAllowedAgents,
@@ -2787,6 +2755,7 @@ const GamesPage = ({
         dateStart: null,
         type: selectedGameType,
         storyConfig: {
+          experienceMode: 'quest',
           nodeLabel: 'Локация',
           startMode: 'common',
           hideTotalNodes: true,
@@ -2794,11 +2763,17 @@ const GamesPage = ({
           showInventory: true,
           showScoreToTeam: false,
           showFinalHistoryToTeam: false,
+          investigation: {},
         },
         storyItems: [],
         storyNodes: [],
         storyEdges: [],
         storyEndings: [],
+        storyCharacters: [],
+        storyTopics: [],
+        storyInteractions: [],
+        storyEvidence: [],
+        storyAccusation: {},
         description: '',
         descriptionRich: '',
         descriptionMedia: [],
@@ -2831,6 +2806,7 @@ const GamesPage = ({
         hideResult: false,
         registrationOpen: true,
         maxTeamPlayers: null,
+        paymentMode: 'team',
         prices: [],
         finances: [],
         tasks: [],
@@ -2901,6 +2877,10 @@ const GamesPage = ({
           baseDraft.maxTeamPlayers = toNullableNumber(
             normalizedSource.maxTeamPlayers,
           )
+          baseDraft.paymentMode =
+            normalizedSource.paymentMode === 'participant'
+              ? 'participant'
+              : 'team'
         }
 
         if (createGameCloneOptions.captainRules) {
@@ -2940,6 +2920,27 @@ const GamesPage = ({
           baseDraft.storyEndings = Array.isArray(normalizedSource.storyEndings)
             ? JSON.parse(JSON.stringify(normalizedSource.storyEndings))
             : []
+          baseDraft.storyCharacters = Array.isArray(
+            normalizedSource.storyCharacters,
+          )
+            ? JSON.parse(JSON.stringify(normalizedSource.storyCharacters))
+            : []
+          baseDraft.storyTopics = Array.isArray(normalizedSource.storyTopics)
+            ? JSON.parse(JSON.stringify(normalizedSource.storyTopics))
+            : []
+          baseDraft.storyInteractions = Array.isArray(
+            normalizedSource.storyInteractions,
+          )
+            ? JSON.parse(JSON.stringify(normalizedSource.storyInteractions))
+            : []
+          baseDraft.storyEvidence = Array.isArray(normalizedSource.storyEvidence)
+            ? JSON.parse(JSON.stringify(normalizedSource.storyEvidence))
+            : []
+          baseDraft.storyAccusation =
+            normalizedSource.storyAccusation &&
+            typeof normalizedSource.storyAccusation === 'object'
+              ? JSON.parse(JSON.stringify(normalizedSource.storyAccusation))
+              : {}
           baseDraft.taskDistributionMode = normalizeTaskDistributionMode(
             normalizedSource.taskDistributionMode,
           )
@@ -6384,7 +6385,7 @@ const GamesPage = ({
                   placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-6 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                 />
               </div>
-              <div className="min-w-0 flex-1 p-0 sm:absolute sm:inset-y-0 sm:left-[168px] sm:right-0 sm:overflow-hidden sm:p-4">
+              <div className="min-w-0 flex-1 p-0 sm:p-4">
                 <div className="flex items-start flex-1 w-full min-w-0 gap-3">
                   <div
                     className={`relative min-h-[96px] w-24 shrink-0 overflow-hidden rounded-xl border shadow-inner sm:hidden ${
@@ -8371,6 +8372,7 @@ GamesPage.propTypes = {
       hideResult: PropTypes.bool,
       registrationOpen: PropTypes.bool,
       maxTeamPlayers: PropTypes.number,
+      paymentMode: PropTypes.oneOf(['team', 'participant']),
       prices: PropTypes.arrayOf(priceShape),
       finances: PropTypes.arrayOf(financeShape),
       tasks: PropTypes.arrayOf(

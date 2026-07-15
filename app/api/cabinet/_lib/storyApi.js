@@ -7,6 +7,14 @@ import {
   getActiveStoryInventory,
   getAvailableStoryNodes,
 } from '@server/storyEngine'
+import {
+  buildInitialInvestigationProgress,
+  getAvailableInvestigationInteractions,
+  getInvestigationClock,
+  getUnlockedInvestigationLocations,
+  isInvestigationStory,
+  upgradeInvestigationProgress,
+} from '@server/storyInvestigationEngine'
 import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
 import { toStringId } from '@helpers/idAndDate'
 import {
@@ -150,10 +158,23 @@ export const ensureStoryProgress = async ({
   save = false,
 }) => {
   if (gameTeam?.storyProgress) {
-    return gameTeam.storyProgress
+    const normalized = upgradeInvestigationProgress(
+      game,
+      gameTeam.storyProgress,
+      { actor },
+    )
+    if (normalized.upgraded && save) {
+      await GamesTeams.updateOne(
+        { _id: gameTeam._id },
+        { $set: { storyProgress: normalized.progress } },
+      )
+    }
+    return normalized.progress
   }
 
-  const baseProgress = buildInitialStoryProgress(game, { actor })
+  const baseProgress = isInvestigationStory(game)
+    ? buildInitialInvestigationProgress(game, { actor })
+    : buildInitialStoryProgress(game, { actor })
   const appliedPrequelEffects = getGameTeamPrequelProgresses(
     gameTeam,
     getGamePrequels(game),
@@ -301,6 +322,7 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
   })
 
   const config = game?.storyConfig || {}
+  const investigationMode = isInvestigationStory(game)
   const currentEnding =
     progress?.currentEndingId && Array.isArray(game?.storyEndings)
       ? game.storyEndings.find(
@@ -312,9 +334,13 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
     game: {
       id: normalizeStringId(game?._id ?? game?.id),
       name: normalizeText(game?.name),
+      description: normalizeText(game?.description),
+      descriptionRich:
+        typeof game?.descriptionRich === 'string' ? game.descriptionRich : '',
       status: normalizeText(game?.status),
       type: normalizeText(game?.type) || 'story',
       storyConfig: {
+        experienceMode: investigationMode ? 'investigation' : 'quest',
         nodeLabel: normalizeText(config?.nodeLabel) || 'Локация',
         startMode: config?.startMode === 'individual' ? 'individual' : 'common',
         hideTotalNodes: config?.hideTotalNodes !== false,
@@ -322,6 +348,20 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
         showInventory: config?.showInventory !== false,
         showScoreToTeam: Boolean(config?.showScoreToTeam),
         showFinalHistoryToTeam: Boolean(config?.showFinalHistoryToTeam),
+        investigation: investigationMode
+          ? {
+              showClockToTeam:
+                config?.investigation?.showClockToTeam !== false,
+              showEvidenceToTeam:
+                config?.investigation?.showEvidenceToTeam !== false,
+              allowFreeReplay:
+                config?.investigation?.allowFreeReplay !== false,
+              accusationTimeMinutes: Math.max(
+                0,
+                Number(config?.investigation?.accusationTimeMinutes) || 0,
+              ),
+            }
+          : null,
       },
       totalNodes: config?.hideTotalNodes === false
         ? Array.isArray(game?.storyNodes)
@@ -359,6 +399,10 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
           media: Array.isArray(currentEnding?.media) ? currentEnding.media : [],
         }
       : null,
+    mode: investigationMode ? 'investigation' : 'quest',
+    investigation: investigationMode
+      ? buildTeamInvestigationStatePayload({ game, progress })
+      : null,
     history:
       progress?.status &&
       ['completed', 'failed'].includes(progress.status) &&
@@ -367,6 +411,178 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
           ? progress.history
           : []
         : [],
+  }
+}
+
+const buildTeamInvestigationStatePayload = ({ game, progress }) => {
+  const charactersById = new Map(
+    (Array.isArray(game?.storyCharacters) ? game.storyCharacters : []).map(
+      (character) => [normalizeText(character?.id), character],
+    ),
+  )
+  const topicsById = new Map(
+    (Array.isArray(game?.storyTopics) ? game.storyTopics : []).map((topic) => [
+      normalizeText(topic?.id),
+      topic,
+    ]),
+  )
+  const unlockedCharacterIds = new Set(
+    Array.isArray(progress?.unlockedCharacterIds)
+      ? progress.unlockedCharacterIds.map(normalizeText)
+      : [],
+  )
+  const unlockedTopicIds = new Set(
+    Array.isArray(progress?.unlockedTopicIds)
+      ? progress.unlockedTopicIds.map(normalizeText)
+      : [],
+  )
+  const evidenceById = new Map(
+    (Array.isArray(game?.storyEvidence) ? game.storyEvidence : []).map(
+      (evidence) => [normalizeText(evidence?.id), evidence],
+    ),
+  )
+  const unlockedLocations = getUnlockedInvestigationLocations(game, progress)
+  const currentNodeId = normalizeText(progress?.currentNodeId)
+  const currentLocation = unlockedLocations.find(
+    (node) => normalizeText(node?.id) === currentNodeId,
+  )
+  const mapLocation = (node) => ({
+    id: normalizeText(node?.id),
+    title: normalizeText(node?.title),
+    descriptionRich:
+      typeof node?.descriptionRich === 'string' ? node.descriptionRich : '',
+    media: Array.isArray(node?.media) ? node.media : [],
+    travelTimeMinutes: Math.max(
+      0,
+      Number(
+        node?.travelTimeMinutes ??
+          game?.storyConfig?.investigation?.defaultTravelTimeMinutes ??
+          0,
+      ) || 0,
+    ),
+    isCurrent: normalizeText(node?.id) === currentNodeId,
+  })
+  const accusationConfig = game?.storyAccusation || {}
+  const accusationTopicId = normalizeText(accusationConfig?.unlockTopicId)
+
+  return {
+    clock: getInvestigationClock(game, progress),
+    currentLocation: currentLocation ? mapLocation(currentLocation) : null,
+    availableLocations: unlockedLocations.map(mapLocation),
+    characters: Array.from(unlockedCharacterIds)
+      .map((id) => charactersById.get(id))
+      .filter(Boolean)
+      .map((character) => ({
+        id: normalizeText(character?.id),
+        title: normalizeText(character?.title),
+        subtitle: normalizeText(character?.subtitle),
+        descriptionRich:
+          typeof character?.descriptionRich === 'string'
+            ? character.descriptionRich
+            : '',
+        image: normalizeText(character?.image),
+        media: Array.isArray(character?.media) ? character.media : [],
+        defaultNodeId: normalizeText(character?.defaultNodeId),
+      })),
+    topics: Array.from(unlockedTopicIds)
+      .map((id) => topicsById.get(id))
+      .filter(Boolean)
+      .map((topic) => ({
+        id: normalizeText(topic?.id),
+        title: normalizeText(topic?.title),
+        descriptionRich:
+          typeof topic?.descriptionRich === 'string'
+            ? topic.descriptionRich
+            : '',
+        icon: normalizeText(topic?.icon),
+      })),
+    availableInteractions: getAvailableInvestigationInteractions(
+      game,
+      progress,
+    ).map((interaction) => ({
+      id: normalizeText(interaction?.id),
+      kind: normalizeText(interaction?.kind) || 'question',
+      locationId: normalizeText(interaction?.locationId),
+      characterId: normalizeText(interaction?.characterId),
+      topicId: normalizeText(interaction?.topicId),
+      label: normalizeText(interaction?.label),
+      promptRich:
+        typeof interaction?.promptRich === 'string'
+          ? interaction.promptRich
+          : '',
+      timeCostMinutes: Math.max(
+        0,
+        Number(
+          interaction?.timeCostMinutes ??
+            game?.storyConfig?.investigation?.defaultInteractionTimeMinutes ??
+            0,
+        ) || 0,
+      ),
+    })),
+    discoveredEvidence:
+      game?.storyConfig?.investigation?.showEvidenceToTeam === false
+        ? []
+        : (Array.isArray(progress?.discoveredEvidenceIds)
+            ? progress.discoveredEvidenceIds
+            : []
+          )
+            .map((id) => evidenceById.get(normalizeText(id)))
+            .filter(Boolean)
+            .map((evidence) => ({
+              id: normalizeText(evidence?.id),
+              title: normalizeText(evidence?.title),
+              descriptionRich:
+                typeof evidence?.descriptionRich === 'string'
+                  ? evidence.descriptionRich
+                  : '',
+              media: Array.isArray(evidence?.media) ? evidence.media : [],
+            })),
+    journal: Array.isArray(progress?.journal) ? progress.journal : [],
+    accusation: {
+      available:
+        accusationConfig?.enabled === true &&
+        (!accusationTopicId || unlockedTopicIds.has(accusationTopicId)) &&
+        !progress?.accusation?.submittedAt,
+      requiredNodeId: normalizeText(accusationConfig?.requiredNodeId),
+      culpritOptions: (Array.isArray(accusationConfig?.culpritCharacterIds)
+        ? accusationConfig.culpritCharacterIds
+        : []
+      )
+        .map((id) => charactersById.get(normalizeText(id)))
+        .filter(Boolean)
+        .map((character) => ({
+          id: normalizeText(character?.id),
+          title: normalizeText(character?.title),
+          subtitle: normalizeText(character?.subtitle),
+        })),
+      motiveOptions: (Array.isArray(accusationConfig?.motives)
+        ? accusationConfig.motives
+        : []
+      ).map((motive) => ({
+        id: normalizeText(motive?.id),
+        title: normalizeText(motive?.title),
+      })),
+      minSelectableEvidence: Math.max(
+        0,
+        Number(accusationConfig?.minSelectableEvidence) || 0,
+      ),
+      maxSelectableEvidence: Math.max(
+        0,
+        Number(accusationConfig?.maxSelectableEvidence) || 0,
+      ),
+      submitted: progress?.accusation?.submittedAt
+        ? {
+            submittedAt: progress.accusation.submittedAt,
+            submittedAtMinute: progress.accusation.submittedAtMinute,
+            culpritId: normalizeText(progress.accusation.culpritId),
+            motiveId: normalizeText(progress.accusation.motiveId),
+            evidenceIds: Array.isArray(progress.accusation.evidenceIds)
+              ? progress.accusation.evidenceIds
+              : [],
+            outcomeId: normalizeText(progress.accusation.outcomeId),
+          }
+        : null,
+    },
   }
 }
 
@@ -451,9 +667,8 @@ export const loadPlayerStoryContext = async ({
   }
 
   const team = await Teams.findById(teamId).lean()
-  const progress = gameTeam?.storyProgress
-    ? gameTeam.storyProgress
-    : gameStatus === 'started'
+  const progress =
+    gameStatus === 'started'
       ? await ensureStoryProgress({
           GamesTeams,
           game,
@@ -461,7 +676,7 @@ export const loadPlayerStoryContext = async ({
           actor: 'team',
           save: true,
         })
-      : { status: 'not_started' }
+      : gameTeam?.storyProgress || { status: 'not_started' }
 
   return { db, GamesTeams, game, gameTeam, team, progress, session, identity }
 }

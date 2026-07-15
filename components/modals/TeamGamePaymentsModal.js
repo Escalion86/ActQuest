@@ -83,6 +83,8 @@ const normalizeTarget = (target) =>
           ? target.members.filter((member) => member?.userId)
           : [],
         totalPaid: Number(target.totalPaid) || 0,
+        totalDiscount: Number(target.totalDiscount) || 0,
+        totalCredited: Number(target.totalCredited) || 0,
       }
     : null
 
@@ -98,6 +100,8 @@ const TeamGamePaymentsModal = ({
   const [localTarget, setLocalTarget] = useState(() => normalizeTarget(target))
   const [transactions, setTransactions] = useState([])
   const [totalPaid, setTotalPaid] = useState(0)
+  const [totalDiscount, setTotalDiscount] = useState(0)
+  const [totalCredited, setTotalCredited] = useState(0)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -133,6 +137,8 @@ const TeamGamePaymentsModal = ({
         const data = json?.data ?? {}
         setTransactions(Array.isArray(data.transactions) ? data.transactions : [])
         setTotalPaid(Number(data.totalPaid) || 0)
+        setTotalDiscount(Number(data.totalDiscount) || 0)
+        setTotalCredited(Number(data.totalCredited) || 0)
         setLocalTarget((prev) =>
           prev
             ? {
@@ -155,6 +161,8 @@ const TeamGamePaymentsModal = ({
       setLocalTarget(null)
       setTransactions([])
       setTotalPaid(0)
+      setTotalDiscount(0)
+      setTotalCredited(0)
       setError('')
       setIsLoading(false)
       setIsCreateOpen(false)
@@ -173,6 +181,8 @@ const TeamGamePaymentsModal = ({
     setLocalTarget(nextTarget)
     setTransactions([])
     setTotalPaid(Number(nextTarget?.totalPaid) || 0)
+    setTotalDiscount(Number(nextTarget?.totalDiscount) || 0)
+    setTotalCredited(Number(nextTarget?.totalCredited) || 0)
     setError('')
     setIsCreateOpen(false)
     loadPayments(nextTarget)
@@ -248,6 +258,8 @@ const TeamGamePaymentsModal = ({
       const data = json?.data ?? {}
       setTransactions(Array.isArray(data.transactions) ? data.transactions : [])
       setTotalPaid(Number(data.totalPaid) || 0)
+      setTotalDiscount(Number(data.totalDiscount) || 0)
+      setTotalCredited(Number(data.totalCredited) || 0)
       setIsCreateOpen(false)
       await onPaymentsChanged?.({
         gameTeamId: localTarget.gameTeamId,
@@ -322,13 +334,15 @@ const TeamGamePaymentsModal = ({
   const isPaidGameUpdating =
     isTogglingPaidGame ||
     updatingPaidGameTeamIds.includes(String(localTarget?.gameTeamId || ''))
+  const paymentMode =
+    selectedGame?.paymentMode === 'participant' ? 'participant' : 'team'
 
   return (
     <>
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
-        title={`Оплата команды «${localTarget?.teamName || 'Без названия'}»`}
+        title={`${paymentMode === 'participant' ? 'Оплаты участников' : 'Оплата команды'} «${localTarget?.teamName || 'Без названия'}»`}
         footer={
           <button
             type="button"
@@ -346,19 +360,30 @@ const TeamGamePaymentsModal = ({
               {error}
             </NoticeBanner>
           ) : null}
-          <div className="flex flex-col gap-3 p-3 border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
-            <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100">
-              <input
-                type="checkbox"
-                checked={Boolean(localTarget?.paidGame)}
-                disabled={!localTarget?.gameTeamId || isPaidGameUpdating}
-                onChange={handleTogglePaidGame}
-                className="w-4 h-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 dark:border-slate-600"
-              />
-              Команда оплатила игру
-            </label>
-            <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Сумма: {formatMoney(totalPaid)}
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
+            {paymentMode === 'team' ? (
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-100">
+                <input
+                  type="checkbox"
+                  checked={Boolean(localTarget?.paidGame)}
+                  disabled={!localTarget?.gameTeamId || isPaidGameUpdating}
+                  onChange={handleTogglePaidGame}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 dark:border-slate-600"
+                />
+                Команда оплатила игру
+              </label>
+            ) : (
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                Оплата фиксируется на выбранного участника
+              </span>
+            )}
+            <div className="text-right text-sm text-slate-900 dark:text-slate-100">
+              <p className="font-semibold">Оплачено: {formatMoney(totalPaid)}</p>
+              {totalDiscount > 0 ? (
+                <p className="text-xs font-medium text-violet-600 dark:text-violet-200">
+                  Скидка: {formatMoney(totalDiscount)} · учтено всего: {formatMoney(totalCredited)}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -406,7 +431,16 @@ const TeamGamePaymentsModal = ({
                           )}
                         </p>
                       </div>
-                      <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">
+                      <div
+                        className={`text-sm font-semibold ${
+                          transaction.paymentMethod === 'discount'
+                            ? 'text-violet-700 dark:text-violet-200'
+                            : 'text-emerald-700 dark:text-emerald-200'
+                        }`}
+                      >
+                        {transaction.paymentMethod === 'discount'
+                          ? 'Скидка '
+                          : ''}
                         {formatMoney(transaction.amount)}
                       </div>
                     </div>
@@ -545,6 +579,7 @@ const TeamGamePaymentsModal = ({
             <option value="transfer">Перевод</option>
             <option value="cash">Наличные</option>
             <option value="invoice">Счёт</option>
+            <option value="discount">Скидка</option>
           </CabinetSelectField>
         </div>
       </Modal>
@@ -569,6 +604,7 @@ TeamGamePaymentsModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   selectedGame: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    paymentMode: PropTypes.oneOf(['team', 'participant']),
   }),
   target: PropTypes.shape({
     gameTeamId: PropTypes.string,
@@ -576,6 +612,8 @@ TeamGamePaymentsModal.propTypes = {
     teamName: PropTypes.string,
     paidGame: PropTypes.bool,
     totalPaid: PropTypes.number,
+    totalDiscount: PropTypes.number,
+    totalCredited: PropTypes.number,
     members: PropTypes.arrayOf(memberShape),
   }),
   updatingPaidGameTeamIds: PropTypes.arrayOf(PropTypes.string),

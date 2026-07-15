@@ -227,3 +227,91 @@ test('manual-only story ending does not require a player path', () => {
   assert.deepEqual(report.unreachableEndingIds, [])
   assert.deepEqual(getStoryValidationErrors(game), [])
 })
+
+const buildValidInvestigationGame = () => ({
+  type: 'story',
+  storyConfig: {
+    experienceMode: 'investigation',
+    investigation: { startNodeId: 'reception', deadlineMinutes: 120 },
+  },
+  storyItems: [],
+  storyNodes: [
+    {
+      id: 'reception',
+      title: 'Приёмная',
+      visibility: { startVisible: true },
+      codes: [],
+      actions: [],
+      clues: [],
+    },
+  ],
+  storyCharacters: [
+    { id: 'suspect', title: 'Подозреваемый', startVisible: true },
+  ],
+  storyTopics: [
+    { id: 'timeline', title: 'Хронология', startVisible: true },
+    { id: 'accuse', title: 'Обвинение', startVisible: false },
+  ],
+  storyEvidence: [
+    { id: 'log', title: 'Журнал', isKey: true, tags: ['time'] },
+  ],
+  storyInteractions: [
+    {
+      id: 'inspect-log',
+      kind: 'examine',
+      locationId: 'reception',
+      label: 'Изучить журнал',
+      responseRich: '<p>Найдена запись.</p>',
+      timeCostMinutes: 10,
+      conditions: {},
+      effects: { grantsEvidenceIds: ['log'] },
+    },
+  ],
+  storyEndings: [
+    { id: 'solved', title: 'Решено', type: 'success', conditions: {} },
+    { id: 'failed', title: 'Ошибка', type: 'failed', conditions: {} },
+    { id: 'timeout', title: 'Время вышло', type: 'failed', conditions: {} },
+  ],
+  storyAccusation: {
+    enabled: true,
+    requiredNodeId: 'reception',
+    unlockTopicId: 'accuse',
+    availability: { minKeyEvidence: 1 },
+    culpritCharacterIds: ['suspect'],
+    motives: [{ id: 'motive', title: 'Мотив' }],
+    correctCulpritId: 'suspect',
+    correctMotiveId: 'motive',
+    outcomes: [
+      {
+        id: 'correct',
+        endingId: 'solved',
+        priority: 10,
+        conditions: {
+          culprit: 'correct',
+          motive: 'correct',
+          requiredEvidenceIds: ['log'],
+        },
+      },
+    ],
+    fallbackEndingId: 'failed',
+    timeoutEndingId: 'timeout',
+  },
+})
+
+test('valid investigation passes additive story validation', () => {
+  assert.deepEqual(getStoryValidationErrors(buildValidInvestigationGame()), [])
+})
+
+test('investigation validation reports broken references and invalid time', () => {
+  const game = buildValidInvestigationGame()
+  game.storyConfig.investigation.startNodeId = 'missing-node'
+  game.storyInteractions[0].timeCostMinutes = -1
+  game.storyInteractions[0].effects.grantsEvidenceIds = ['missing-evidence']
+  game.storyAccusation.correctMotiveId = 'missing-motive'
+
+  const errors = getStoryValidationErrors(game)
+  assert.ok(errors.some((error) => error.includes('стартовую локацию')))
+  assert.ok(errors.some((error) => error.includes('неотрицательным числом')))
+  assert.ok(errors.some((error) => error.includes('missing-evidence')))
+  assert.ok(errors.some((error) => error.includes('правильный мотив')))
+})

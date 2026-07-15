@@ -72,6 +72,43 @@ const cloneProgress = (progress = {}) => ({
   usedBonusCodeIds: uniqueStrings(progress?.usedBonusCodeIds),
   usedActionIds: uniqueStrings(progress?.usedActionIds),
   prequelFlags: uniqueStrings(progress?.prequelFlags),
+  currentNodeId: normalizeId(progress?.currentNodeId) || null,
+  elapsedMinutes: Math.max(0, toNumber(progress?.elapsedMinutes, 0)),
+  unlockedCharacterIds: uniqueStrings(progress?.unlockedCharacterIds),
+  unlockedTopicIds: uniqueStrings(progress?.unlockedTopicIds),
+  usedInteractionIds: uniqueStrings(progress?.usedInteractionIds),
+  discoveredEvidenceIds: uniqueStrings(progress?.discoveredEvidenceIds),
+  flags: uniqueStrings(progress?.flags),
+  journal: toArray(progress?.journal).map((entry) => ({
+    id: normalizeId(entry?.id) || createEventId(),
+    interactionId: normalizeId(entry?.interactionId) || null,
+    kind: normalizeId(entry?.kind) || 'system',
+    title: typeof entry?.title === 'string' ? entry.title : '',
+    summaryRich:
+      typeof entry?.summaryRich === 'string' ? entry.summaryRich : '',
+    media: toArray(entry?.media).map((item) => ({ ...item })),
+    characterId: normalizeId(entry?.characterId) || null,
+    topicId: normalizeId(entry?.topicId) || null,
+    locationId: normalizeId(entry?.locationId) || null,
+    evidenceId: normalizeId(entry?.evidenceId) || null,
+    discoveredAtMinute: Math.max(
+      0,
+      toNumber(entry?.discoveredAtMinute, 0),
+    ),
+    createdAt: toDate(entry?.createdAt),
+  })),
+  accusation: {
+    submittedAt: toDate(progress?.accusation?.submittedAt),
+    submittedAtMinute:
+      progress?.accusation?.submittedAtMinute === null ||
+      progress?.accusation?.submittedAtMinute === undefined
+        ? null
+        : Math.max(0, toNumber(progress.accusation.submittedAtMinute, 0)),
+    culpritId: normalizeId(progress?.accusation?.culpritId) || null,
+    motiveId: normalizeId(progress?.accusation?.motiveId) || null,
+    evidenceIds: uniqueStrings(progress?.accusation?.evidenceIds),
+    outcomeId: normalizeId(progress?.accusation?.outcomeId) || null,
+  },
   history: toArray(progress?.history).map((entry) => ({
     id: normalizeId(entry?.id) || createEventId(),
     type: normalizeId(entry?.type),
@@ -81,6 +118,14 @@ const cloneProgress = (progress = {}) => ({
     actionId: normalizeId(entry?.actionId) || null,
     codeId: normalizeId(entry?.codeId) || null,
     clueId: normalizeId(entry?.clueId) || null,
+    interactionId: normalizeId(entry?.interactionId) || null,
+    characterId: normalizeId(entry?.characterId) || null,
+    topicId: normalizeId(entry?.topicId) || null,
+    evidenceId: normalizeId(entry?.evidenceId) || null,
+    fromNodeId: normalizeId(entry?.fromNodeId) || null,
+    toNodeId: normalizeId(entry?.toNodeId) || null,
+    minutes: toNumber(entry?.minutes, 0),
+    elapsedMinutes: Math.max(0, toNumber(entry?.elapsedMinutes, 0)),
     endingId: normalizeId(entry?.endingId) || null,
     points: toNumber(entry?.points, 0),
     message: typeof entry?.message === 'string' ? entry.message : '',

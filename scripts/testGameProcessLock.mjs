@@ -11,6 +11,7 @@ const wait = (milliseconds) =>
 
 class InMemoryGamesTeams {
   constructor() {
+    this.lastFindOneAndUpdateOptions = null
     this.document = {
       _id: 'game-team-1',
       activeNum: 0,
@@ -19,7 +20,8 @@ class InMemoryGamesTeams {
     }
   }
 
-  findOneAndUpdate(filter, update) {
+  findOneAndUpdate(filter, update, options) {
+    this.lastFindOneAndUpdateOptions = options
     return {
       lean: async () => {
         const lock = this.document.gameProcessLock
@@ -56,6 +58,9 @@ const firstLock = await acquireGameProcessLock({
   waitMs: 0,
 })
 assert.equal(firstLock.acquired, true)
+assert.deepEqual(GamesTeams.lastFindOneAndUpdateOptions, {
+  returnDocument: 'after',
+})
 
 const blockedLock = await acquireGameProcessLock({
   GamesTeams,

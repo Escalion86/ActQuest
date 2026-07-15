@@ -427,14 +427,22 @@ const buildTransactionResponse = (transaction) => ({
   comment: typeof transaction?.comment === 'string' ? transaction.comment : '',
 })
 
-const calculateTotalPaid = (transactions) =>
-  transactions.reduce((sum, item) => {
+const calculatePaymentTotals = (transactions) =>
+  transactions.reduce((totals, item) => {
     if (item?.direction !== 'income' || item?.status !== 'completed') {
-      return sum
+      return totals
     }
     const amount = Number(item?.amount)
-    return Number.isFinite(amount) ? sum + amount : sum
-  }, 0)
+    if (!Number.isFinite(amount)) return totals
+
+    if (item?.paymentMethod === 'discount') {
+      totals.totalDiscount += amount
+    } else {
+      totals.totalPaid += amount
+    }
+    totals.totalCredited += amount
+    return totals
+  }, { totalPaid: 0, totalDiscount: 0, totalCredited: 0 })
 
 const loadGamePaymentContext = async ({ db, gameId, session }) => {
   const GamesModel = db.model('Games')
@@ -444,6 +452,7 @@ const loadGamePaymentContext = async ({ db, gameId, session }) => {
     name: 1,
     location: 1,
     moderators: 1,
+    paymentMode: 1,
   })
 
   if (!game?._id) {
@@ -513,8 +522,21 @@ const buildTeamPaymentsSummaryResponse = async ({ db, game, gameId }) => {
         },
         {
           $group: {
-            _id: '$gameTeamId',
-            totalPaid: { $sum: '$amount' },
+            _id: {
+              gameTeamId: '$gameTeamId',
+              userId: '$userId',
+            },
+            totalPaid: {
+              $sum: {
+                $cond: [{ $eq: ['$paymentMethod', 'discount'] }, 0, '$amount'],
+              },
+            },
+            totalDiscount: {
+              $sum: {
+                $cond: [{ $eq: ['$paymentMethod', 'discount'] }, '$amount', 0],
+              },
+            },
+            totalCredited: { $sum: '$amount' },
             transactionsCount: { $sum: 1 },
           },
         },
@@ -531,6 +553,8 @@ const buildTeamPaymentsSummaryResponse = async ({ db, game, gameId }) => {
       success: true,
       data: {
         gameId,
+        paymentMode:
+          game?.paymentMode === 'participant' ? 'participant' : 'team',
         ...summary,
       },
     },
@@ -556,6 +580,7 @@ const buildTeamPaymentsDetailResponse = async ({ db, gameId, gameTeamId }) => {
   })
     .sort({ paidAt: -1, createdAt: -1 })
     .lean()
+  const paymentTotals = calculatePaymentTotals(transactions)
 
   return NextResponse.json(
     {
@@ -565,7 +590,7 @@ const buildTeamPaymentsDetailResponse = async ({ db, gameId, gameTeamId }) => {
         gameTeamId,
         teamId,
         paidGame: Boolean(gameTeam.paidGame),
-        totalPaid: calculateTotalPaid(transactions),
+        ...paymentTotals,
         transactions: transactions.map(buildTransactionResponse),
       },
     },
@@ -703,7 +728,11 @@ const handleTeamPaymentCreate = async ({ payload, params, session }) => {
         gameTeamId,
         paidAt: payload?.paidAt || new Date(),
         location: context.game?.location || null,
-        comment: payload?.comment || 'Оплата участия команды в игре',
+        comment:
+          payload?.comment ||
+          (payload?.paymentMethod === 'discount'
+            ? 'Скидка на участие в игре'
+            : 'Оплата участия в игре'),
         source: 'manual',
         affectsUserBalance: false,
         meta: {
@@ -711,6 +740,10 @@ const handleTeamPaymentCreate = async ({ payload, params, session }) => {
             ? payload.meta
             : {}),
           teamPayment: true,
+          paymentMode:
+            context.game?.paymentMode === 'participant'
+              ? 'participant'
+              : 'team',
         },
       },
     })
@@ -723,13 +756,14 @@ const handleTeamPaymentCreate = async ({ payload, params, session }) => {
     })
       .sort({ paidAt: -1, createdAt: -1 })
       .lean()
+    const paymentTotals = calculatePaymentTotals(transactions)
 
     return NextResponse.json(
       {
         success: true,
         data: {
           transaction: buildTransactionResponse(created),
-          totalPaid: calculateTotalPaid(transactions),
+          ...paymentTotals,
           transactions: transactions.map(buildTransactionResponse),
         },
       },
@@ -834,7 +868,15 @@ export async function GET(request, { params }) {
           {
             $group: {
               _id: '$gameTeamId',
-              totalPaid: { $sum: '$amount' },
+              totalPaid: {
+                $sum: {
+                  $cond: [
+                    { $eq: ['$paymentMethod', 'discount'] },
+                    0,
+                    '$amount',
+                  ],
+                },
+              },
             },
           },
         ])

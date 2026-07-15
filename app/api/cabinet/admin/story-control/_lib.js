@@ -17,6 +17,13 @@ import {
   runLockedStoryMutation,
 } from '@app/api/cabinet/_lib/storyApi'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
+import {
+  adjustInvestigationTime,
+  grantInvestigationEvidence,
+  setInvestigationLocation,
+  unlockInvestigationCharacter,
+  unlockInvestigationTopic,
+} from '@server/storyInvestigationEngine'
 
 export const runAdminStoryMutation = async ({ request, action }) => {
   const payload = await readJsonPayload(request)
@@ -125,4 +132,64 @@ export const adminFinishAction = ({ game, progress, payload }) =>
     endingId: payload?.endingId,
     actor: 'admin',
     nodeId: payload?.nodeId,
+  })
+
+export const adminSetInvestigationLocationAction = ({
+  game,
+  progress,
+  payload,
+}) =>
+  setInvestigationLocation({
+    game,
+    progress,
+    nodeId: payload?.nodeId,
+    actor: 'admin',
+  })
+
+export const adminAdjustInvestigationTimeAction = ({
+  game,
+  progress,
+  payload,
+}) =>
+  adjustInvestigationTime({
+    game,
+    progress,
+    minutes: payload?.minutes,
+    actor: 'admin',
+  })
+
+export const adminUnlockInvestigationCharacterAction = ({
+  game,
+  progress,
+  payload,
+}) =>
+  unlockInvestigationCharacter({
+    game,
+    progress,
+    characterId: payload?.characterId,
+    actor: 'admin',
+  })
+
+export const adminUnlockInvestigationTopicAction = ({
+  game,
+  progress,
+  payload,
+}) =>
+  unlockInvestigationTopic({
+    game,
+    progress,
+    topicId: payload?.topicId,
+    actor: 'admin',
+  })
+
+export const adminGrantInvestigationEvidenceAction = ({
+  game,
+  progress,
+  payload,
+}) =>
+  grantInvestigationEvidence({
+    game,
+    progress,
+    evidenceId: payload?.evidenceId,
+    actor: 'admin',
   })

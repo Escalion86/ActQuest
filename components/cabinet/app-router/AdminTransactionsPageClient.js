@@ -31,6 +31,7 @@ const PAY_OPTIONS = [
   ['transfer', 'Перевод'],
   ['invoice', 'Оплата по счёту'],
   ['coupon', 'Купон'],
+  ['discount', 'Скидка'],
 ]
 const STATUS_OPTIONS = [
   ['pending', 'Ожидает'],
@@ -348,6 +349,8 @@ const AdminTransactionsPage = ({
                   <p className="text-sm font-semibold text-primary dark:text-slate-100">
                     {transaction.paymentMethod === 'coupon'
                       ? 'Купон'
+                      : transaction.paymentMethod === 'discount'
+                        ? 'Скидка'
                       : transaction.paymentMethod || 'Транзакция'}
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-300">ID: {transaction._id}</p>
@@ -414,6 +417,7 @@ const AdminTransactionsPage = ({
                 id="transactions-form-direction"
                 label={null}
                 value={form.direction}
+                disabled={form.paymentMethod === 'discount'}
                 onChange={(e) => setForm((p) => ({ ...p, direction: e.target.value }))}
                 containerClassName="space-y-0"
                 selectClassName={`${INPUT_CLASS} cursor-pointer`}
@@ -429,7 +433,14 @@ const AdminTransactionsPage = ({
                 id="transactions-form-payment-method"
                 label={null}
                 value={form.paymentMethod}
-                onChange={(e) => setForm((p) => ({ ...p, paymentMethod: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    paymentMethod: e.target.value,
+                    direction:
+                      e.target.value === 'discount' ? 'income' : p.direction,
+                  }))
+                }
                 containerClassName="space-y-0"
                 selectClassName={`${INPUT_CLASS} cursor-pointer`}
               >

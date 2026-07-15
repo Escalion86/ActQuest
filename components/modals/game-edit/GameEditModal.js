@@ -604,6 +604,58 @@ const GameEditModal = ({
               Добавить тариф
             </CabinetButton>
           </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+              Режим оплаты
+            </p>
+            <div
+              className="mt-3 grid gap-2 sm:grid-cols-2"
+              role="radiogroup"
+              aria-label="Режим оплаты игры"
+            >
+              {[
+                {
+                  value: 'team',
+                  label: 'Оплата с команды',
+                  description: 'Оплата фиксируется общей суммой по команде.',
+                },
+                {
+                  value: 'participant',
+                  label: 'Оплата с участников',
+                  description: 'Оплата контролируется отдельно по каждому игроку.',
+                },
+              ].map((option) => {
+                const isSelected =
+                  (selectedGame.paymentMode === 'participant'
+                    ? 'participant'
+                    : 'team') === option.value
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() =>
+                      updateSelectedGame({ paymentMode: option.value })
+                    }
+                    className={`rounded-xl border p-3 text-left transition ${
+                      isSelected
+                        ? 'border-cyan-400 bg-white shadow-sm ring-1 ring-cyan-200 dark:border-cyan-500 dark:bg-slate-800 dark:ring-cyan-500/20'
+                        : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold text-slate-800 dark:text-white">
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500 dark:text-slate-300">
+                      {option.description}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           {(selectedGame.prices ?? []).length > 0 ? (
             <div className="space-y-3">
               {selectedGame.prices.map((price) => (
@@ -647,7 +699,7 @@ const GameEditModal = ({
             </div>
           ) : (
             <p className="text-sm text-slate-500 dark:text-slate-200">
-              Добавьте тариф, чтобы задать стоимость участия для команд.
+              Добавьте тариф, чтобы задать стоимость участия.
             </p>
           )}
         </ModalSection>
@@ -662,6 +714,7 @@ GameEditModal.propTypes = {
     showTasks: PropTypes.bool,
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
+    paymentMode: PropTypes.oneOf(['team', 'participant']),
   }),
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,

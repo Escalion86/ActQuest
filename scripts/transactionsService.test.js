@@ -36,3 +36,19 @@ test('buildTransactionPayload does not affect user balance for team payments by 
 
   assert.equal(payload.userBalanceDelta, 0)
 })
+
+test('buildTransactionPayload accepts discount without affecting user balance', () => {
+  const payload = buildTransactionPayload({
+    direction: 'expense',
+    amount: 500,
+    paymentMethod: 'discount',
+    status: 'completed',
+    userId: 'user-1',
+    gameId: 'game-1',
+  })
+
+  assert.equal(payload.paymentMethod, 'discount')
+  assert.equal(payload.direction, 'income')
+  assert.equal(payload.amount, 500)
+  assert.equal(payload.userBalanceDelta, 0)
+})

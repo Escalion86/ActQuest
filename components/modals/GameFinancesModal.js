@@ -41,6 +41,15 @@ const getFinanceTypeMeta = (type) =>
 
 const formatFinanceDate = (value) => formatDate(value) || 'Дата не указана'
 
+const getMemberDisplayName = (member) => {
+  const name = String(member?.name || member?.user?.name || '').trim()
+  const username = String(
+    member?.username || member?.user?.username || '',
+  ).trim()
+  const phone = String(member?.phone || member?.user?.phone || '').trim()
+  return name || (username ? `@${username}` : '') || phone || 'Участник без имени'
+}
+
 const GameFinancesModal = ({
   selectedGame,
   isOpen,
@@ -60,6 +69,8 @@ const GameFinancesModal = ({
     isLoading: false,
     error: '',
     totalPaid: 0,
+    totalDiscount: 0,
+    totalCredited: 0,
     teams: [],
   })
   const [isTeamPaymentsModalOpen, setIsTeamPaymentsModalOpen] =
@@ -76,6 +87,8 @@ const GameFinancesModal = ({
           isLoading: false,
           error: '',
           totalPaid: 0,
+          totalDiscount: 0,
+          totalCredited: 0,
           teams: [],
         })
         return
@@ -100,6 +113,8 @@ const GameFinancesModal = ({
           isLoading: false,
           error: '',
           totalPaid: Number(data.totalPaid) || 0,
+          totalDiscount: Number(data.totalDiscount) || 0,
+          totalCredited: Number(data.totalCredited) || 0,
           teams: Array.isArray(data.teams) ? data.teams : [],
         })
       } catch (error) {
@@ -107,6 +122,8 @@ const GameFinancesModal = ({
           isLoading: false,
           error: error?.message || 'Не удалось загрузить оплаты команд',
           totalPaid: 0,
+          totalDiscount: 0,
+          totalCredited: 0,
           teams: [],
         })
       }
@@ -120,6 +137,8 @@ const GameFinancesModal = ({
         isLoading: false,
         error: '',
         totalPaid: 0,
+        totalDiscount: 0,
+        totalCredited: 0,
         teams: [],
       })
       setIsTeamPaymentsModalOpen(false)
@@ -144,7 +163,12 @@ const GameFinancesModal = ({
       teamName: String(team.teamName || 'Без названия'),
       paidGame: Boolean(team.paidGame),
       totalPaid: Number(team.totalPaid) || 0,
+      totalDiscount: Number(team.totalDiscount) || 0,
+      totalCredited: Number(team.totalCredited) || 0,
       members: Array.isArray(team.members) ? team.members : [],
+      memberPayments: Array.isArray(team.memberPayments)
+        ? team.memberPayments
+        : [],
     })
     setIsTeamPaymentsModalOpen(true)
   }, [])
@@ -252,6 +276,9 @@ const GameFinancesModal = ({
   }
 
   const teamPaymentsIncome = Number(teamPaymentsState.totalPaid) || 0
+  const paymentDiscounts = Number(teamPaymentsState.totalDiscount) || 0
+  const paymentMode =
+    selectedGame.paymentMode === 'participant' ? 'participant' : 'team'
   const summaryIncome = financesSummary.income + teamPaymentsIncome
   const summaryBalance = summaryIncome - financesSummary.expense
   const summaryBalanceClass =
@@ -272,7 +299,7 @@ const GameFinancesModal = ({
           <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
             Сводка
           </h2>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/40 dark:bg-emerald-500/10">
               <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
                 Доходы
@@ -285,6 +312,17 @@ const GameFinancesModal = ({
                 <span className="text-base">
                   {currencyFormatter.format(summaryIncome)}
                 </span>
+              </p>
+            </div>
+            <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-500/40 dark:bg-violet-500/10">
+              <p className="text-xs font-medium uppercase tracking-wide text-violet-700 dark:text-violet-200">
+                Скидки
+              </p>
+              <p className="mt-1 text-base font-semibold text-violet-700 dark:text-violet-100">
+                {currencyFormatter.format(paymentDiscounts)}
+              </p>
+              <p className="mt-1 text-xs text-violet-600 dark:text-violet-200/80">
+                Учтены в оплате, но не входят в доход
               </p>
             </div>
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-500/40 dark:bg-rose-500/10">
@@ -387,11 +425,20 @@ const GameFinancesModal = ({
         <ModalSection>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
-              Оплаты от команд
+              {paymentMode === 'participant'
+                ? 'Оплаты участников'
+                : 'Оплаты команд'}
             </h2>
-            <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-              Итого: {currencyFormatter.format(teamPaymentsState.totalPaid)}
-            </span>
+            <div className="flex flex-wrap gap-2 text-sm font-semibold">
+              <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                Оплачено: {currencyFormatter.format(teamPaymentsState.totalPaid)}
+              </span>
+              {teamPaymentsState.totalDiscount > 0 ? (
+                <span className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200">
+                  Скидки: {currencyFormatter.format(teamPaymentsState.totalDiscount)}
+                </span>
+              ) : null}
+            </div>
           </div>
 
           {teamPaymentsState.error ? (
@@ -400,42 +447,42 @@ const GameFinancesModal = ({
             </p>
           ) : teamPaymentsState.isLoading ? (
             <p className="text-sm text-slate-500 dark:text-slate-200">
-              Загружаем оплаты команд…
+              Загружаем оплаты…
             </p>
           ) : teamPaymentsState.teams.length > 0 ? (
             <div className="space-y-2">
-              {teamPaymentsState.teams.map((team) => (
+              {teamPaymentsState.teams.map((team) => {
+                const teamHasPayment =
+                  Boolean(team.paidGame) || Number(team.totalCredited) > 0
+                const paymentsByUserId = new Map(
+                  (Array.isArray(team.memberPayments)
+                    ? team.memberPayments
+                    : []
+                  ).map((item) => [String(item.userId || ''), item]),
+                )
+
+                return (
                 <button
                   type="button"
                   key={team.gameTeamId}
                   onClick={() => handleOpenTeamPaymentsModal(team)}
-                  className="flex w-full cursor-pointer flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50/60 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-emerald-500/45 dark:hover:bg-emerald-500/10 dark:focus:ring-emerald-500/20 sm:flex-row sm:items-center sm:justify-between"
+                  className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50/60 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-emerald-500/45 dark:hover:bg-emerald-500/10 dark:focus:ring-emerald-500/20"
                 >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
                       <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                         {team.teamName || 'Команда без названия'}
                       </p>
-                      {team.paidGame ? (
+                      {paymentMode === 'team' ? (
                         <span
-                          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200"
-                          title="Команда оплатила игру"
+                          className={`inline-flex shrink-0 rounded-full border px-2 py-1 text-xs font-medium ${
+                            teamHasPayment
+                              ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                              : 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
+                          }`}
                         >
-                          <svg
-                            className="h-3.5 w-3.5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <rect x="2" y="6" width="20" height="12" rx="2" />
-                            <circle cx="12" cy="12" r="2.5" />
-                            <line x1="6" y1="10" x2="6" y2="14" />
-                            <line x1="18" y1="10" x2="18" y2="14" />
-                          </svg>
+                          {teamHasPayment ? 'Оплачено' : 'Не оплачено'}
                         </span>
                       ) : null}
                     </div>
@@ -443,15 +490,64 @@ const GameFinancesModal = ({
                       Транзакций: {Number(team.transactionsCount) || 0}
                     </p>
                   </div>
-                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">
-                    {currencyFormatter.format(Number(team.totalPaid) || 0)}
-                  </span>
+                  <div className="text-right">
+                    <span className="block text-sm font-semibold text-emerald-700 dark:text-emerald-200">
+                      {currencyFormatter.format(Number(team.totalPaid) || 0)}
+                    </span>
+                    {Number(team.totalDiscount) > 0 ? (
+                      <span className="block text-xs text-violet-600 dark:text-violet-200">
+                        + скидка {currencyFormatter.format(team.totalDiscount)}
+                      </span>
+                    ) : null}
+                  </div>
+                  </div>
+                  {paymentMode === 'participant' ? (
+                    <div className="mt-3 divide-y divide-slate-100 border-t border-slate-200 pt-2 dark:divide-slate-800 dark:border-slate-700">
+                      {(Array.isArray(team.members) ? team.members : []).map(
+                        (member) => {
+                          const userId = String(member?.userId || '')
+                          const payment = paymentsByUserId.get(userId) || {}
+                          const isPaid = Number(payment.totalCredited) > 0
+                          return (
+                            <div
+                              key={userId || member?.membershipId}
+                              className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"
+                            >
+                              <span className="font-medium text-slate-700 dark:text-slate-200">
+                                {getMemberDisplayName(member)}
+                              </span>
+                              <span className="flex flex-wrap items-center justify-end gap-2">
+                                <span className="text-slate-600 dark:text-slate-300">
+                                  {currencyFormatter.format(
+                                    Number(payment.totalPaid) || 0,
+                                  )}
+                                  {Number(payment.totalDiscount) > 0
+                                    ? ` + скидка ${currencyFormatter.format(payment.totalDiscount)}`
+                                    : ''}
+                                </span>
+                                <span
+                                  className={`rounded-full border px-2 py-1 font-medium ${
+                                    isPaid
+                                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                                      : 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
+                                  }`}
+                                >
+                                  {isPaid ? 'Оплачено' : 'Не оплачено'}
+                                </span>
+                              </span>
+                            </div>
+                          )
+                        },
+                      )}
+                    </div>
+                  ) : null}
                 </button>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <p className="text-sm text-slate-500 dark:text-slate-200">
-              Пока нет зарегистрированных команд или оплат по этой игре.
+              Пока нет зарегистрированных команд по этой игре.
             </p>
           )}
         </ModalSection>
@@ -559,6 +655,7 @@ GameFinancesModal.propTypes = {
         description: PropTypes.string,
       }),
     ),
+    paymentMode: PropTypes.oneOf(['team', 'participant']),
   }),
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,

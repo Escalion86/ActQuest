@@ -9,9 +9,13 @@ import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import { getStoryValidationErrors } from '@helpers/isGameHaveErrors'
+import sanitize from '@helpers/sanitize'
 
 const normalizeText = (value, maxLength = 4000) =>
   typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
+
+const normalizeRichText = (value, maxLength = 50000) =>
+  sanitize(normalizeText(value, maxLength))
 
 const normalizeStringArray = (value) =>
   (Array.isArray(value) ? value : [])
@@ -250,6 +254,279 @@ const normalizeStoryEndings = (endings) =>
     }))
     .filter((ending) => ending.id)
 
+const filterKnownIds = (values, allowedIds) =>
+  normalizeStringArray(values).filter((id) => allowedIds.has(id))
+
+const normalizeInvestigationCharacters = (characters, nodeIds) =>
+  (Array.isArray(characters) ? characters : []).map((character, index) => {
+    const defaultNodeId = normalizeText(character?.defaultNodeId, 100)
+    return {
+      id: normalizeText(character?.id, 100) || `character-${index + 1}`,
+      title: normalizeText(character?.title, 300),
+      subtitle: normalizeText(character?.subtitle, 300),
+      descriptionRich: normalizeRichText(character?.descriptionRich),
+      image: normalizeText(character?.image, 2000),
+      media: normalizeMedia(character?.media),
+      startVisible: normalizeBoolean(character?.startVisible, false),
+      hiddenUntilUnlocked: character?.hiddenUntilUnlocked !== false,
+      defaultNodeId: nodeIds.has(defaultNodeId) ? defaultNodeId : null,
+      position: {
+        x: normalizeNumber(character?.position?.x, 80 + index * 48),
+        y: normalizeNumber(character?.position?.y, 80 + index * 48),
+      },
+    }
+  })
+
+const normalizeInvestigationTopics = (topics) =>
+  (Array.isArray(topics) ? topics : []).map((topic, index) => ({
+    id: normalizeText(topic?.id, 100) || `topic-${index + 1}`,
+    title: normalizeText(topic?.title, 300),
+    descriptionRich: normalizeRichText(topic?.descriptionRich),
+    icon: normalizeText(topic?.icon, 2000),
+    startVisible: normalizeBoolean(topic?.startVisible, false),
+    hiddenUntilUnlocked: topic?.hiddenUntilUnlocked !== false,
+    position: {
+      x: normalizeNumber(topic?.position?.x, 80 + index * 48),
+      y: normalizeNumber(topic?.position?.y, 80 + index * 48),
+    },
+  }))
+
+const normalizeInvestigationEvidence = (evidence) =>
+  (Array.isArray(evidence) ? evidence : []).map((item, index) => ({
+    id: normalizeText(item?.id, 100) || `evidence-${index + 1}`,
+    title: normalizeText(item?.title, 300),
+    descriptionRich: normalizeRichText(item?.descriptionRich),
+    media: normalizeMedia(item?.media),
+    tags: normalizeStringArray(item?.tags).slice(0, 50),
+    weight: normalizeNumber(item?.weight, 0),
+    isKey: normalizeBoolean(item?.isKey, false),
+    hiddenUntilDiscovered: item?.hiddenUntilDiscovered !== false,
+  }))
+
+const normalizeInvestigationInteractions = ({
+  interactions,
+  nodeIds,
+  itemIds,
+  characterIds,
+  topicIds,
+  evidenceIds,
+}) => {
+  const interactionIds = new Set(
+    (Array.isArray(interactions) ? interactions : [])
+      .map((interaction) => normalizeText(interaction?.id, 100))
+      .filter(Boolean),
+  )
+  return (Array.isArray(interactions) ? interactions : []).map(
+    (interaction, index) => {
+      const locationId = normalizeText(interaction?.locationId, 100)
+      const characterId = normalizeText(interaction?.characterId, 100)
+      const topicId = normalizeText(interaction?.topicId, 100)
+      const minElapsedMinutes = Number(interaction?.conditions?.minElapsedMinutes)
+      const maxElapsedMinutes = Number(interaction?.conditions?.maxElapsedMinutes)
+      const endingId = normalizeText(interaction?.effects?.endingId, 100)
+      return {
+        id:
+          normalizeText(interaction?.id, 100) || `interaction-${index + 1}`,
+        kind: ['question', 'examine', 'analysis', 'system'].includes(
+          interaction?.kind,
+        )
+          ? interaction.kind
+          : 'question',
+        locationId: nodeIds.has(locationId) ? locationId : '',
+        characterId: characterIds.has(characterId) ? characterId : null,
+        topicId: topicIds.has(topicId) ? topicId : null,
+        label: normalizeText(interaction?.label, 300),
+        promptRich: normalizeRichText(interaction?.promptRich),
+        responseRich: normalizeRichText(interaction?.responseRich),
+        media: normalizeMedia(interaction?.media),
+        timeCostMinutes: Math.max(
+          0,
+          normalizeNumber(interaction?.timeCostMinutes, 10),
+        ),
+        repeatable: normalizeBoolean(interaction?.repeatable, false),
+        reapplyEffects: normalizeBoolean(interaction?.reapplyEffects, false),
+        conditions: {
+          requiredItemIds: filterKnownIds(
+            interaction?.conditions?.requiredItemIds,
+            itemIds,
+          ),
+          requiredEvidenceIds: filterKnownIds(
+            interaction?.conditions?.requiredEvidenceIds,
+            evidenceIds,
+          ),
+          requiredTopicIds: filterKnownIds(
+            interaction?.conditions?.requiredTopicIds,
+            topicIds,
+          ),
+          requiredCharacterIds: filterKnownIds(
+            interaction?.conditions?.requiredCharacterIds,
+            characterIds,
+          ),
+          requiredInteractionIds: filterKnownIds(
+            interaction?.conditions?.requiredInteractionIds,
+            interactionIds,
+          ),
+          requiredFlagIds: normalizeStringArray(
+            interaction?.conditions?.requiredFlagIds,
+          ),
+          minElapsedMinutes: Number.isFinite(minElapsedMinutes)
+            ? Math.max(0, minElapsedMinutes)
+            : null,
+          maxElapsedMinutes: Number.isFinite(maxElapsedMinutes)
+            ? Math.max(0, maxElapsedMinutes)
+            : null,
+        },
+        effects: {
+          grantsItemIds: filterKnownIds(
+            interaction?.effects?.grantsItemIds,
+            itemIds,
+          ),
+          consumesItemIds: filterKnownIds(
+            interaction?.effects?.consumesItemIds,
+            itemIds,
+          ),
+          grantsEvidenceIds: filterKnownIds(
+            interaction?.effects?.grantsEvidenceIds,
+            evidenceIds,
+          ),
+          unlocksNodeIds: filterKnownIds(
+            interaction?.effects?.unlocksNodeIds,
+            nodeIds,
+          ),
+          unlocksCharacterIds: filterKnownIds(
+            interaction?.effects?.unlocksCharacterIds,
+            characterIds,
+          ),
+          unlocksTopicIds: filterKnownIds(
+            interaction?.effects?.unlocksTopicIds,
+            topicIds,
+          ),
+          setsFlagIds: normalizeStringArray(interaction?.effects?.setsFlagIds),
+          scoreBonus: normalizeNumber(interaction?.effects?.scoreBonus, 0),
+          scorePenalty: normalizeNumber(interaction?.effects?.scorePenalty, 0),
+          endingId: endingId || null,
+        },
+        journal: {
+          title: normalizeText(interaction?.journal?.title, 300),
+          summaryRich: normalizeRichText(interaction?.journal?.summaryRich),
+          kind: ['testimony', 'evidence', 'observation', 'system'].includes(
+            interaction?.journal?.kind,
+          )
+            ? interaction.journal.kind
+            : 'observation',
+        },
+      }
+    },
+  )
+}
+
+const normalizeInvestigationAccusation = ({
+  accusation,
+  nodeIds,
+  characterIds,
+  topicIds,
+  interactionIds,
+  evidenceIds,
+  endingIds,
+}) => {
+  const motives = (Array.isArray(accusation?.motives)
+    ? accusation.motives
+    : []
+  ).map((motive, index) => ({
+    id: normalizeText(motive?.id, 100) || `motive-${index + 1}`,
+    title: normalizeText(motive?.title, 500),
+  }))
+  const motiveIds = new Set(motives.map((motive) => motive.id))
+  const normalizeKnownId = (value, allowedIds) => {
+    const id = normalizeText(value, 100)
+    return allowedIds.has(id) ? id : null
+  }
+  return {
+    enabled: normalizeBoolean(accusation?.enabled, false),
+    requiredNodeId: normalizeKnownId(accusation?.requiredNodeId, nodeIds),
+    unlockTopicId: normalizeKnownId(accusation?.unlockTopicId, topicIds),
+    availability: {
+      minKeyEvidence: Math.max(
+        0,
+        Math.trunc(normalizeNumber(accusation?.availability?.minKeyEvidence, 0)),
+      ),
+      requiredEvidenceIds: filterKnownIds(
+        accusation?.availability?.requiredEvidenceIds,
+        evidenceIds,
+      ),
+      requiredInteractionIds: filterKnownIds(
+        accusation?.availability?.requiredInteractionIds,
+        interactionIds,
+      ),
+    },
+    culpritCharacterIds: filterKnownIds(
+      accusation?.culpritCharacterIds,
+      characterIds,
+    ),
+    motives,
+    minSelectableEvidence: Math.max(
+      0,
+      Math.trunc(normalizeNumber(accusation?.minSelectableEvidence, 0)),
+    ),
+    maxSelectableEvidence: Math.max(
+      0,
+      Math.trunc(normalizeNumber(accusation?.maxSelectableEvidence, 5)),
+    ),
+    correctCulpritId: normalizeKnownId(
+      accusation?.correctCulpritId,
+      characterIds,
+    ),
+    correctMotiveId: normalizeKnownId(accusation?.correctMotiveId, motiveIds),
+    outcomes: (Array.isArray(accusation?.outcomes)
+      ? accusation.outcomes
+      : []
+    ).map((outcome, index) => ({
+      id: normalizeText(outcome?.id, 100) || `outcome-${index + 1}`,
+      priority: normalizeNumber(outcome?.priority, 0),
+      endingId: normalizeKnownId(outcome?.endingId, endingIds),
+      conditions: {
+        culprit: ['any', 'correct', 'incorrect'].includes(
+          outcome?.conditions?.culprit,
+        )
+          ? outcome.conditions.culprit
+          : 'any',
+        motive: ['any', 'correct', 'incorrect'].includes(
+          outcome?.conditions?.motive,
+        )
+          ? outcome.conditions.motive
+          : 'any',
+        minSelectedEvidence: Math.max(
+          0,
+          Math.trunc(
+            normalizeNumber(outcome?.conditions?.minSelectedEvidence, 0),
+          ),
+        ),
+        minKeyEvidence: Math.max(
+          0,
+          Math.trunc(normalizeNumber(outcome?.conditions?.minKeyEvidence, 0)),
+        ),
+        requiredEvidenceIds: filterKnownIds(
+          outcome?.conditions?.requiredEvidenceIds,
+          evidenceIds,
+        ),
+        requiredEvidenceTags: normalizeStringArray(
+          outcome?.conditions?.requiredEvidenceTags,
+        ),
+        maxElapsedMinutes:
+          outcome?.conditions?.maxElapsedMinutes === null
+            ? null
+            : normalizeNumber(outcome?.conditions?.maxElapsedMinutes, null),
+        maxUsedClues:
+          outcome?.conditions?.maxUsedClues === null
+            ? null
+            : normalizeNumber(outcome?.conditions?.maxUsedClues, null),
+      },
+    })),
+    fallbackEndingId: normalizeKnownId(accusation?.fallbackEndingId, endingIds),
+    timeoutEndingId: normalizeKnownId(accusation?.timeoutEndingId, endingIds),
+  }
+}
+
 const buildHistoryActorFromSession = (session) => ({
   userId:
     session?.user?.globalUserId ??
@@ -311,6 +588,10 @@ const buildEditorPayload = (game) => ({
     status: normalizeText(game?.status),
     type: normalizeText(game?.type),
     storyConfig: {
+      experienceMode:
+        game?.storyConfig?.experienceMode === 'investigation'
+          ? 'investigation'
+          : 'quest',
       nodeLabel: normalizeText(game?.storyConfig?.nodeLabel, 100) || 'Локация',
       startMode:
         game?.storyConfig?.startMode === 'individual' ? 'individual' : 'common',
@@ -319,11 +600,57 @@ const buildEditorPayload = (game) => ({
       showInventory: game?.storyConfig?.showInventory !== false,
       showScoreToTeam: Boolean(game?.storyConfig?.showScoreToTeam),
       showFinalHistoryToTeam: Boolean(game?.storyConfig?.showFinalHistoryToTeam),
+      investigation: {
+        startNodeId:
+          normalizeText(game?.storyConfig?.investigation?.startNodeId, 100) ||
+          null,
+        startClockMinutes: normalizeNumber(
+          game?.storyConfig?.investigation?.startClockMinutes,
+          0,
+        ),
+        deadlineMinutes:
+          game?.storyConfig?.investigation?.deadlineMinutes ?? null,
+        defaultTravelTimeMinutes: normalizeNumber(
+          game?.storyConfig?.investigation?.defaultTravelTimeMinutes,
+          10,
+        ),
+        defaultInteractionTimeMinutes: normalizeNumber(
+          game?.storyConfig?.investigation?.defaultInteractionTimeMinutes,
+          10,
+        ),
+        accusationTimeMinutes: normalizeNumber(
+          game?.storyConfig?.investigation?.accusationTimeMinutes,
+          10,
+        ),
+        allowFreeReplay:
+          game?.storyConfig?.investigation?.allowFreeReplay !== false,
+        showClockToTeam:
+          game?.storyConfig?.investigation?.showClockToTeam !== false,
+        showEvidenceToTeam:
+          game?.storyConfig?.investigation?.showEvidenceToTeam !== false,
+        autoFailOnDeadline:
+          game?.storyConfig?.investigation?.autoFailOnDeadline !== false,
+        revealSolutionAfterFinish: Boolean(
+          game?.storyConfig?.investigation?.revealSolutionAfterFinish,
+        ),
+      },
     },
     storyItems: Array.isArray(game?.storyItems) ? game.storyItems : [],
     storyNodes: Array.isArray(game?.storyNodes) ? game.storyNodes : [],
     storyEdges: Array.isArray(game?.storyEdges) ? game.storyEdges : [],
     storyEndings: Array.isArray(game?.storyEndings) ? game.storyEndings : [],
+    storyCharacters: Array.isArray(game?.storyCharacters)
+      ? game.storyCharacters
+      : [],
+    storyTopics: Array.isArray(game?.storyTopics) ? game.storyTopics : [],
+    storyInteractions: Array.isArray(game?.storyInteractions)
+      ? game.storyInteractions
+      : [],
+    storyEvidence: Array.isArray(game?.storyEvidence) ? game.storyEvidence : [],
+    storyAccusation:
+      game?.storyAccusation && typeof game.storyAccusation === 'object'
+        ? game.storyAccusation
+        : {},
     agents: Array.isArray(game?.agents) ? game.agents : [],
     validationErrors: getStoryValidationErrors(game),
   },
@@ -398,9 +725,49 @@ export async function PATCH(request) {
       normalizedStoryNodes,
       storyEdges,
     )
+    const storyEndings = normalizeStoryEndings(payload?.storyEndings)
+    const endingIds = new Set(storyEndings.map((ending) => ending.id))
+    const storyCharacters = normalizeInvestigationCharacters(
+      payload?.storyCharacters,
+      nodeIds,
+    )
+    const storyTopics = normalizeInvestigationTopics(payload?.storyTopics)
+    const storyEvidence = normalizeInvestigationEvidence(payload?.storyEvidence)
+    const characterIds = new Set(
+      storyCharacters.map((character) => character.id),
+    )
+    const topicIds = new Set(storyTopics.map((topic) => topic.id))
+    const evidenceIds = new Set(storyEvidence.map((evidence) => evidence.id))
+    const storyInteractions = normalizeInvestigationInteractions({
+      interactions: payload?.storyInteractions,
+      nodeIds,
+      itemIds,
+      characterIds,
+      topicIds,
+      evidenceIds,
+    })
+    const interactionIds = new Set(
+      storyInteractions.map((interaction) => interaction.id),
+    )
+    const storyAccusation = normalizeInvestigationAccusation({
+      accusation: payload?.storyAccusation,
+      nodeIds,
+      characterIds,
+      topicIds,
+      interactionIds,
+      evidenceIds,
+      endingIds,
+    })
+    const investigationConfig = storyConfig?.investigation || {}
+    const startNodeId = normalizeText(investigationConfig?.startNodeId, 100)
+    const deadlineMinutes = Number(investigationConfig?.deadlineMinutes)
     const update = {
       type: 'story',
       storyConfig: {
+        experienceMode:
+          storyConfig?.experienceMode === 'investigation'
+            ? 'investigation'
+            : 'quest',
         nodeLabel: normalizeText(storyConfig?.nodeLabel, 100) || 'Локация',
         startMode:
           storyConfig?.startMode === 'individual' ? 'individual' : 'common',
@@ -409,18 +776,61 @@ export async function PATCH(request) {
         showInventory: storyConfig?.showInventory !== false,
         showScoreToTeam: Boolean(storyConfig?.showScoreToTeam),
         showFinalHistoryToTeam: Boolean(storyConfig?.showFinalHistoryToTeam),
+        investigation: {
+          startNodeId: nodeIds.has(startNodeId) ? startNodeId : null,
+          startClockMinutes: Math.max(
+            0,
+            normalizeNumber(investigationConfig?.startClockMinutes, 0),
+          ),
+          deadlineMinutes:
+            Number.isFinite(deadlineMinutes) && deadlineMinutes >= 0
+              ? deadlineMinutes
+              : null,
+          defaultTravelTimeMinutes: Math.max(
+            0,
+            normalizeNumber(
+              investigationConfig?.defaultTravelTimeMinutes,
+              10,
+            ),
+          ),
+          defaultInteractionTimeMinutes: Math.max(
+            0,
+            normalizeNumber(
+              investigationConfig?.defaultInteractionTimeMinutes,
+              10,
+            ),
+          ),
+          accusationTimeMinutes: Math.max(
+            0,
+            normalizeNumber(investigationConfig?.accusationTimeMinutes, 10),
+          ),
+          allowFreeReplay: investigationConfig?.allowFreeReplay !== false,
+          showClockToTeam: investigationConfig?.showClockToTeam !== false,
+          showEvidenceToTeam:
+            investigationConfig?.showEvidenceToTeam !== false,
+          autoFailOnDeadline:
+            investigationConfig?.autoFailOnDeadline !== false,
+          revealSolutionAfterFinish: Boolean(
+            investigationConfig?.revealSolutionAfterFinish,
+          ),
+        },
       },
       storyItems,
       storyNodes,
       storyEdges,
-      storyEndings: normalizeStoryEndings(payload?.storyEndings),
+      storyEndings,
+      storyCharacters,
+      storyTopics,
+      storyInteractions,
+      storyEvidence,
+      storyAccusation,
     }
 
     const Games = context.db.model('Games')
     const updatedGame = await Games.findByIdAndUpdate(
       context.game._id,
       { $set: update },
-      { new: true },
+      { returnDocument: 'after' },
     )
 
     const afterHistoryState = await fetchGameHistoryState({

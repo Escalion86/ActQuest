@@ -469,6 +469,8 @@ const storyEndingTypeLabels = {
 
 const StoryGameBlock = ({ game }) => {
   const computed = game?.result?.computed || {}
+  const isInvestigation =
+    computed?.summary?.experienceMode === 'investigation'
   const teams = [
     ...(Array.isArray(computed?.teams) ? computed.teams : []),
     ...(Array.isArray(computed?.outOfCompetitionTeams)
@@ -485,8 +487,9 @@ const StoryGameBlock = ({ game }) => {
           </p>
           <h1 className="mt-2 text-3xl font-bold">{game?.name || 'Story-квест'}</h1>
           <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-            Команды проходят сюжет независимо, поэтому места не присваиваются.
-            Итог определяется достигнутой концовкой и набранными баллами.
+            {isInvestigation
+              ? 'Команды расследуют дело независимо. Итог определяется предъявленным обвинением, найденными доказательствами и концовкой.'
+              : 'Команды проходят сюжет независимо, поэтому места не присваиваются. Итог определяется достигнутой концовкой и набранными баллами.'}
           </p>
         </header>
 
@@ -530,6 +533,49 @@ const StoryGameBlock = ({ game }) => {
                     <dd className="mt-1 font-semibold">{team.activeItemsCount}</dd>
                   </div>
                 </dl>
+
+                {team.investigation ? (
+                  <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4 text-sm dark:border-cyan-500/30 dark:bg-cyan-500/10">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">
+                          Игровое время
+                        </p>
+                        <p className="font-semibold">
+                          {team.investigation.elapsedMinutes} мин.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-400">
+                          Найдено улик
+                        </p>
+                        <p className="font-semibold">
+                          {team.investigation.discoveredEvidenceCount}
+                        </p>
+                      </div>
+                    </div>
+                    {team.investigation.accusation ? (
+                      <div className="mt-3 border-t border-cyan-200 pt-3 dark:border-cyan-500/30">
+                        <p className="font-semibold">Версия команды</p>
+                        <p className="mt-1">
+                          {team.investigation.accusation.culpritTitle ||
+                            team.investigation.accusation.culpritId}
+                          {' · '}
+                          {team.investigation.accusation.motiveTitle ||
+                            team.investigation.accusation.motiveId}
+                        </p>
+                        {Array.isArray(team.investigation.selectedEvidence) &&
+                        team.investigation.selectedEvidence.length > 0 ? (
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {team.investigation.selectedEvidence.map((item) => (
+                              <li key={item.id}>{item.title || item.id}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {team.ending ? (
                   <div className="mt-4 rounded-2xl border border-violet-300 bg-violet-50 p-4 dark:border-violet-500/30 dark:bg-violet-500/10">

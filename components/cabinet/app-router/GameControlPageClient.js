@@ -465,10 +465,21 @@ const StoryControlTeamCard = ({ game, team, onMutation, isMutating }) => {
   const [selectedNodeId, setSelectedNodeId] = useState('')
   const [selectedEndingId, setSelectedEndingId] = useState('')
   const [scoreDelta, setScoreDelta] = useState('')
+  const [timeDelta, setTimeDelta] = useState('')
+  const [selectedCharacterId, setSelectedCharacterId] = useState('')
+  const [selectedTopicId, setSelectedTopicId] = useState('')
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState('')
 
   const items = Array.isArray(game?.storyItems) ? game.storyItems : []
   const nodes = Array.isArray(game?.storyNodes) ? game.storyNodes : []
   const endings = Array.isArray(game?.storyEndings) ? game.storyEndings : []
+  const characters = Array.isArray(game?.storyCharacters)
+    ? game.storyCharacters
+    : []
+  const topics = Array.isArray(game?.storyTopics) ? game.storyTopics : []
+  const evidence = Array.isArray(game?.storyEvidence) ? game.storyEvidence : []
+  const investigationMode =
+    game?.storyConfig?.experienceMode === 'investigation'
   const progress = team?.progress || {}
   const inventory = Array.isArray(progress?.inventory) ? progress.inventory : []
   const activeInventory = inventory.filter((item) => item?.status === 'active')
@@ -496,6 +507,9 @@ const StoryControlTeamCard = ({ game, team, onMutation, isMutating }) => {
   const selectedItem = selectedItemId || items[0]?.id || ''
   const selectedNode = selectedNodeId || nodes[0]?.id || ''
   const selectedEnding = selectedEndingId || endings[0]?.id || ''
+  const selectedCharacter = selectedCharacterId || characters[0]?.id || ''
+  const selectedTopic = selectedTopicId || topics[0]?.id || ''
+  const selectedEvidence = selectedEvidenceId || evidence[0]?.id || ''
 
   const run = (endpoint, payload) =>
     onMutation(endpoint, {
@@ -575,6 +589,43 @@ const StoryControlTeamCard = ({ game, team, onMutation, isMutating }) => {
       </div>
 
       <div className="grid gap-3 p-3 mt-4 border rounded-lg border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50">
+        {investigationMode ? (
+          <div className="grid gap-3 rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-500/30 dark:bg-violet-500/10">
+            <div className="grid gap-2 text-sm sm:grid-cols-3">
+              <p><span className="text-slate-500">Текущая локация:</span> {nodesById.get(progress?.currentNodeId)?.title || progress?.currentNodeId || '—'}</p>
+              <p><span className="text-slate-500">Игровое время:</span> {Number(progress?.elapsedMinutes) || 0} мин.</p>
+              <p><span className="text-slate-500">Доказательств:</span> {Array.isArray(progress?.discoveredEvidenceIds) ? progress.discoveredEvidenceIds.length : 0}</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <select value={selectedNode} onChange={(event) => setSelectedNodeId(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800">
+                {nodes.map((node) => <option key={node.id} value={node.id}>{node.title || node.id}</option>)}
+              </select>
+              <button type="button" disabled={isMutating || !selectedNode} onClick={() => run('set-location', { nodeId: selectedNode })} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">Переместить</button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input type="number" value={timeDelta} onChange={(event) => setTimeDelta(event.target.value)} placeholder="Минуты: +10 или -10" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800" />
+              <button type="button" disabled={isMutating || !Number(timeDelta)} onClick={() => { void run('adjust-time', { minutes: Number(timeDelta) }); setTimeDelta('') }} className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">Изменить время</button>
+            </div>
+            {[
+              ['unlock-character', 'characterId', characters, selectedCharacter, setSelectedCharacterId, 'Открыть персонажа'],
+              ['unlock-topic', 'topicId', topics, selectedTopic, setSelectedTopicId, 'Открыть тему'],
+              ['grant-evidence', 'evidenceId', evidence, selectedEvidence, setSelectedEvidenceId, 'Выдать доказательство'],
+            ].map(([endpoint, field, options, selected, setter, label]) => (
+              <div key={endpoint} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <select value={selected} onChange={(event) => setter(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800">
+                  {options.length === 0 ? <option value="">Нет вариантов</option> : null}
+                  {options.map((option) => <option key={option.id} value={option.id}>{option.title || option.id}</option>)}
+                </select>
+                <button type="button" disabled={isMutating || !selected} onClick={() => run(endpoint, { [field]: selected })} className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{label}</button>
+              </div>
+            ))}
+            {progress?.accusation?.submittedAt ? (
+              <p className="rounded-lg bg-white/70 p-3 text-sm dark:bg-slate-900/50">
+                Обвинение: {progress.accusation.culpritId} · {progress.accusation.motiveId} · исход {progress.accusation.outcomeId || 'fallback'}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
           <select
             value={selectedItem}
@@ -743,9 +794,13 @@ const StoryControlTeamCard = ({ game, team, onMutation, isMutating }) => {
 
 StoryControlTeamCard.propTypes = {
   game: PropTypes.shape({
+    storyConfig: PropTypes.object,
     storyItems: PropTypes.array,
     storyNodes: PropTypes.array,
     storyEndings: PropTypes.array,
+    storyCharacters: PropTypes.array,
+    storyTopics: PropTypes.array,
+    storyEvidence: PropTypes.array,
   }).isRequired,
   team: PropTypes.shape({
     team: PropTypes.shape({

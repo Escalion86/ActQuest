@@ -215,6 +215,187 @@ const StoryEdgeSchema = new Schema(
   { _id: false },
 )
 
+const StoryInvestigationCharacterSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, default: '' },
+    subtitle: { type: String, trim: true, default: '' },
+    descriptionRich: { type: String, default: '' },
+    image: { type: String, trim: true, default: '' },
+    media: { type: [StoryMediaSchema], default: [] },
+    startVisible: { type: Boolean, default: false },
+    hiddenUntilUnlocked: { type: Boolean, default: true },
+    defaultNodeId: { type: String, trim: true, default: null },
+    position: {
+      type: {
+        x: { type: Number, default: 0 },
+        y: { type: Number, default: 0 },
+      },
+      default: () => ({}),
+    },
+  },
+  { _id: false },
+)
+
+const StoryInvestigationTopicSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, default: '' },
+    descriptionRich: { type: String, default: '' },
+    icon: { type: String, trim: true, default: '' },
+    startVisible: { type: Boolean, default: false },
+    hiddenUntilUnlocked: { type: Boolean, default: true },
+    position: {
+      type: {
+        x: { type: Number, default: 0 },
+        y: { type: Number, default: 0 },
+      },
+      default: () => ({}),
+    },
+  },
+  { _id: false },
+)
+
+const StoryInvestigationEvidenceSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, default: '' },
+    descriptionRich: { type: String, default: '' },
+    media: { type: [StoryMediaSchema], default: [] },
+    tags: { type: [String], default: [] },
+    weight: { type: Number, default: 0 },
+    isKey: { type: Boolean, default: false },
+    hiddenUntilDiscovered: { type: Boolean, default: true },
+  },
+  { _id: false },
+)
+
+const StoryInvestigationInteractionSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    kind: {
+      type: String,
+      enum: ['question', 'examine', 'analysis', 'system'],
+      default: 'question',
+    },
+    locationId: { type: String, trim: true, required: true },
+    characterId: { type: String, trim: true, default: null },
+    topicId: { type: String, trim: true, default: null },
+    label: { type: String, trim: true, default: '' },
+    promptRich: { type: String, default: '' },
+    responseRich: { type: String, default: '' },
+    media: { type: [StoryMediaSchema], default: [] },
+    timeCostMinutes: { type: Number, default: 10, min: 0 },
+    repeatable: { type: Boolean, default: false },
+    reapplyEffects: { type: Boolean, default: false },
+    conditions: {
+      type: {
+        requiredItemIds: { type: [String], default: [] },
+        requiredEvidenceIds: { type: [String], default: [] },
+        requiredTopicIds: { type: [String], default: [] },
+        requiredCharacterIds: { type: [String], default: [] },
+        requiredInteractionIds: { type: [String], default: [] },
+        requiredFlagIds: { type: [String], default: [] },
+        minElapsedMinutes: { type: Number, default: null },
+        maxElapsedMinutes: { type: Number, default: null },
+      },
+      default: () => ({}),
+    },
+    effects: {
+      type: {
+        grantsItemIds: { type: [String], default: [] },
+        consumesItemIds: { type: [String], default: [] },
+        grantsEvidenceIds: { type: [String], default: [] },
+        unlocksNodeIds: { type: [String], default: [] },
+        unlocksCharacterIds: { type: [String], default: [] },
+        unlocksTopicIds: { type: [String], default: [] },
+        setsFlagIds: { type: [String], default: [] },
+        scoreBonus: { type: Number, default: 0 },
+        scorePenalty: { type: Number, default: 0 },
+        endingId: { type: String, trim: true, default: null },
+      },
+      default: () => ({}),
+    },
+    journal: {
+      type: {
+        title: { type: String, trim: true, default: '' },
+        summaryRich: { type: String, default: '' },
+        kind: {
+          type: String,
+          enum: ['testimony', 'evidence', 'observation', 'system'],
+          default: 'observation',
+        },
+      },
+      default: () => ({}),
+    },
+  },
+  { _id: false },
+)
+
+const StoryInvestigationOutcomeSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    priority: { type: Number, default: 0 },
+    endingId: { type: String, trim: true, required: true },
+    conditions: {
+      type: {
+        culprit: {
+          type: String,
+          enum: ['any', 'correct', 'incorrect'],
+          default: 'any',
+        },
+        motive: {
+          type: String,
+          enum: ['any', 'correct', 'incorrect'],
+          default: 'any',
+        },
+        minSelectedEvidence: { type: Number, default: 0, min: 0 },
+        minKeyEvidence: { type: Number, default: 0, min: 0 },
+        requiredEvidenceIds: { type: [String], default: [] },
+        requiredEvidenceTags: { type: [String], default: [] },
+        maxElapsedMinutes: { type: Number, default: null },
+        maxUsedClues: { type: Number, default: null },
+      },
+      default: () => ({}),
+    },
+  },
+  { _id: false },
+)
+
+const StoryInvestigationAccusationSchema = new Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    requiredNodeId: { type: String, trim: true, default: null },
+    unlockTopicId: { type: String, trim: true, default: null },
+    availability: {
+      type: {
+        minKeyEvidence: { type: Number, default: 0, min: 0 },
+        requiredEvidenceIds: { type: [String], default: [] },
+        requiredInteractionIds: { type: [String], default: [] },
+      },
+      default: () => ({}),
+    },
+    culpritCharacterIds: { type: [String], default: [] },
+    motives: {
+      type: [
+        {
+          id: { type: String, trim: true, required: true },
+          title: { type: String, trim: true, default: '' },
+        },
+      ],
+      default: [],
+    },
+    minSelectableEvidence: { type: Number, default: 0, min: 0 },
+    maxSelectableEvidence: { type: Number, default: 5, min: 0 },
+    correctCulpritId: { type: String, trim: true, default: null },
+    correctMotiveId: { type: String, trim: true, default: null },
+    outcomes: { type: [StoryInvestigationOutcomeSchema], default: [] },
+    fallbackEndingId: { type: String, trim: true, default: null },
+    timeoutEndingId: { type: String, trim: true, default: null },
+  },
+  { _id: false },
+)
+
 const PrequelMediaSchema = new Schema(
   {
     id: { type: String, trim: true },
@@ -596,6 +777,11 @@ const gamesSchema = {
   },
   storyConfig: {
     type: {
+      experienceMode: {
+        type: String,
+        enum: ['quest', 'investigation'],
+        default: 'quest',
+      },
       nodeLabel: { type: String, trim: true, default: 'Локация' },
       startMode: {
         type: String,
@@ -607,6 +793,22 @@ const gamesSchema = {
       showInventory: { type: Boolean, default: true },
       showScoreToTeam: { type: Boolean, default: false },
       showFinalHistoryToTeam: { type: Boolean, default: false },
+      investigation: {
+        type: {
+          startNodeId: { type: String, trim: true, default: null },
+          startClockMinutes: { type: Number, default: 0, min: 0 },
+          deadlineMinutes: { type: Number, default: null, min: 0 },
+          defaultTravelTimeMinutes: { type: Number, default: 10, min: 0 },
+          defaultInteractionTimeMinutes: { type: Number, default: 10, min: 0 },
+          accusationTimeMinutes: { type: Number, default: 10, min: 0 },
+          allowFreeReplay: { type: Boolean, default: true },
+          showClockToTeam: { type: Boolean, default: true },
+          showEvidenceToTeam: { type: Boolean, default: true },
+          autoFailOnDeadline: { type: Boolean, default: true },
+          revealSolutionAfterFinish: { type: Boolean, default: false },
+        },
+        default: () => ({}),
+      },
     },
     default: () => ({}),
   },
@@ -625,6 +827,26 @@ const gamesSchema = {
   storyEndings: {
     type: [StoryEndingSchema],
     default: [],
+  },
+  storyCharacters: {
+    type: [StoryInvestigationCharacterSchema],
+    default: [],
+  },
+  storyTopics: {
+    type: [StoryInvestigationTopicSchema],
+    default: [],
+  },
+  storyInteractions: {
+    type: [StoryInvestigationInteractionSchema],
+    default: [],
+  },
+  storyEvidence: {
+    type: [StoryInvestigationEvidenceSchema],
+    default: [],
+  },
+  storyAccusation: {
+    type: StoryInvestigationAccusationSchema,
+    default: () => ({}),
   },
   taskDuration: {
     type: Number,
@@ -767,6 +989,11 @@ const gamesSchema = {
     type: Number,
     default: null,
     min: 1,
+  },
+  paymentMode: {
+    type: String,
+    enum: ['team', 'participant'],
+    default: 'team',
   },
   prices: {
     type: [{ id: String, name: { type: String, trim: true }, price: Number }],
