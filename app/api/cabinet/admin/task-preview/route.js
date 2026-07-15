@@ -6,6 +6,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
+import { resolveRequiredMainCodesCount } from '@helpers/classicGameRules'
 
 const normalizeString = (value) =>
   typeof value === 'string' ? value.trim() : ''
@@ -52,18 +53,9 @@ const normalizeTaskForPreview = (task) => ({
     : [],
 })
 
-const toFiniteNonNegativeIntegerOrNull = (value) => {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return null
-  const normalized = Math.floor(numeric)
-  return normalized >= 0 ? normalized : null
-}
-
 const buildTaskDisplayMeta = (task) => ({
   mainCodesCount: Array.isArray(task?.codes) ? task.codes.length : 0,
-  requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
-    task?.numCodesToCompliteTask,
-  ),
+  requiredCodesCount: resolveRequiredMainCodesCount(task),
   bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
   penaltyCodesCount: Array.isArray(task?.penaltyCodes)
     ? task.penaltyCodes.length

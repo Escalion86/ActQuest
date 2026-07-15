@@ -139,6 +139,7 @@ export async function GET(request) {
         descriptionRich: 1,
         descriptionMedia: 1,
         prequel: 1,
+        prequels: 1,
         image: 1,
         startingPlace: 1,
         finishingPlace: 1,

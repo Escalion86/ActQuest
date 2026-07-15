@@ -17,6 +17,7 @@ import { getCaptainRoleQuery } from '@helpers/teamRoles'
 import {
   hasPrequelAdjustments,
   normalizePrequelProgress,
+  normalizePrequelProgresses,
 } from '@helpers/normalizePrequel'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
@@ -136,7 +137,19 @@ const normalizeGameTeamEntry = (doc) => {
     return null
   }
 
-  const prequelProgress = normalizePrequelProgress(doc?.prequelProgress)
+  const prequelProgresses = normalizePrequelProgresses(
+    Array.isArray(doc?.prequelProgresses) && doc.prequelProgresses.length > 0
+      ? doc.prequelProgresses
+      : doc?.prequelProgress
+        ? [doc.prequelProgress]
+        : [],
+  )
+  const prequelProgress = {
+    ...normalizePrequelProgress(doc?.prequelProgress),
+    appliedAdjustments: prequelProgresses.flatMap(
+      (item) => item.appliedAdjustments,
+    ),
+  }
   const prequelAdjustments = (
     Array.isArray(prequelProgress.appliedAdjustments)
       ? prequelProgress.appliedAdjustments
@@ -217,7 +230,7 @@ const normalizeGameTeamEntry = (doc) => {
         ? doc.taskSequenceSource
         : 'linear',
     timeAddings: normalizeTimeAddingsForResponse(doc?.timeAddings),
-    hasPrequelAdjustments: hasPrequelAdjustments(doc?.prequelProgress),
+    hasPrequelAdjustments: prequelProgresses.some(hasPrequelAdjustments),
     prequelAdjustments,
   }
 }
@@ -799,6 +812,7 @@ export async function GET(request, { params }) {
         taskSequenceSource: 1,
         timeAddings: 1,
         prequelProgress: 1,
+        prequelProgresses: 1,
       })
       .lean()
 

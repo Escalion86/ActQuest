@@ -42,7 +42,9 @@ const buildResetPayload = ({
   taskFailures: [],
   ...(clearTimeAddings ? { timeAddings: [] } : {}),
   storyProgress: null,
-  ...(clearPrequelProgress ? { prequelProgress: null } : {}),
+  ...(clearPrequelProgress
+    ? { prequelProgress: null, prequelProgresses: [] }
+    : {}),
   timerId: null,
 })
 
@@ -224,18 +226,24 @@ const sanitizePrequelContent = (prequel = {}) => {
     descriptionPlainRaw.trim() || stripHtmlToPlainText(descriptionRich)
 
   const bonusCodes = sanitizePrequelCodeItems(normalized.bonusCodes, 'bonus')
+  const mainCodes = sanitizePrequelCodeItems(normalized.mainCodes, 'main')
   const penaltyCodes = sanitizePrequelCodeItems(
     normalized.penaltyCodes,
     'penalty',
   )
 
-  const duplicateAcrossKinds = bonusCodes.find((bonusCode) =>
-    penaltyCodes.some(
-      (penaltyCode) =>
-        normalizeCodeDuplicateKey(penaltyCode.code) ===
-        normalizeCodeDuplicateKey(bonusCode.code),
-    ),
-  )
+  const allCodes = [
+    ...mainCodes.map((item) => ({ ...item, kind: 'основным' })),
+    ...bonusCodes.map((item) => ({ ...item, kind: 'бонусным' })),
+    ...penaltyCodes.map((item) => ({ ...item, kind: 'штрафным' })),
+  ]
+  const seenAcrossKinds = new Map()
+  const duplicateAcrossKinds = allCodes.find((item) => {
+    const key = normalizeCodeDuplicateKey(item.code)
+    const previousKind = seenAcrossKinds.get(key)
+    seenAcrossKinds.set(key, item.kind)
+    return previousKind && previousKind !== item.kind
+  })
 
   if (duplicateAcrossKinds) {
     const error = new Error(
@@ -252,12 +260,38 @@ const sanitizePrequelContent = (prequel = {}) => {
 
   return {
     ...buildDefaultPrequel(),
+    id:
+      typeof normalized.id === 'string' && normalized.id.trim()
+        ? normalized.id.trim()
+        : `prequel-${Date.now()}`,
+    title:
+      typeof normalized.title === 'string' ? normalized.title.trim() : '',
     enabled: Boolean(normalized.enabled),
     openAt: normalized.openAt,
     description: descriptionPlain,
     descriptionRich,
     descriptionMedia: sanitizeTaskMedia(normalized.descriptionMedia),
     mode: normalized.mode,
+    mainCodes,
+    requiredMainCodesCount:
+      mainCodes.length > 0 &&
+      Number.isInteger(Number(normalized.requiredMainCodesCount)) &&
+      Number(normalized.requiredMainCodesCount) >= 1 &&
+      Number(normalized.requiredMainCodesCount) <= mainCodes.length
+        ? Number(normalized.requiredMainCodesCount)
+        : null,
+    completionBonus: {
+      value: Number(normalized?.completionBonus?.value) || 0,
+      description:
+        typeof normalized?.completionBonus?.description === 'string'
+          ? normalized.completionBonus.description.trim()
+          : '',
+      storyEffects: (
+        Array.isArray(normalized?.completionBonus?.storyEffects)
+          ? normalized.completionBonus.storyEffects
+          : []
+      ).map(normalizePrequelStoryEffect),
+    },
     bonusCodes,
     penaltyCodes,
     wrongAttemptsLimit,
@@ -270,10 +304,30 @@ const sanitizePrequelContent = (prequel = {}) => {
   }
 }
 
+const sanitizePrequelCollection = (prequels) => {
+  const seenIds = new Set()
+  return (Array.isArray(prequels) ? prequels : []).map((item, index) => {
+    const sanitized = sanitizePrequelContent(item)
+    const requestedId = String(sanitized.id || '').trim()
+    const id =
+      requestedId && !seenIds.has(requestedId)
+        ? requestedId
+        : `prequel-${Date.now()}-${index}`
+    seenIds.add(id)
+    return {
+      ...sanitized,
+      id,
+      title: sanitized.title || `Приквел ${index + 1}`,
+    }
+  })
+}
+
 const resolvePrequelResetMode = ({ updatePayload, gameTeams }) => {
   const teamDocs = Array.isArray(gameTeams) ? gameTeams : []
   const hasResolvedPrequel = teamDocs.some((gameTeam) =>
-    hasPrequelAdjustments(gameTeam?.prequelProgress),
+    hasPrequelAdjustments(gameTeam?.prequelProgress) ||
+    (Array.isArray(gameTeam?.prequelProgresses) &&
+      gameTeam.prequelProgresses.some(hasPrequelAdjustments)),
   )
 
   const requestedMode =
@@ -760,10 +814,17 @@ const execute = (request, params) =>
 
         const hasPrequelContentKeys =
           Object.prototype.hasOwnProperty.call(updateData, 'prequel') ||
+          Object.prototype.hasOwnProperty.call(updateData, 'prequels') ||
           Object.prototype.hasOwnProperty.call(updateData, 'prequelEnabled')
 
         if (hasPrequelContentKeys) {
-          updateData.prequel = sanitizePrequelContent(updateData.prequel)
+          const rawPrequels = Array.isArray(updateData.prequels)
+            ? updateData.prequels
+            : updateData.prequel
+              ? [updateData.prequel]
+              : []
+          updateData.prequels = sanitizePrequelCollection(rawPrequels)
+          updateData.prequel = updateData.prequels[0] || buildDefaultPrequel()
         }
 
         if (Object.prototype.hasOwnProperty.call(updateData, 'creatorUserId')) {
@@ -812,7 +873,7 @@ const execute = (request, params) =>
         if (shouldReset) {
           const GamesTeams = db.model('GamesTeams')
           const existingGameTeams = await GamesTeams.find({ gameId: id })
-            .select({ _id: 1, prequelProgress: 1 })
+            .select({ _id: 1, prequelProgress: 1, prequelProgresses: 1 })
             .lean()
           const {
             hasResolvedPrequel,

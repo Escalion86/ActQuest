@@ -44,6 +44,7 @@ import {
   getDuplicateCodeKindsLabel,
   getTaskDuplicateCodeConflicts,
 } from '@helpers/getTaskDuplicateCodeConflicts'
+import { getRequiredMainCodesValidationError } from '@helpers/classicGameRules'
 import {
   canManageCabinetGameFinances,
   canViewPublishedGameTasks,
@@ -58,6 +59,7 @@ import { getNounTeams } from '@helpers/getNoun'
 import {
   buildDefaultPrequel,
   normalizePrequelConfig,
+  normalizePrequelConfigs,
   normalizePrequelStoryEffect,
 } from '@helpers/normalizePrequel'
 import { LOCATIONS } from '@server/serverConstants'
@@ -567,6 +569,9 @@ const getUserParticipationTeams = (game) =>
           entry?.prequelProgress && typeof entry.prequelProgress === 'object'
             ? entry.prequelProgress
             : null,
+        prequelProgresses: Array.isArray(entry?.prequelProgresses)
+          ? entry.prequelProgresses
+          : [],
       }
     })
     .filter(Boolean)
@@ -824,7 +829,15 @@ const buildUpdatePayload = (game) => {
   }))
 
   const normalizedIsRated = Boolean(game.isRated ?? true)
-  const normalizedPrequel = normalizePrequelConfig(game?.prequel)
+  const normalizedPrequels = normalizePrequelConfigs(
+    Array.isArray(game?.prequels) && game.prequels.length > 0
+      ? game.prequels
+      : game?.prequel
+        ? [game.prequel]
+        : [],
+  )
+  const normalizedPrequel =
+    normalizedPrequels[0] || normalizePrequelConfig(game?.prequel)
   const taskDistributionMode = normalizeTaskDistributionMode(
     game.taskDistributionMode,
   )
@@ -931,6 +944,9 @@ const buildUpdatePayload = (game) => {
         }))
         .filter((media) => media.url !== ''),
       mode: normalizedPrequel.mode,
+      mainCodes: normalizedPrequel.mainCodes,
+      requiredMainCodesCount: normalizedPrequel.requiredMainCodesCount,
+      completionBonus: normalizedPrequel.completionBonus,
       bonusCodes: (Array.isArray(normalizedPrequel.bonusCodes)
         ? normalizedPrequel.bonusCodes
         : []
@@ -974,6 +990,7 @@ const buildUpdatePayload = (game) => {
         : []
       ).map(normalizePrequelStoryEffect),
     },
+    prequels: normalizedPrequels,
     image: game.image ? game.image : null,
     startingPlace: game.startingPlace ?? '',
     finishingPlace: game.finishingPlace ?? '',
@@ -1143,14 +1160,11 @@ const validateTaskEditorRequirements = (game) => {
       })
     }
 
-    const requiredCodesCount = toNullableNumber(task?.numCodesToCompliteTask)
-    if (
-      requiredCodesCount !== null &&
-      Number(requiredCodesCount) > Number(codes.length)
-    ) {
+    const requiredCodesError = getRequiredMainCodesValidationError(task)
+    if (requiredCodesError) {
       issues.push({
         taskId,
-        message: `${taskLabel}: «Кодов для выполнения» (${requiredCodesCount}) не может быть больше количества основных кодов (${codes.length}).`,
+        message: `${taskLabel}: ${requiredCodesError}`,
       })
     }
 
@@ -2789,6 +2803,7 @@ const GamesPage = ({
         descriptionRich: '',
         descriptionMedia: [],
         prequel: buildDefaultPrequel(),
+        prequels: [],
         image: null,
         startingPlace: '',
         finishingPlace: '',
@@ -2858,6 +2873,9 @@ const GamesPage = ({
             ? normalizedSource.descriptionMedia
             : []
           baseDraft.prequel = normalizePrequelConfig(normalizedSource.prequel)
+          baseDraft.prequels = normalizePrequelConfigs(
+            normalizedSource.prequels,
+          )
           baseDraft.image = normalizedSource.image || null
         }
 
@@ -8307,6 +8325,7 @@ const userParticipationTeamShape = PropTypes.shape({
   teamName: PropTypes.string,
   isCaptain: PropTypes.bool,
   prequelProgress: PropTypes.object,
+  prequelProgresses: PropTypes.arrayOf(PropTypes.object),
 })
 
 GamesPage.propTypes = {

@@ -5,8 +5,8 @@ import { authOptions } from '@server/auth/authOptions'
 import { toStringId } from '@helpers/idAndDate'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import {
-  normalizePrequelConfig,
-  normalizePrequelProgress,
+  getGamePrequels,
+  getGameTeamPrequelProgresses,
 } from '@helpers/normalizePrequel'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { fetchUnreadTeamMessageCounts } from '@server/gameTeamMessages'
@@ -695,13 +695,24 @@ const buildCodeDescriptionLookup = (definitions) => {
 }
 
 const buildPrequelStatusStats = (game, gameTeam) => {
-  const prequel = normalizePrequelConfig(game?.prequel)
-  const progress = normalizePrequelProgress(gameTeam?.prequelProgress)
+  const prequels = getGamePrequels(game)
+  const progresses = getGameTeamPrequelProgresses(gameTeam, prequels)
+  const enabledPrequels = prequels.filter((item) => item.enabled)
+  const progress = {
+    attempts: progresses.flatMap((item) => item.attempts),
+    wrongCodes: progresses.flatMap((item) => item.wrongCodes),
+    appliedAdjustments: progresses.flatMap((item) => item.appliedAdjustments),
+    appliedStoryEffects: progresses.flatMap((item) => item.appliedStoryEffects),
+    wrongPenaltyAppliedCount: progresses.reduce(
+      (sum, item) => sum + (Number(item.wrongPenaltyAppliedCount) || 0),
+      0,
+    ),
+  }
 
-  if (!prequel.enabled) {
+  if (enabledPrequels.length === 0) {
     return {
       enabled: false,
-      mode: prequel.mode,
+      mode: 'multi_hit',
       isClosed: false,
       closedReason: null,
       attemptsCount: 0,
@@ -766,9 +777,16 @@ const buildPrequelStatusStats = (game, gameTeam) => {
 
   return {
     enabled: true,
-    mode: prequel.mode,
-    isClosed: Boolean(progress.isClosed),
-    closedReason: progress.closedReason || null,
+    mode: enabledPrequels.length === 1 ? enabledPrequels[0].mode : 'multi_hit',
+    isClosed:
+      enabledPrequels.length > 0 &&
+      enabledPrequels.every((item) =>
+        progresses.some(
+          (progressItem) =>
+            progressItem.prequelId === item.id && Boolean(progressItem.completedAt),
+        ),
+      ),
+    closedReason: null,
     attemptsCount: progress.attempts.length,
     wrongCodesCount: progress.wrongCodes.length,
     wrongPenaltyAppliedCount: Number(progress.wrongPenaltyAppliedCount) || 0,
@@ -785,6 +803,18 @@ const buildPrequelStatusStats = (game, gameTeam) => {
       (acc, item) => acc + (Number(item.value) || 0),
       0,
     ),
+    items: enabledPrequels.map((item) => {
+      const itemProgress = progresses.find(
+        (progressItem) => progressItem.prequelId === item.id,
+      )
+      return {
+        prequelId: item.id,
+        title: item.title,
+        completedAt: itemProgress?.completedAt || null,
+        foundMainCodesCount: itemProgress?.foundMainCodes?.length || 0,
+        attemptsCount: itemProgress?.attempts?.length || 0,
+      }
+    }),
   }
 }
 
@@ -862,6 +892,7 @@ export async function GET(request) {
         manyCodesPenalty: 1,
         tasks: 1,
         prequel: 1,
+        prequels: 1,
         moderators: 1,
       })
       .lean()
@@ -1543,6 +1574,7 @@ export async function GET(request) {
 
       return {
         teamId,
+        gameTeamId: toStringId(gt?._id),
         teamName: team?.name ?? 'Без названия',
         unreadTeamMessagesCount: Number(unreadMessagesByTeamId[teamId] || 0),
         members: teamMembersByTeamId.get(teamId) || [],

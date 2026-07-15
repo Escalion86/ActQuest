@@ -6,6 +6,7 @@ import {
   getTimedCluesCount,
   normalizeClueEarlyAccessFrom,
 } from './clueEarlyAccess.js'
+import { getRequiredMainCodesValidationError } from './classicGameRules.js'
 
 const stripHtmlToPlainText = (value) =>
   String(value || '')
@@ -173,25 +174,31 @@ const storyRequirementsCanBeMet = ({
 }
 
 const getPotentialPrequelStoryEffects = (game) =>
-  game?.prequel?.enabled
-    ? [
-        ...(Array.isArray(game?.prequel?.wrongAttemptsStoryEffects)
-          ? game.prequel.wrongAttemptsStoryEffects
-          : []),
-        ...(Array.isArray(game?.prequel?.bonusCodes)
-          ? game.prequel.bonusCodes
-          : []
-        ).flatMap((code) =>
-          Array.isArray(code?.storyEffects) ? code.storyEffects : [],
-        ),
-        ...(Array.isArray(game?.prequel?.penaltyCodes)
-          ? game.prequel.penaltyCodes
-          : []
-        ).flatMap((code) =>
-          Array.isArray(code?.storyEffects) ? code.storyEffects : [],
-        ),
-      ]
-    : []
+  (
+    Array.isArray(game?.prequels) && game.prequels.length > 0
+      ? game.prequels
+      : game?.prequel
+        ? [game.prequel]
+        : []
+  )
+    .filter((prequel) => prequel?.enabled)
+    .flatMap((prequel) => [
+      ...(Array.isArray(prequel?.wrongAttemptsStoryEffects)
+        ? prequel.wrongAttemptsStoryEffects
+        : []),
+      ...(Array.isArray(prequel?.completionBonus?.storyEffects)
+        ? prequel.completionBonus.storyEffects
+        : []),
+      ...(Array.isArray(prequel?.bonusCodes) ? prequel.bonusCodes : []).flatMap(
+        (code) => (Array.isArray(code?.storyEffects) ? code.storyEffects : []),
+      ),
+      ...(Array.isArray(prequel?.penaltyCodes)
+        ? prequel.penaltyCodes
+        : []
+      ).flatMap((code) =>
+        Array.isArray(code?.storyEffects) ? code.storyEffects : [],
+      ),
+    ])
 
 export const getStoryReachabilityReport = (game) => {
   const nodes = Array.isArray(game?.storyNodes) ? game.storyNodes : []
@@ -645,7 +652,6 @@ export const getGameValidationErrors = (game) => {
         (code) => typeof code === 'string' && code.trim() !== '',
       )
       const taskCodesLength = taskCodes.length
-      const neededCodesLength = Number(task?.numCodesToCompliteTask || 0)
       const emptyCodePositions = getEmptyCodePositions(rawTaskCodes)
 
       if (!taskCodesLength) {
@@ -658,10 +664,9 @@ export const getGameValidationErrors = (game) => {
         )
       }
 
-      if (taskCodesLength < neededCodesLength) {
-        errors.push(
-          `${taskLabel}: кодов меньше, чем требуется для выполнения (${taskCodesLength}/${neededCodesLength}).`
-        )
+      const requiredCodesError = getRequiredMainCodesValidationError(task)
+      if (requiredCodesError) {
+        errors.push(`${taskLabel}: ${requiredCodesError}`)
       }
     }
 

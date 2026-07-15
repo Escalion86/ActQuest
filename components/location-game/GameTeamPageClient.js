@@ -3056,11 +3056,16 @@ function GameTeamPage({
         }
       >
         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-          Вы уверены, что хотите получить подсказку досрочно? Команде будет
-          добавлено игровое время:{' '}
+          Вы уверены, что хотите получить подсказку досрочно?{' '}
+          {currentCaptainActions?.forceClueMode === 'penalty'
+            ? 'Штраф за досрочную подсказку:'
+            : 'Команде будет добавлено игровое время:'}{' '}
           <span className="font-semibold text-slate-900 dark:text-slate-100">
             {formatCountdownSeconds(
-              Number(currentCaptainActions?.forceClueAdvanceSeconds) || 0,
+              Number(
+                currentCaptainActions?.forceClueCostSeconds ??
+                  currentCaptainActions?.forceClueAdvanceSeconds,
+              ) || 0,
             )}
           </span>
           .
@@ -3189,6 +3194,8 @@ GameTeamPage.propTypes = {
     canFinishBreak: PropTypes.bool,
     canForceClue: PropTypes.bool,
     forceClueAdvanceSeconds: PropTypes.number,
+    forceClueCostSeconds: PropTypes.number,
+    forceClueMode: PropTypes.oneOf(['penalty', 'time']),
     nextClueNumber: PropTypes.number,
     canFailTask: PropTypes.bool,
   }),

@@ -13,8 +13,10 @@
     "verify:critical-security": "node scripts/verifyCriticalSecurityContracts.js",
     "test:public-game-sanitizer": "node --no-warnings scripts/testPublicGameSanitizer.mjs",
     "test:game-process-lock": "node --no-warnings scripts/testGameProcessLock.mjs",
+    "test:classic-game-process": "node --no-warnings --test scripts/classicGameRules.test.js scripts/classicGameResult.test.js",
     "test:story-engine": "node --no-warnings --test scripts/storyEngine.test.js scripts/storyValidation.test.js scripts/prequelResultComputed.test.js",
-    "premerge:app": "npm run lint && npm run build && npm run smoke:app && npm run verify:api-contracts && npm run verify:location-api-contracts && npm run verify:critical-security && npm run test:public-game-sanitizer && npm run test:game-process-lock && npm run test:story-engine",
+    "test:prequel": "node --no-warnings scripts/prequelProgress.test.js",
+    "premerge:app": "npm run lint && npm run build && npm run smoke:app && npm run verify:api-contracts && npm run verify:location-api-contracts && npm run verify:critical-security && npm run test:public-game-sanitizer && npm run test:game-process-lock && npm run test:classic-game-process && npm run test:story-engine && npm run test:prequel",
     "lint": "eslint app components/cabinet/app-router components/cabinet/CabinetLayout.js components/cabinet/GameSelectField.js components/cabinet/UserSelectField.js helpers/fetchCabinetGameDetails.js helpers/fetchCabinetTeamDetails.js helpers/fetchCabinetUserDetails.js helpers/getSessionSafe.js scripts/smokeAppRoutes.js --ext .js,.jsx --no-error-on-unmatched-pattern",
     "start": "next start",
     "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js",
@@ -24,7 +26,9 @@
     "repair:db:global-user-ids": "node scripts/repairGlobalUserIds.js",
     "verify:db:global": "node scripts/verifyGlobalMigration.js",
     "migrate:escalioncloud-urls": "node scripts/migrateEscalionCloudUrls.js",
-    "migrate:escalioncloud-urls:apply": "node scripts/migrateEscalionCloudUrls.js --apply"
+    "migrate:escalioncloud-urls:apply": "node scripts/migrateEscalionCloudUrls.js --apply",
+    "migrate:multiple-prequels": "node scripts/migrateMultiplePrequels.js",
+    "migrate:multiple-prequels:apply": "node scripts/migrateMultiplePrequels.js --apply"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",

@@ -1,5 +1,6 @@
 import {
   buildDefaultPrequel,
+  getGamePrequels,
   normalizePrequelConfig,
 } from './normalizePrequel.js'
 import { canBypassGameAssignments } from './gameAssignmentAccess.js'
@@ -110,6 +111,7 @@ const sanitizeCabinetGameForViewer = (
       ...buildDefaultPrequel(),
       ...normalizePrequelConfig(game?.prequel, { includeCodes: false }),
     },
+    prequels: getGamePrequels(game, { includeCodes: false }),
     moderators: [],
     agents: [],
     agentNotifications: undefined,

@@ -15,6 +15,12 @@ import {
 import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
 import { normalizeClueEarlyAccessFrom } from '@helpers/clueEarlyAccess'
+import {
+  canMutateClassicGameProgress,
+  getClassicTaskMutationBlockReason,
+  resolveForceClueCost,
+  resolveRequiredMainCodesCount,
+} from '@helpers/classicGameRules'
 
 const isGameTaskDebugEnabled =
   process.env.GAME_TASK_DEBUG === '1' || process.env.SESSION_DEBUG === '1'
@@ -57,16 +63,6 @@ const parseDurationSeconds = (value, fallback) => {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return fallback
   return Math.max(Math.floor(numeric), 0)
-}
-
-const toFiniteNonNegativeIntegerOrNull = (value) => {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return null
-  const normalized = Math.floor(numeric)
-  return normalized >= 0 ? normalized : null
 }
 
 const normalizeAcceptedCodes = (value) => {
@@ -156,9 +152,7 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex) => {
   return {
     taskIndex: safeTaskIndex,
     mainCodesCount,
-    requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
-      task?.numCodesToCompliteTask,
-    ),
+    requiredCodesCount: resolveRequiredMainCodesCount(task),
     bonusCodesCount: Array.isArray(task?.bonusCodes)
       ? task.bonusCodes.length
       : 0,
@@ -338,10 +332,14 @@ const safeSerializeGameForClient = (game) => {
 const buildCaptainActions = ({ game, isCaptain }) => ({
   canFinishBreak:
     Boolean(isCaptain) &&
+    canMutateClassicGameProgress(game?.status) &&
     game?.allowCaptainFinishBreak !== false &&
     parseDurationSeconds(game?.breakDuration, 0) > 0,
   canForceClue: false,
   forceClueAdvanceSeconds: 0,
+  forceClueCostSeconds: 0,
+  forceClueMode:
+    game?.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time',
   nextClueNumber: null,
   canFailTask: false,
 })
@@ -398,7 +396,17 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
   const isAlreadyFailed = Boolean(
     getTaskFailureEntry(gameTeam, activeTaskIndex),
   )
-  const canMutateActiveTask = !isAlreadyFinished && !isAlreadyFailed
+  const mutationBlockReason = getClassicTaskMutationBlockReason({
+    game,
+    gameTeam,
+    task: activeTask,
+    taskIndex: activeTaskIndex,
+  })
+  const canMutateActiveTask =
+    canMutateClassicGameProgress(game?.status) &&
+    !isAlreadyFinished &&
+    !isAlreadyFailed &&
+    !mutationBlockReason
   const effectiveElapsedSeconds = getEffectiveTaskElapsedSeconds({
     gameTeam,
     taskIndex: activeTaskIndex,
@@ -410,26 +418,33 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
   const clueEarlyAccessFrom = normalizeClueEarlyAccessFrom(
     game?.clueEarlyAccessFrom,
   )
-  const forceClueAdvanceSeconds =
+  const secondsUntilNextClue =
     nextClueNumber && cluesDurationSeconds > 0
       ? Math.max(
           nextClueNumber * cluesDurationSeconds - effectiveElapsedSeconds,
           0,
         )
       : 0
+  const forceClueCost = resolveForceClueCost({
+    mode: game?.clueEarlyAccessMode,
+    configuredPenaltySeconds: game?.clueEarlyPenalty,
+    secondsUntilNextClue,
+  })
   const canForceClue =
     game?.allowCaptainForceClue !== false &&
     totalClues > 0 &&
     cluesDurationSeconds > 0 &&
     visibleCluesCount < totalClues &&
     nextClueNumber >= clueEarlyAccessFrom &&
-    forceClueAdvanceSeconds > 0 &&
+    secondsUntilNextClue > 0 &&
     canMutateActiveTask
 
   return {
     ...base,
     canForceClue,
-    forceClueAdvanceSeconds: canForceClue ? forceClueAdvanceSeconds : 0,
+    forceClueAdvanceSeconds: canForceClue ? forceClueCost.seconds : 0,
+    forceClueCostSeconds: canForceClue ? forceClueCost.seconds : 0,
+    forceClueMode: forceClueCost.mode,
     nextClueNumber: canForceClue ? nextClueNumber : null,
     canFailTask:
       game?.allowCaptainFailTask !== false &&
@@ -508,10 +523,13 @@ const finishBreakForCaptain = async ({
     activeTaskStartTime &&
     taskDurationSeconds > 0 &&
     (() => {
-      const elapsedSinceStart = Math.max(
-        Math.floor((nowMs - activeTaskStartTime.getTime()) / 1000),
-        0,
-      )
+      const elapsedSinceStart = getEffectiveTaskElapsedSeconds({
+        gameTeam,
+        taskIndex: activeTaskIndex,
+        task: tasks[activeTaskIndex],
+        startTime: activeTaskStartTime,
+        now: new Date(nowMs),
+      })
       return (
         elapsedSinceStart >= taskDurationSeconds &&
         elapsedSinceStart < taskDurationSeconds + breakDurationSeconds
@@ -674,17 +692,40 @@ const forceClueForCaptain = async ({
       },
     }
   }
-  const advanceSeconds = Math.max(
+
+  const mutationBlockReason = getClassicTaskMutationBlockReason({
+    game,
+    gameTeam,
+    task: activeTask,
+    taskIndex: activeTaskIndex,
+  })
+  if (mutationBlockReason) {
+    return {
+      gameTeam,
+      result: {
+        message:
+          mutationBlockReason === 'not_started'
+            ? 'Задание ещё не началось.'
+            : 'Время на задание уже вышло.',
+      },
+    }
+  }
+  const secondsUntilNextClue = Math.max(
     nextClueNumber * cluesDurationSeconds - effectiveElapsedSeconds,
     0,
   )
 
-  if (advanceSeconds <= 0) {
+  if (secondsUntilNextClue <= 0) {
     return {
       gameTeam,
       result: { message: 'Подсказка уже доступна. Обновите задание.' },
     }
   }
+  const forceClueCost = resolveForceClueCost({
+    mode: game?.clueEarlyAccessMode,
+    configuredPenaltySeconds: game?.clueEarlyPenalty,
+    secondsUntilNextClue,
+  })
 
   const nextForcedClues = [...forcedClues]
   nextForcedClues[activeTaskIndex] = Math.max(
@@ -703,21 +744,22 @@ const forceClueForCaptain = async ({
     return adding?.taskIndex === activeTaskIndex
   })
 
-  const nextTimeAddings = hasExistingClueAdding
-    ? existingAddings
-    : [
-        ...existingAddings,
-        {
-          name: clueAddingName,
-          time: advanceSeconds,
-          taskIndex: activeTaskIndex,
-          ...(taskId ? { taskId } : {}),
-          source: 'captain_force_clue',
-          scope: 'task_elapsed',
-          showInAdjustments: false,
-          createdAt: new Date(),
-        },
-      ]
+  const nextTimeAddings =
+    hasExistingClueAdding || forceClueCost.seconds <= 0
+      ? existingAddings
+      : [
+          ...existingAddings,
+          {
+            name: clueAddingName,
+            time: forceClueCost.seconds,
+            taskIndex: activeTaskIndex,
+            ...(taskId ? { taskId } : {}),
+            source: 'captain_force_clue',
+            scope: 'task_elapsed',
+            showInAdjustments: false,
+            createdAt: new Date(),
+          },
+        ]
 
   const updatedGameTeam = await gamesTeamsModel
     .findByIdAndUpdate(
@@ -737,7 +779,11 @@ const forceClueForCaptain = async ({
       timeAddings: nextTimeAddings,
     },
     result: {
-      message: `<b>Подсказка №${nextClueNumber} выдана досрочно.</b>`,
+      message: `<b>Подсказка №${nextClueNumber} выдана досрочно.</b>${
+        forceClueCost.seconds > 0
+          ? `<br /><b>${forceClueCost.mode === 'penalty' ? 'Штраф' : 'Добавленное время'}:</b> ${forceClueCost.seconds} сек.`
+          : ''
+      }`,
       messages: [`Подсказка №${nextClueNumber} выдана досрочно.`],
       shouldResetMessages: true,
     },
@@ -791,15 +837,6 @@ const failTaskForCaptain = async ({
     forcedCluesCount: forcedClues[activeTaskIndex],
   })
 
-  if (totalClues <= 0 || visibleCluesCount < totalClues) {
-    return {
-      gameTeam,
-      result: {
-        message: 'Слить задание можно только после получения всех подсказок.',
-      },
-    }
-  }
-
   if (endTimes[activeTaskIndex]) {
     return {
       gameTeam,
@@ -811,6 +848,33 @@ const failTaskForCaptain = async ({
     return {
       gameTeam,
       result: { message: 'Это задание уже слито.' },
+    }
+  }
+
+  const mutationBlockReason = getClassicTaskMutationBlockReason({
+    game,
+    gameTeam,
+    task: activeTask,
+    taskIndex: activeTaskIndex,
+  })
+  if (mutationBlockReason) {
+    return {
+      gameTeam,
+      result: {
+        message:
+          mutationBlockReason === 'not_started'
+            ? 'Задание ещё не началось.'
+            : 'Время на задание уже вышло.',
+      },
+    }
+  }
+
+  if (totalClues <= 0 || visibleCluesCount < totalClues) {
+    return {
+      gameTeam,
+      result: {
+        message: 'Слить задание можно только после получения всех подсказок.',
+      },
     }
   }
 
@@ -1518,7 +1582,14 @@ const getTeamGameTaskState = async ({
               ? failTaskForCaptain
               : null
 
-      if (captainActionHandler) {
+      if (
+        captainActionHandler &&
+        !canMutateClassicGameProgress(game?.status)
+      ) {
+        processResult = {
+          message: 'Капитанские действия доступны только во время запущенной игры.',
+        }
+      } else if (captainActionHandler) {
         const expectedActiveStep = getActiveTaskStep(gameTeam)
         const lock = isCaptain
           ? await acquireGameProcessLock({

@@ -1,6 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
+import {
+  PREQUEL_STATUS_COMPLETED,
+  PREQUEL_STATUS_LOCKED,
+  PREQUEL_STATUS_OPEN,
+  resolveDefaultPrequelForDate,
+  resolvePrequelStatusForDate,
+} from '../helpers/normalizePrequel.js'
 import applyPrequelSubmission from '../server/applyPrequelSubmission.js'
 
 const buildGame = (overrides = {}) => ({
@@ -87,4 +94,144 @@ test('applyPrequelSubmission closes single-hit prequel after first matched code'
 
   assert.equal(second.ok, false)
   assert.equal(second.status, 409)
+})
+
+test('main codes complete only the selected prequel and apply completion bonus once', () => {
+  const game = {
+    prequels: [
+      {
+        id: 'first',
+        title: 'Первый',
+        enabled: true,
+        mode: 'single_hit',
+        mainCodes: [
+          { id: 'm1', code: 'ONE' },
+          { id: 'm2', code: 'TWO' },
+        ],
+        requiredMainCodesCount: 2,
+        completionBonus: { value: 45, description: 'За выполнение' },
+        bonusCodes: [{ id: 'b1', code: 'SIDE', value: 5 }],
+      },
+      {
+        id: 'second',
+        title: 'Второй',
+        enabled: true,
+        bonusCodes: [{ id: 'b2', code: 'OTHER', value: 10 }],
+      },
+    ],
+  }
+
+  const side = applyPrequelSubmission({
+    game,
+    gameTeam: { prequelProgresses: [] },
+    prequelId: 'first',
+    code: 'SIDE',
+  })
+  assert.equal(side.ok, true)
+  assert.equal(side.progress.completedAt, null)
+
+  const firstMain = applyPrequelSubmission({
+    game,
+    gameTeam: { prequelProgresses: [side.progress] },
+    prequelId: 'first',
+    code: 'ONE',
+  })
+  assert.equal(firstMain.progress.completedAt, null)
+
+  const secondMain = applyPrequelSubmission({
+    game,
+    gameTeam: { prequelProgresses: [firstMain.progress] },
+    prequelId: 'first',
+    code: 'TWO',
+  })
+  assert.equal(secondMain.completed, true)
+  assert.ok(secondMain.progress.completedAt)
+  assert.equal(
+    secondMain.progress.appliedAdjustments.filter(
+      (item) => item.source === 'completion_bonus',
+    ).length,
+    1,
+  )
+})
+
+test('manual completion works without main codes and applies bonus', () => {
+  const result = applyPrequelSubmission({
+    game: {
+      prequels: [
+        {
+          id: 'manual',
+          enabled: true,
+          completionBonus: { value: 30 },
+        },
+      ],
+    },
+    gameTeam: { prequelProgresses: [] },
+    prequelId: 'manual',
+    manualComplete: true,
+    actorUserId: 'admin-id',
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.progress.completedSource, 'manual')
+  assert.equal(result.progress.completedByUserId, 'admin-id')
+  assert.equal(result.progress.appliedAdjustments[0].value, 30)
+})
+
+test('default prequel selection prefers an already opened prequel', () => {
+  const selected = resolveDefaultPrequelForDate(
+    [
+      {
+        id: 'future',
+        enabled: true,
+        openAt: '2026-08-01T14:00:00.000Z',
+        description: 'Откроется позже',
+        mainCodes: [{ id: 'future-code', code: 'FUTURE' }],
+      },
+      {
+        id: 'opened',
+        enabled: true,
+        openAt: '2026-07-01T14:00:00.000Z',
+        description: 'Уже открыт',
+        mainCodes: [{ id: 'opened-code', code: 'OPENED' }],
+      },
+    ],
+    new Date('2026-07-15T14:00:00.000Z'),
+  )
+
+  assert.equal(selected?.id, 'opened')
+})
+
+test('prequel status distinguishes locked, open and completed states', () => {
+  const prequel = {
+    id: 'status-test',
+    enabled: true,
+    openAt: '2026-08-01T14:00:00.000Z',
+    description: 'Проверка статуса',
+    mainCodes: [{ id: 'status-code', code: 'STATUS' }],
+  }
+
+  assert.equal(
+    resolvePrequelStatusForDate(
+      prequel,
+      null,
+      new Date('2026-07-15T14:00:00.000Z'),
+    ),
+    PREQUEL_STATUS_LOCKED,
+  )
+  assert.equal(
+    resolvePrequelStatusForDate(
+      { ...prequel, openAt: '2026-07-01T14:00:00.000Z' },
+      null,
+      new Date('2026-07-15T14:00:00.000Z'),
+    ),
+    PREQUEL_STATUS_OPEN,
+  )
+  assert.equal(
+    resolvePrequelStatusForDate(
+      prequel,
+      { completedAt: '2026-07-10T14:00:00.000Z' },
+      new Date('2026-07-15T14:00:00.000Z'),
+    ),
+    PREQUEL_STATUS_COMPLETED,
+  )
 })

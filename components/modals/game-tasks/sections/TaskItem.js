@@ -29,6 +29,7 @@ import {
   TaskWarningIcon,
   AccordionChevronIcon,
 } from '@components/modals/game-edit/sharedIcons'
+import { getRequiredMainCodesValidationError } from '@helpers/classicGameRules'
 
 const TaskRichEditor = dynamic(
   () => import('@components/cabinet/TaskRichEditor'),
@@ -165,11 +166,8 @@ const TaskItem = ({
     rawRequiredCodes === ''
       ? null
       : Number(rawRequiredCodes)
-  const hasCodesOverflowError =
-    !isPhotoGame &&
-    requiredCodesCount !== null &&
-    Number.isFinite(requiredCodesCount) &&
-    requiredCodesCount > normalizedCodes.length
+  const hasRequiredCodesError =
+    !isPhotoGame && Boolean(getRequiredMainCodesValidationError(task))
   const hasPostTaskMessage =
     (typeof task?.postMessage === 'string' && task.postMessage.trim() !== '') ||
     stripHtmlToPlainText(task?.postMessageRich).trim() !== '' ||
@@ -184,7 +182,7 @@ const TaskItem = ({
     taskClues.length === 0 ||
     !hasFilledClue ||
     (!isPhotoGame && normalizedCodes.length === 0) ||
-    hasCodesOverflowError
+    hasRequiredCodesError
   const taskBadgeLabel = task.isBonusTask
     ? `${index + 1} Бонусное задание`
     : `${index + 1} Задание`
@@ -1177,7 +1175,8 @@ const TaskItem = ({
                 <CabinetNumberField
                   id={`task-codes-required-${task.id}`}
                   label="Кодов для выполнения"
-                  min="0"
+                  min="1"
+                  step="1"
                   value={task.numCodesToCompliteTask ?? ''}
                   onChange={(event) =>
                     handleTaskOptionalNumberChange(

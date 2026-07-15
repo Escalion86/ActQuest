@@ -6,6 +6,30 @@ const omitCodeValue = (value) => {
   return safeValue
 }
 
+const sanitizePrequel = (prequel, now = new Date()) => {
+  if (!prequel || typeof prequel !== 'object') return prequel
+  const openAt = prequel?.openAt ? new Date(prequel.openAt) : null
+  const isOpen = !openAt || Number.isNaN(openAt.getTime()) || openAt <= now
+  const mainCodes = Array.isArray(prequel.mainCodes) ? prequel.mainCodes : []
+  const bonusCodes = Array.isArray(prequel.bonusCodes) ? prequel.bonusCodes : []
+  const penaltyCodes = Array.isArray(prequel.penaltyCodes)
+    ? prequel.penaltyCodes
+    : []
+
+  return {
+    ...prequel,
+    mainCodesCount: mainCodes.length,
+    bonusCodesCount: bonusCodes.length,
+    penaltyCodesCount: penaltyCodes.length,
+    mainCodes: [],
+    bonusCodes: bonusCodes.map(omitCodeValue),
+    penaltyCodes: penaltyCodes.map(omitCodeValue),
+    ...(!isOpen
+      ? { description: '', descriptionRich: '', descriptionMedia: [] }
+      : {}),
+  }
+}
+
 // Публичные страницы используют общую информацию об игре и данные результата,
 // но правильные ответы должны приходить участникам только через game-task state.
 const sanitizeGameForPublicRead = (game) => {
@@ -53,26 +77,21 @@ const sanitizeGameForPublicRead = (game) => {
     }),
   )
 
-  const prequel =
-    source.prequel && typeof source.prequel === 'object'
-      ? {
-          ...source.prequel,
-          bonusCodes: (Array.isArray(source.prequel.bonusCodes)
-            ? source.prequel.bonusCodes
-            : []
-          ).map(omitCodeValue),
-          penaltyCodes: (Array.isArray(source.prequel.penaltyCodes)
-            ? source.prequel.penaltyCodes
-            : []
-          ).map(omitCodeValue),
-        }
+  const prequels = (
+    Array.isArray(source.prequels) && source.prequels.length > 0
+      ? source.prequels
       : source.prequel
+        ? [source.prequel]
+        : []
+  ).map((item) => sanitizePrequel(item))
+  const prequel = prequels[0] || sanitizePrequel(source.prequel)
 
   return {
     ...source,
     tasks,
     storyNodes,
     prequel,
+    prequels,
   }
 }
 

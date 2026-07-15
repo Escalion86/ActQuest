@@ -9,6 +9,10 @@ import {
 } from '@server/storyEngine'
 import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
 import { toStringId } from '@helpers/idAndDate'
+import {
+  getGamePrequels,
+  getGameTeamPrequelProgresses,
+} from '@helpers/normalizePrequel'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import {
@@ -150,11 +154,10 @@ export const ensureStoryProgress = async ({
   }
 
   const baseProgress = buildInitialStoryProgress(game, { actor })
-  const appliedPrequelEffects = Array.isArray(
-    gameTeam?.prequelProgress?.appliedStoryEffects,
-  )
-    ? gameTeam.prequelProgress.appliedStoryEffects
-    : []
+  const appliedPrequelEffects = getGameTeamPrequelProgresses(
+    gameTeam,
+    getGamePrequels(game),
+  ).flatMap((item) => item.appliedStoryEffects)
   const { progress } = applyPrequelStoryEffects({
     game,
     progress: baseProgress,

@@ -1177,7 +1177,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     description:
                       typeof item?.description === 'string' &&
                       item.description.trim()
-                        ? `Приквел: ${item.description.trim()}`
+                        ? `${item.prequelTitle ? `${item.prequelTitle}: ` : 'Приквел: '}${item.description.trim()}`
                         : item?.code
                           ? `Приквел: бонусный код ${item.code}`
                           : 'Приквел: бонус',
@@ -1191,7 +1191,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     description:
                       typeof item?.description === 'string' &&
                       item.description.trim()
-                        ? `Приквел: ${item.description.trim()}`
+                        ? `${item.prequelTitle ? `${item.prequelTitle}: ` : 'Приквел: '}${item.description.trim()}`
                         : item?.code
                           ? `Приквел: штрафной код ${item.code}`
                           : 'Приквел: штраф',

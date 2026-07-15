@@ -175,6 +175,8 @@ const gamesTeamsSchema = {
   },
   prequelProgress: {
     type: {
+      prequelId: { type: String, trim: true, default: '' },
+      foundMainCodes: { type: [String], default: [] },
       foundBonusCodes: { type: [String], default: [] },
       foundPenaltyCodes: { type: [String], default: [] },
       wrongCodes: { type: [String], default: [] },
@@ -186,10 +188,16 @@ const gamesTeamsSchema = {
             normalizedCode: { type: String, trim: true, default: '' },
             category: {
               type: String,
-              enum: ['bonus', 'penalty', 'wrong'],
+              enum: ['main', 'bonus', 'penalty', 'wrong'],
               default: 'wrong',
             },
             matchedCode: { type: String, trim: true, default: '' },
+            source: {
+              type: String,
+              enum: ['player', 'admin'],
+              default: 'player',
+            },
+            actorUserId: { type: String, trim: true, default: null },
             createdAt: { type: Date, default: null },
           },
         ],
@@ -207,10 +215,16 @@ const gamesTeamsSchema = {
             },
             source: {
               type: String,
-              enum: ['bonus_code', 'penalty_code', 'wrong_attempts_limit'],
+              enum: [
+                'bonus_code',
+                'penalty_code',
+                'wrong_attempts_limit',
+                'completion_bonus',
+              ],
               default: 'bonus_code',
             },
             code: { type: String, trim: true, default: '' },
+            codeId: { type: String, trim: true, default: '' },
             value: { type: Number, default: 0 },
             description: { type: String, trim: true, default: '' },
             createdAt: { type: Date, default: null },
@@ -225,7 +239,12 @@ const gamesTeamsSchema = {
             effectId: { type: String, trim: true, default: '' },
             source: {
               type: String,
-              enum: ['bonus_code', 'penalty_code', 'wrong_attempts_limit'],
+              enum: [
+                'bonus_code',
+                'penalty_code',
+                'wrong_attempts_limit',
+                'completion_bonus',
+              ],
               default: 'bonus_code',
             },
             code: { type: String, trim: true, default: '' },
@@ -247,9 +266,124 @@ const gamesTeamsSchema = {
       },
       isClosed: { type: Boolean, default: false },
       closedReason: { type: String, trim: true, default: null },
+      completedAt: { type: Date, default: null },
+      completedSource: {
+        type: String,
+        enum: ['codes', 'manual'],
+        default: null,
+      },
+      completedByUserId: { type: String, trim: true, default: null },
+      completionBonusApplied: { type: Boolean, default: false },
       lastSubmittedAt: { type: Date, default: null },
     },
     default: null,
+  },
+  prequelProgresses: {
+    type: [
+      {
+        prequelId: { type: String, trim: true, required: true },
+        foundMainCodes: { type: [String], default: [] },
+        foundBonusCodes: { type: [String], default: [] },
+        foundPenaltyCodes: { type: [String], default: [] },
+        wrongCodes: { type: [String], default: [] },
+        attempts: {
+          type: [
+            {
+              id: { type: String, trim: true },
+              code: { type: String, default: '' },
+              normalizedCode: { type: String, trim: true, default: '' },
+              category: {
+                type: String,
+                enum: ['main', 'bonus', 'penalty', 'wrong'],
+                default: 'wrong',
+              },
+              matchedCode: { type: String, trim: true, default: '' },
+              source: {
+                type: String,
+                enum: ['player', 'admin'],
+                default: 'player',
+              },
+              actorUserId: { type: String, trim: true, default: null },
+              createdAt: { type: Date, default: null },
+            },
+          ],
+          default: [],
+        },
+        wrongPenaltyAppliedCount: { type: Number, default: 0 },
+        appliedAdjustments: {
+          type: [
+            {
+              id: { type: String, trim: true },
+              type: {
+                type: String,
+                enum: ['bonus', 'penalty'],
+                default: 'penalty',
+              },
+              source: {
+                type: String,
+                enum: [
+                  'bonus_code',
+                  'penalty_code',
+                  'wrong_attempts_limit',
+                  'completion_bonus',
+                ],
+                default: 'bonus_code',
+              },
+              code: { type: String, trim: true, default: '' },
+              codeId: { type: String, trim: true, default: '' },
+              value: { type: Number, default: 0 },
+              description: { type: String, trim: true, default: '' },
+              createdAt: { type: Date, default: null },
+            },
+          ],
+          default: [],
+        },
+        appliedStoryEffects: {
+          type: [
+            {
+              id: { type: String, trim: true },
+              effectId: { type: String, trim: true, default: '' },
+              source: {
+                type: String,
+                enum: [
+                  'bonus_code',
+                  'penalty_code',
+                  'wrong_attempts_limit',
+                  'completion_bonus',
+                ],
+                default: 'bonus_code',
+              },
+              code: { type: String, trim: true, default: '' },
+              type: {
+                type: String,
+                enum: ['grant_item', 'unlock_node', 'set_flag', 'score_modifier'],
+                default: 'grant_item',
+              },
+              itemId: { type: String, trim: true, default: '' },
+              nodeId: { type: String, trim: true, default: '' },
+              flagKey: { type: String, trim: true, default: '' },
+              flagValue: { type: Boolean, default: true },
+              value: { type: Number, default: 0 },
+              label: { type: String, trim: true, default: '' },
+              appliedAt: { type: Date, default: null },
+            },
+          ],
+          default: [],
+        },
+        isClosed: { type: Boolean, default: false },
+        closedReason: { type: String, trim: true, default: null },
+        completedAt: { type: Date, default: null },
+        completedSource: {
+          type: String,
+          enum: ['codes', 'manual'],
+          default: null,
+        },
+        completedByUserId: { type: String, trim: true, default: null },
+        completionBonusApplied: { type: Boolean, default: false },
+        lastSubmittedAt: { type: Date, default: null },
+      },
+    ],
+    default: [],
   },
   timerId: String,
 }

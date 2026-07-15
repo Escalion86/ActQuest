@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import requestApiJson from '@helpers/requestApiJson'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
+import { resolveRequiredMainCodesCount } from '@helpers/classicGameRules'
 import RichTaskContentView from '@components/game/RichTaskContentView'
 import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
 
@@ -38,18 +39,9 @@ const buildBackHref = ({ status, gameId }) => {
 const normalizeString = (value) =>
   typeof value === 'string' ? value.trim() : ''
 
-const toFiniteNonNegativeIntegerOrNull = (value) => {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return null
-  const normalized = Math.floor(numeric)
-  return normalized >= 0 ? normalized : null
-}
-
 const buildTaskDisplayMeta = (task) => ({
   mainCodesCount: Array.isArray(task?.codes) ? task.codes.length : 0,
-  requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
-    task?.numCodesToCompliteTask,
-  ),
+  requiredCodesCount: resolveRequiredMainCodesCount(task),
   bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
   penaltyCodesCount: Array.isArray(task?.penaltyCodes)
     ? task.penaltyCodes.length

@@ -22,6 +22,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import TeamDescriptionModal from './TeamDescriptionModal'
 import GameControlTeamStatsModal from './GameControlTeamStatsModal'
 import TeamGamePaymentsModal from './TeamGamePaymentsModal'
+import TeamPrequelsModal from './TeamPrequelsModal'
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
@@ -211,6 +212,7 @@ const GameTeamsModal = ({
   const [isTeamStatsModalOpen, setIsTeamStatsModalOpen] = useState(false)
   const [isTeamPaymentsModalOpen, setIsTeamPaymentsModalOpen] = useState(false)
   const [teamPaymentsTarget, setTeamPaymentsTarget] = useState(null)
+  const [teamPrequelsTarget, setTeamPrequelsTarget] = useState(null)
   const [teamDistributionTarget, setTeamDistributionTarget] = useState(null)
   const [teamDistributionText, setTeamDistributionText] = useState('')
   const [teamDistributionError, setTeamDistributionError] = useState('')
@@ -342,6 +344,7 @@ const GameTeamsModal = ({
       setIsTeamStatsModalOpen(false)
       setIsTeamPaymentsModalOpen(false)
       setTeamPaymentsTarget(null)
+      setTeamPrequelsTarget(null)
       setTeamDistributionTarget(null)
       setTeamDistributionText('')
       setTeamDistributionError('')
@@ -1382,6 +1385,27 @@ const GameTeamsModal = ({
                                   type="button"
                                   onClick={(event) => {
                                     event.stopPropagation()
+                                    setTeamPrequelsTarget({
+                                      gameTeamId: String(team.id || ''),
+                                      teamName: String(team.teamName || 'Команда'),
+                                    })
+                                  }}
+                                  aria-label={`Приквелы команды ${team.teamName || ''}`}
+                                  title="Приквелы команды"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-200 sm:h-8 sm:w-8"
+                                >
+                                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                                    <path d="M4 6h16v12H4z" />
+                                    <path d="m8 10 4-3 4 3v5H8z" />
+                                    <path d="M10 18v-4h4v4" />
+                                  </svg>
+                                </button>
+                              ) : null}
+                              {canEditRegisteredTeams ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
                                     handleOpenTeamPaymentsModal(team)
                                   }}
                                   aria-label={`Оплата команды ${team.teamName || ''}`}
@@ -1634,6 +1658,14 @@ const GameTeamsModal = ({
         updatingPaidGameTeamIds={updatingPaidGameTeamIds}
         onPaidGameChange={handleToggleTeamPaidGame}
         onPaymentsChanged={handleRefreshTeamsModalData}
+      />
+      <TeamPrequelsModal
+        isOpen={Boolean(teamPrequelsTarget)}
+        onClose={() => setTeamPrequelsTarget(null)}
+        gameId={String(selectedGame?.id || '')}
+        gameTeamId={teamPrequelsTarget?.gameTeamId || ''}
+        teamName={teamPrequelsTarget?.teamName || ''}
+        onUpdated={handleRefreshTeamsModalData}
       />
       <Modal
         isOpen={Boolean(teamDistributionTarget)}

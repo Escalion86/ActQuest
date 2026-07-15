@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
 import {
+  getGamePrequels,
+  getGameTeamPrequelProgresses,
   isPrequelOpenForDate,
   isPrequelReadyForPlayers,
 } from '@helpers/normalizePrequel'
@@ -37,6 +39,7 @@ export async function POST(request) {
   const gameTeamId =
     typeof payload?.gameTeamId === 'string' ? payload.gameTeamId.trim() : ''
   const code = typeof payload?.code === 'string' ? payload.code : ''
+  const prequelId = normalizeStringId(payload?.prequelId)
 
   if (!gameTeamId) {
     return NextResponse.json(
@@ -104,14 +107,25 @@ export async function POST(request) {
       )
     }
 
-    if (!isPrequelReadyForPlayers(game?.prequel)) {
+    const prequels = getGamePrequels(game)
+    const selectedPrequel =
+      prequels.find((item) => item.id === prequelId) ||
+      (prequels.length === 1 ? prequels[0] : null)
+    if (!selectedPrequel) {
+      return NextResponse.json(
+        { success: false, error: 'Приквел не найден' },
+        { status: 404 },
+      )
+    }
+
+    if (!isPrequelReadyForPlayers(selectedPrequel)) {
       return NextResponse.json(
         { success: false, error: 'Приквел заполнен не полностью' },
         { status: 400 },
       )
     }
 
-    if (!isPrequelOpenForDate(game?.prequel, new Date())) {
+    if (!isPrequelOpenForDate(selectedPrequel, new Date())) {
       return NextResponse.json(
         { success: false, error: 'Приквел ещё не открыт' },
         { status: 423 },
@@ -121,6 +135,7 @@ export async function POST(request) {
     const result = applyPrequelSubmission({
       game,
       gameTeam,
+      prequelId: selectedPrequel.id,
       code,
       now: new Date(),
     })
@@ -136,14 +151,24 @@ export async function POST(request) {
       )
     }
 
+    const currentProgresses = getGameTeamPrequelProgresses(gameTeam, prequels)
+    const progressIndex = currentProgresses.findIndex(
+      (item) => item.prequelId === selectedPrequel.id,
+    )
+    const nextProgresses = [...currentProgresses]
+    if (progressIndex >= 0) nextProgresses[progressIndex] = result.progress
+    else nextProgresses.push(result.progress)
+
     await GamesTeams.findByIdAndUpdate(gameTeamId, {
-      $set: { prequelProgress: result.progress },
+      $set: { prequelProgresses: nextProgresses },
     })
 
     return NextResponse.json({
       success: true,
       message: result.message,
       matchedCategory: result.matchedCategory,
+      completed: Boolean(result.completed),
+      prequelId: selectedPrequel.id,
       progress: normalizePrequelProgressForApi(result.progress),
     })
   } catch (error) {

@@ -2,7 +2,10 @@ import { redirect, notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import fetchGame from '@server/fetchGame'
-import { normalizePrequelConfig } from '@helpers/normalizePrequel'
+import {
+  getGamePrequels,
+  normalizePrequelConfig,
+} from '@helpers/normalizePrequel'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { authOptions } from '@server/auth/authOptions'
 import GameEntryPageClient from '@components/location-game/GameEntryPageClient'
@@ -98,6 +101,16 @@ export default async function GameEntryPage({ params }) {
     serializedGame.prequel = normalizePrequelConfig(serializedGame.prequel, {
       includeCodes: false,
     })
+    const now = new Date()
+    serializedGame.prequels = getGamePrequels(serializedGame, {
+      includeCodes: false,
+    }).map((item) => {
+      const openAt = item.openAt ? new Date(item.openAt) : null
+      const isOpen = !openAt || Number.isNaN(openAt.getTime()) || openAt <= now
+      return isOpen
+        ? item
+        : { ...item, description: '', descriptionRich: '', descriptionMedia: [] }
+    })
     const status = serializedGame.status || 'active'
     const isGameStarted = status === 'started'
     const isGameFinished = status === 'finished'
@@ -188,6 +201,9 @@ export default async function GameEntryPage({ params }) {
                       'captain',
                   ),
                 prequelProgress: mappedTeam.prequelProgress || null,
+                prequelProgresses: Array.isArray(mappedTeam.prequelProgresses)
+                  ? mappedTeam.prequelProgresses
+                  : [],
               }
             })
             .filter(Boolean)

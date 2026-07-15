@@ -9,6 +9,12 @@ import getLocationTimeZone from '@helpers/locationTimeZone'
 import sanitize from '@helpers/sanitize'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
 import {
+  canMutateClassicGameProgress,
+  getClassicTaskMutationBlockReason,
+  normalizeClassicCode,
+  resolveRequiredMainCodesCount,
+} from '@helpers/classicGameRules'
+import {
   acquireGameProcessLock,
   didGameProcessStepChange,
   releaseGameProcessLock,
@@ -273,12 +279,18 @@ const webGameProcessUnlocked = async ({
     return { message: 'Игра не найдена.' }
   }
 
-  if (resolvedGame.status === 'active') {
-    return { message: 'Игра ещё не началась.' }
-  }
-
-  if (resolvedGame.status === 'finished' || resolvedGame.status === 'closed') {
-    return { message: 'Игра завершена.' }
+  if (!canMutateClassicGameProgress(resolvedGame.status)) {
+    const statusMessages = {
+      active: 'Игра ещё не началась.',
+      finished: 'Игра завершена.',
+      closed: 'Игра завершена.',
+      canceled: 'Игра отменена.',
+    }
+    return {
+      message:
+        statusMessages[resolvedGame.status] ||
+        'Игровой процесс сейчас недоступен.',
+    }
   }
 
   const tasks = Array.isArray(resolvedGame.tasks) ? resolvedGame.tasks : []
@@ -341,7 +353,7 @@ const webGameProcessUnlocked = async ({
     return null
   }
 
-  const normalizedCode = codeInput.toLowerCase()
+  const normalizedCode = normalizeClassicCode(codeInput)
 
   if (resolvedGame.type === 'photo') {
     const photosProgress = preparePhotosProgress(
@@ -383,6 +395,27 @@ const webGameProcessUnlocked = async ({
     })
   }
 
+  const mutationBlockReason = getClassicTaskMutationBlockReason({
+    game: resolvedGame,
+    gameTeam: resolvedGameTeam,
+    task: currentTask,
+    taskIndex: activeTaskIndex,
+  })
+
+  if (mutationBlockReason) {
+    const messages = {
+      not_started: 'Задание ещё не началось. Обновите экран.',
+      completed: 'Задание уже выполнено. Обновите экран.',
+      failed: 'Задание уже завершено как невыполненное. Обновите экран.',
+      timeout: 'Время на задание уже вышло. Код не был принят.',
+    }
+
+    return {
+      message: messages[mutationBlockReason],
+      staleState: true,
+    }
+  }
+
   const taskCodes = Array.isArray(currentTask.codes) ? currentTask.codes : []
   const penaltyCodes = Array.isArray(currentTask.penaltyCodes)
     ? currentTask.penaltyCodes
@@ -409,21 +442,33 @@ const webGameProcessUnlocked = async ({
     : []
 
   // Проверяем, что код не вводился ранее участниками команды.
-  if (findedBonusCodesInTask.includes(normalizedCode)) {
+  if (
+    findedBonusCodesInTask.some(
+      (value) => normalizeClassicCode(value) === normalizedCode,
+    )
+  ) {
     return { message: 'Вы уже нашли этот бонусный код. Хотите ещё?' }
   }
 
-  if (findedPenaltyCodesInTask.includes(normalizedCode)) {
+  if (
+    findedPenaltyCodesInTask.some(
+      (value) => normalizeClassicCode(value) === normalizedCode,
+    )
+  ) {
     return { message: 'Вы уже нашли этот штрафной код. Хотите ещё?' }
   }
 
-  if (findedCodesInTask.includes(normalizedCode)) {
+  if (
+    findedCodesInTask.some(
+      (value) => normalizeClassicCode(value) === normalizedCode,
+    )
+  ) {
     return { message: 'Такой код уже найден. Введите другой код.' }
   }
 
   // Обработка бонусных кодов.
   const bonusCode = bonusCodes.find(
-    ({ code }) => code?.toLowerCase() === normalizedCode
+    ({ code }) => normalizeClassicCode(code) === normalizedCode
   )
   if (bonusCode) {
     const nextBonusProgress = [...findedBonusCodes]
@@ -479,7 +524,7 @@ const webGameProcessUnlocked = async ({
 
   // Обработка штрафных кодов.
   const penaltyCode = penaltyCodes.find(
-    ({ code }) => code?.toLowerCase() === normalizedCode
+    ({ code }) => normalizeClassicCode(code) === normalizedCode
   )
   if (penaltyCode) {
     const nextPenaltyProgress = [...findedPenaltyCodes]
@@ -535,9 +580,7 @@ const webGameProcessUnlocked = async ({
     })
   }
 
-  const normalizedCodes = taskCodes.map((code) =>
-    typeof code === 'string' ? code.toLowerCase() : String(code || '')
-  )
+  const normalizedCodes = taskCodes.map(normalizeClassicCode).filter(Boolean)
 
   const isDynamicTimeCode =
     normalizedCodes[0] === '[time]' &&
@@ -601,9 +644,14 @@ const webGameProcessUnlocked = async ({
     normalizedCode,
   ]
 
-  const requiredCodes = currentTask.numCodesToCompliteTask ?? taskCodes.length
+  const requiredCodes = resolveRequiredMainCodesCount(currentTask)
+  const acceptedMainCodesCount = new Set(
+    nextFindedProgress[activeTaskIndex]
+      .map(normalizeClassicCode)
+      .filter(Boolean),
+  ).size
   const isTaskComplete =
-    nextFindedProgress[activeTaskIndex].length >= requiredCodes
+    acceptedMainCodesCount >= requiredCodes
 
   let updates = { findedCodes: nextFindedProgress }
 

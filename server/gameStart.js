@@ -7,6 +7,10 @@ import buildGameStartProgressUpdate from '@server/buildGameStartProgressUpdate'
 import { getTaskDistributionStartErrors } from '@helpers/taskDistribution'
 import { buildInitialStoryProgress } from '@server/storyEngine'
 import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
+import {
+  getGamePrequels,
+  getGameTeamPrequelProgresses,
+} from '@helpers/normalizePrequel'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -87,12 +91,13 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
           actor: 'system',
           now: startedAt,
         })
+        const prequels = getGamePrequels(game)
+        const prequelEffects = getGameTeamPrequelProgresses(team, prequels)
+          .flatMap((item) => item.appliedStoryEffects)
         storyProgress = applyPrequelStoryEffects({
           game,
           progress: baseProgress,
-          effects: Array.isArray(team?.prequelProgress?.appliedStoryEffects)
-            ? team.prequelProgress.appliedStoryEffects
-            : [],
+          effects: prequelEffects,
           actor: 'system',
         }).progress
       }

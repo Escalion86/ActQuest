@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Modal from '@components/Modal'
+import PrequelStatusIcon from '@components/PrequelStatusIcon'
 import TiptapContentView from '@components/cabinet/TiptapContentView'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import requestApiJson from '@helpers/requestApiJson'
@@ -14,8 +15,10 @@ import {
   isPrequelReadyForPlayers,
   isPrequelProgressClosedForConfig,
   isPrequelProgressExhaustedForConfig,
-  normalizePrequelConfig,
+  normalizePrequelConfigs,
   normalizePrequelProgress,
+  normalizePrequelProgresses,
+  resolveDefaultPrequelForDate,
 } from '@helpers/normalizePrequel'
 
 const statusLabels = {
@@ -170,11 +173,33 @@ function GameEntryPage({
   const captainGameTeamId = captainParticipantTeam?.gameTeamId
     ? String(captainParticipantTeam.gameTeamId)
     : ''
-  const prequel = useMemo(
-    () => normalizePrequelConfig(game?.prequel, { includeCodes: false }),
-    [game?.prequel],
+  const prequels = useMemo(
+    () =>
+      normalizePrequelConfigs(
+        Array.isArray(game?.prequels) && game.prequels.length > 0
+          ? game.prequels
+          : game?.prequel
+            ? [game.prequel]
+            : [],
+        { includeCodes: false },
+      ),
+    [game?.prequel, game?.prequels],
   )
+  const visiblePrequels = useMemo(
+    () => prequels.filter((item) => item.enabled),
+    [prequels],
+  )
+  const [activePrequelId, setActivePrequelId] = useState('')
   const [prequelNowTs, setPrequelNowTs] = useState(() => Date.now())
+  const defaultPrequel = useMemo(
+    () =>
+      resolveDefaultPrequelForDate(visiblePrequels, new Date(prequelNowTs)),
+    [prequelNowTs, visiblePrequels],
+  )
+  const prequel =
+    visiblePrequels.find((item) => item.id === activePrequelId) ||
+    defaultPrequel ||
+    {}
   const isPrequelOpen = useMemo(
     () => isPrequelOpenForDate(prequel, new Date(prequelNowTs)),
     [prequel, prequelNowTs],
@@ -183,22 +208,67 @@ function GameEntryPage({
     () => isPrequelReadyForPlayers(prequel),
     [prequel],
   )
+  const hasVisiblePrequels = visiblePrequels.length > 0
   const prequelOpenAtLabel = useMemo(
     () => formatDateTime(prequel.openAt, location),
     [prequel.openAt, location],
   )
-  const initialPrequelProgress = useMemo(
+  const initialPrequelProgresses = useMemo(
     () =>
-      normalizePrequelProgress(captainParticipantTeam?.prequelProgress) ||
-      buildDefaultPrequelProgress(),
-    [captainParticipantTeam?.prequelProgress],
+      normalizePrequelProgresses(
+        Array.isArray(captainParticipantTeam?.prequelProgresses) &&
+          captainParticipantTeam.prequelProgresses.length > 0
+          ? captainParticipantTeam.prequelProgresses
+          : captainParticipantTeam?.prequelProgress
+            ? [captainParticipantTeam.prequelProgress]
+            : [],
+        prequels,
+      ),
+    [
+      captainParticipantTeam?.prequelProgress,
+      captainParticipantTeam?.prequelProgresses,
+      prequels,
+    ],
   )
   const canEnterGame = isGameStarted && !isGameFinished
   const showParticipantInfo = Boolean(participantTeamId && isParticipant)
 
   const [prequelCode, setPrequelCode] = useState('')
   const [prequelFeedback, setPrequelFeedback] = useState(null)
-  const [prequelProgress, setPrequelProgress] = useState(initialPrequelProgress)
+  const [prequelProgresses, setPrequelProgresses] = useState(
+    initialPrequelProgresses,
+  )
+  const prequelProgressById = useMemo(
+    () =>
+      new Map(
+        prequelProgresses.map((item) => [String(item.prequelId || ''), item]),
+      ),
+    [prequelProgresses],
+  )
+  const prequelProgress = useMemo(
+    () =>
+      prequelProgressById.get(prequel.id) || {
+        ...buildDefaultPrequelProgress(),
+        prequelId: prequel.id || '',
+      },
+    [prequel.id, prequelProgressById],
+  )
+  const setPrequelProgress = useCallback(
+    (nextProgress) => {
+      const normalized = normalizePrequelProgress(nextProgress)
+      setPrequelProgresses((current) => {
+        const index = current.findIndex(
+          (item) => item.prequelId === prequel.id,
+        )
+        const next = [...current]
+        const value = { ...normalized, prequelId: prequel.id || '' }
+        if (index >= 0) next[index] = value
+        else next.push(value)
+        return next
+      })
+    },
+    [prequel.id],
+  )
   const [isPrequelSubmitting, setIsPrequelSubmitting] = useState(false)
   const [isPrequelHelpOpen, setIsPrequelHelpOpen] = useState(false)
   const isPrequelExhausted = useMemo(
@@ -234,12 +304,12 @@ function GameEntryPage({
       : isPrequelExhausted
         ? 'Все доступные коды приквела для вашей команды уже найдены.'
       : isPrequelClosed
-        ? 'Приквел уже закрыт для вашей команды после первого найденного кода.'
+        ? 'Приквел выполнен вашей командой.'
         : 'Ввод приквела доступен только капитану зарегистрированной команды.'
 
   useEffect(() => {
-    setPrequelProgress(initialPrequelProgress)
-  }, [initialPrequelProgress])
+    setPrequelProgresses(initialPrequelProgresses)
+  }, [initialPrequelProgresses])
 
   useEffect(() => {
     if (!prequel.openAt || isPrequelOpen) {
@@ -315,6 +385,7 @@ function GameEntryPage({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             gameTeamId: captainGameTeamId,
+            prequelId: prequel.id,
             code: trimmedCode,
           }),
           fallbackMessage: 'Не удалось отправить код приквела',
@@ -342,7 +413,7 @@ function GameEntryPage({
         setIsPrequelSubmitting(false)
       }
     },
-    [canUsePrequel, captainGameTeamId, prequelCode],
+    [canUsePrequel, captainGameTeamId, prequel.id, prequelCode, setPrequelProgress],
   )
 
   return (
@@ -408,12 +479,12 @@ function GameEntryPage({
                   textClassName="text-base leading-relaxed text-gray-700 dark:text-slate-200"
                   emptyText=""
                 />
-                {isPrequelReady ? (
+                {hasVisiblePrequels ? (
                   <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4 dark:border-cyan-500/35 dark:bg-cyan-500/10">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-start justify-between gap-3">
                         <h2 className="text-lg font-semibold text-cyan-900 dark:text-cyan-100">
-                          Приквел
+                          {prequel.title || 'Приквел'}
                         </h2>
                         <button
                           type="button"
@@ -423,6 +494,33 @@ function GameEntryPage({
                           Что такое приквел?
                         </button>
                       </div>
+                      {visiblePrequels.length > 1 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {visiblePrequels.map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                setActivePrequelId(item.id)
+                                setPrequelCode('')
+                                setPrequelFeedback(null)
+                              }}
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                                item.id === prequel.id
+                                  ? 'border-cyan-500 bg-cyan-600 text-white'
+                                  : 'border-cyan-200 bg-white text-cyan-800 dark:border-cyan-500/30 dark:bg-slate-900/70 dark:text-cyan-100'
+                              }`}
+                            >
+                              <PrequelStatusIcon
+                                prequel={item}
+                                progress={prequelProgressById.get(item.id)}
+                                nowTs={prequelNowTs}
+                              />
+                              {item.title || 'Приквел'}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                       <div className="border-t border-cyan-200/80 dark:border-cyan-500/20" />
                       {isPrequelOpen ? (
                         <TiptapContentView
@@ -487,9 +585,20 @@ function GameEntryPage({
                     ) : null}
 
                     {isPrequelOpen ? (
-                      <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
-                        Неверных кодов: {prequelProgress.wrongCodes.length}
-                      </p>
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-600 dark:text-slate-300">
+                        {Number(prequel.mainCodesCount) > 0 ? (
+                          <span>
+                            Основных кодов: {prequelProgress.foundMainCodes.length}/
+                            {prequel.requiredMainCodesCount || prequel.mainCodesCount}
+                          </span>
+                        ) : null}
+                        <span>Неверных кодов: {prequelProgress.wrongCodes.length}</span>
+                        {prequelProgress.completedAt ? (
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                            Выполнен
+                          </span>
+                        ) : null}
+                      </div>
                     ) : null}
 
                     {isPrequelOpen && acceptedBonusCodeItems.length > 0 ? (

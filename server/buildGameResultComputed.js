@@ -1,10 +1,11 @@
 import getSecondsBetween from '../helpers/getSecondsBetween.js'
 import { toStringId } from '../helpers/idAndDate.js'
 import {
-  normalizePrequelConfig,
-  normalizePrequelProgress,
+  getGamePrequels,
+  getGameTeamPrequelProgresses,
 } from '../helpers/normalizePrequel.js'
 import { getTeamTaskSequence } from '../helpers/taskDistribution.js'
+import { normalizeClassicCode } from '../helpers/classicGameRules.js'
 
 const secondsToTime = (sec) => {
   const numeric = Number(sec)
@@ -250,9 +251,17 @@ const getTaskPenaltyAndBonus = (task, gameTeam, taskIndex) => {
     ? task.penaltyCodes
     : []
   const bonusCodes = Array.isArray(task?.bonusCodes) ? task.bonusCodes : []
+  const normalizedPenaltyCodesFound = new Set(
+    penaltyFoundOnTask.map(normalizeClassicCode).filter(Boolean),
+  )
+  const normalizedBonusCodesFound = new Set(
+    bonusFoundOnTask.map(normalizeClassicCode).filter(Boolean),
+  )
 
   const penaltyItems = penaltyCodes
-    .filter((item) => penaltyFoundOnTask.includes(item?.code))
+    .filter((item) =>
+      normalizedPenaltyCodesFound.has(normalizeClassicCode(item?.code)),
+    )
     .map((item) => ({
       type: 'penalty',
       seconds: Number(item?.penalty) || 0,
@@ -263,7 +272,9 @@ const getTaskPenaltyAndBonus = (task, gameTeam, taskIndex) => {
     .filter((item) => item.seconds > 0)
 
   const bonusItems = bonusCodes
-    .filter((item) => bonusFoundOnTask.includes(item?.code))
+    .filter((item) =>
+      normalizedBonusCodesFound.has(normalizeClassicCode(item?.code)),
+    )
     .map((item) => ({
       type: 'bonus',
       seconds: Number(item?.bonus) || 0,
@@ -317,10 +328,11 @@ const getWrongCodePenalty = (game, gameTeam, taskIndex) => {
 }
 
 const getPrequelResult = (game, gameTeam) => {
-  const prequel = normalizePrequelConfig(game?.prequel)
-  const progress = normalizePrequelProgress(gameTeam?.prequelProgress)
+  const prequels = getGamePrequels(game)
+  const progresses = getGameTeamPrequelProgresses(gameTeam, prequels)
+  const enabledPrequels = prequels.filter((item) => item.enabled)
 
-  if (!prequel.enabled) {
+  if (enabledPrequels.length === 0) {
     return {
       enabled: false,
       bonusItems: [],
@@ -330,7 +342,20 @@ const getPrequelResult = (game, gameTeam) => {
       bonusValue: 0,
       penaltyValue: 0,
       wrongPenaltyValue: 0,
+      items: [],
     }
+  }
+
+  const progress = {
+    appliedAdjustments: progresses.flatMap((item) =>
+      item.appliedAdjustments.map((adjustment) => ({
+        ...adjustment,
+        prequelId: item.prequelId,
+        prequelTitle:
+          prequels.find((prequel) => prequel.id === item.prequelId)?.title || '',
+      })),
+    ),
+    appliedStoryEffects: progresses.flatMap((item) => item.appliedStoryEffects),
   }
 
   const bonusItems = progress.appliedAdjustments
@@ -377,6 +402,18 @@ const getPrequelResult = (game, gameTeam) => {
       (acc, item) => acc + (Number(item.value) || 0),
       0,
     ),
+    items: enabledPrequels.map((prequel) => {
+      const itemProgress = progresses.find((item) => item.prequelId === prequel.id)
+      const adjustments = itemProgress?.appliedAdjustments || []
+      return {
+        prequelId: prequel.id,
+        title: prequel.title,
+        completedAt: itemProgress?.completedAt || null,
+        bonusItems: adjustments.filter((item) => item.type === 'bonus'),
+        penaltyItems: adjustments.filter((item) => item.type === 'penalty'),
+        storyEffects: itemProgress?.appliedStoryEffects || [],
+      }
+    }),
   }
 }
 

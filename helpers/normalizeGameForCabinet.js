@@ -1,6 +1,8 @@
 import { ensureDateISOString } from './idAndDate.js'
 import {
   buildDefaultPrequel,
+  normalizePrequelConfigs,
+  normalizePrequelProgresses,
   normalizePrequelProgress,
   normalizePrequelConfig,
 } from './normalizePrequel.js'
@@ -453,10 +455,13 @@ const normalizeUserParticipationTeams = (teams = []) => {
         gameTeamId: ensureString(team?.gameTeamId, ''),
         teamName: ensureString(team?.teamName ?? team?.name, ''),
         isCaptain: ensureBoolean(team?.isCaptain, false),
-        prequelProgress:
-          team?.prequelProgress && typeof team.prequelProgress === 'object'
-            ? normalizePrequelProgress(team.prequelProgress)
-            : null,
+          prequelProgress:
+            team?.prequelProgress && typeof team.prequelProgress === 'object'
+              ? normalizePrequelProgress(team.prequelProgress)
+              : null,
+          prequelProgresses: normalizePrequelProgresses(
+            team?.prequelProgresses,
+          ),
       }
     })
     .filter(Boolean)
@@ -606,6 +611,13 @@ const normalizeGameForCabinet = (game) => {
     descriptionRich: ensureString(game.descriptionRich, ''),
     descriptionMedia: normalizeTaskMedia(game.descriptionMedia),
     prequel: normalizePrequelForCabinet(game.prequel),
+    prequels: normalizePrequelConfigs(
+      Array.isArray(game.prequels) && game.prequels.length > 0
+        ? game.prequels
+        : game.prequel
+          ? [game.prequel]
+          : [],
+    ),
     image: normalizeMediaUrl(game.image),
     startingPlace: ensureString(game.startingPlace, ''),
     finishingPlace: ensureString(game.finishingPlace, ''),

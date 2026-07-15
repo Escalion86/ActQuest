@@ -266,6 +266,47 @@ const PrequelCodeSchema = new Schema(
   { _id: false },
 )
 
+const PrequelCompletionBonusSchema = new Schema(
+  {
+    value: { type: Number, default: 0 },
+    description: { type: String, trim: true, default: '' },
+    storyEffects: { type: [PrequelStoryEffectSchema], default: [] },
+  },
+  { _id: false },
+)
+
+const PrequelConfigSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, default: '' },
+    enabled: { type: Boolean, default: false },
+    openAt: { type: Date, default: null },
+    description: { type: String, default: '', trim: true },
+    descriptionRich: { type: String, default: '' },
+    descriptionMedia: { type: [PrequelMediaSchema], default: [] },
+    mode: {
+      type: String,
+      enum: ['single_hit', 'multi_hit'],
+      default: 'multi_hit',
+    },
+    mainCodes: { type: [PrequelCodeSchema], default: [] },
+    requiredMainCodesCount: { type: Number, default: null, min: 1 },
+    completionBonus: {
+      type: PrequelCompletionBonusSchema,
+      default: () => ({}),
+    },
+    bonusCodes: { type: [PrequelCodeSchema], default: [] },
+    penaltyCodes: { type: [PrequelCodeSchema], default: [] },
+    wrongAttemptsLimit: { type: Number, default: null },
+    wrongAttemptsPenalty: { type: Number, default: 0 },
+    wrongAttemptsStoryEffects: {
+      type: [PrequelStoryEffectSchema],
+      default: [],
+    },
+  },
+  { _id: false },
+)
+
 const gamesSchema = {
   name: {
     type: String,
@@ -338,6 +379,10 @@ const gamesSchema = {
       },
     },
     default: () => ({}),
+  },
+  prequels: {
+    type: [PrequelConfigSchema],
+    default: [],
   },
   dateStart: {
     type: Date,
@@ -485,6 +530,11 @@ const gamesSchema = {
         numCodesToCompliteTask: {
           type: Number,
           default: null,
+          min: [1, 'Количество кодов для выполнения должно быть не меньше 1'],
+          validate: {
+            validator: (value) => value === null || Number.isInteger(value),
+            message: 'Количество кодов для выполнения должно быть целым числом',
+          },
         },
         postMessage: {
           type: String,

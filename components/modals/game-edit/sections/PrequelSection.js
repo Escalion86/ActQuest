@@ -18,6 +18,7 @@ import {
   buildDefaultPrequel,
   isPrequelReadyForPlayers,
   normalizePrequelConfig,
+  normalizePrequelConfigs,
   normalizePrequelStoryEffect,
 } from '@helpers/normalizePrequel'
 import {
@@ -51,14 +52,18 @@ const compactInputClassName =
 
 const getPrequelCodeAccordionKey = (kind, index) => `prequel-${kind}-${index}`
 
-const PrequelSection = ({
+const PrequelItem = ({
+  prequel,
+  prequelIndex,
+  isExpanded,
+  onExpandedChange,
+  onUpdatePrequel,
+  onRemovePrequel,
   selectedGame,
   canEditSelectedGame,
   isSaving,
-  updateSelectedGame,
   canViewCodePhotos,
 }) => {
-  const [isPrequelExpanded, setIsPrequelExpanded] = useState(true)
   const [expandedCodeAccordions, setExpandedCodeAccordions] = useState(
     () => new Set(),
   )
@@ -66,38 +71,26 @@ const PrequelSection = ({
 
   const isPhotoGame = selectedGame?.type === 'photo'
   const isStoryGame = selectedGame?.type === 'story'
-  const prequel = normalizePrequelConfig(
-    selectedGame?.prequel || buildDefaultPrequel(),
-  )
-
   const hasPrequelValidationErrors =
     Boolean(prequel.enabled) && !isPrequelReadyForPlayers(prequel)
 
   useEffect(() => {
-    setIsPrequelExpanded(false)
-  }, [selectedGame?.id])
-
-  useEffect(() => {
-    if (!isPrequelExpanded) {
+    if (!isExpanded) {
       setExpandedCodeAccordions(new Set())
     }
-  }, [isPrequelExpanded])
+  }, [isExpanded])
 
   const updatePrequel = (patch) => {
-    const nextPrequelPatch =
-      typeof patch === 'function' ? patch(prequel) : patch
-    updateSelectedGame({
-      prequel: {
-        ...prequel,
-        ...(nextPrequelPatch && typeof nextPrequelPatch === 'object'
-          ? nextPrequelPatch
-          : {}),
-      },
-    })
+    onUpdatePrequel(prequel.id, patch)
   }
 
   const updatePrequelCodeEntry = (kind, index, patch) => {
-    const fieldName = kind === 'penalty' ? 'penaltyCodes' : 'bonusCodes'
+    const fieldName =
+      kind === 'main'
+        ? 'mainCodes'
+        : kind === 'penalty'
+          ? 'penaltyCodes'
+          : 'bonusCodes'
     updatePrequel((currentPrequel) => ({
       [fieldName]: (currentPrequel[fieldName] || []).map((item, itemIndex) =>
         itemIndex === index
@@ -118,13 +111,13 @@ const PrequelSection = ({
     emptyLabel,
   }) => {
     const isPenaltyKind = kind === 'penalty'
-    const items = Array.isArray(
-      isPenaltyKind ? prequel.penaltyCodes : prequel.bonusCodes,
-    )
-      ? isPenaltyKind
-        ? prequel.penaltyCodes
-        : prequel.bonusCodes
-      : []
+    const isMainKind = kind === 'main'
+    const fieldName = isMainKind
+      ? 'mainCodes'
+      : isPenaltyKind
+        ? 'penaltyCodes'
+        : 'bonusCodes'
+    const items = Array.isArray(prequel[fieldName]) ? prequel[fieldName] : []
 
     return (
       <div className="space-y-3">
@@ -143,10 +136,8 @@ const PrequelSection = ({
                 return next
               })
               updatePrequel((currentPrequel) => ({
-                [isPenaltyKind ? 'penaltyCodes' : 'bonusCodes']: [
-                  ...((isPenaltyKind
-                    ? currentPrequel.penaltyCodes
-                    : currentPrequel.bonusCodes) || []),
+                [fieldName]: [
+                  ...(currentPrequel[fieldName] || []),
                   {
                     id: `prequel-${kind}-${Date.now()}`,
                     code: '',
@@ -190,12 +181,14 @@ const PrequelSection = ({
                   <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
                     <div
                       className={`absolute left-0 top-0 shrink-0 rounded-br-full border-b border-r px-3 py-0 text-[11px] font-semibold ${
-                        isPenaltyKind
+                        isMainKind
+                          ? 'border-cyan-300/70 bg-cyan-100/80 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200'
+                          : isPenaltyKind
                           ? 'border-rose-300/70 bg-rose-100/80 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200'
                           : 'border-emerald-300/70 bg-emerald-100/80 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
                       }`}
                     >
-                      {isPenaltyKind ? 'Штраф' : 'Бонус'}
+                      {isMainKind ? 'Основной' : isPenaltyKind ? 'Штраф' : 'Бонус'}
                     </div>
                     <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-1">
                       <div className="flex items-center w-full min-w-0 gap-2 mt-2 overflow-hidden">
@@ -225,7 +218,7 @@ const PrequelSection = ({
                   </summary>
                   <div className="grid gap-3 mt-2 md:grid-cols-4">
                     <CabinetInputField
-                      id={`prequel-${kind}-code-${item.id || itemIndex}`}
+                      id={`prequel-${prequel.id}-${kind}-code-${item.id || itemIndex}`}
                       label="Код"
                       type="text"
                       value={item.code || ''}
@@ -238,9 +231,9 @@ const PrequelSection = ({
                       labelClassName={compactLabelClassName}
                       inputClassName={compactInputClassName}
                     />
-                    {isPhotoGame ? (
+                    {isMainKind ? null : isPhotoGame ? (
                       <CabinetNumberField
-                        id={`prequel-${kind}-value-${item.id || itemIndex}`}
+                        id={`prequel-${prequel.id}-${kind}-value-${item.id || itemIndex}`}
                         label={isPenaltyKind ? 'Штраф' : 'Бонус'}
                         value={item.value ?? 0}
                         onChange={(event) =>
@@ -254,7 +247,7 @@ const PrequelSection = ({
                       />
                     ) : (
                       <CabinetDurationField
-                        id={`prequel-${kind}-value-${item.id || itemIndex}`}
+                        id={`prequel-${prequel.id}-${kind}-value-${item.id || itemIndex}`}
                         label={isPenaltyKind ? 'Штраф' : 'Бонус'}
                         valueSeconds={item.value ?? 0}
                         onChangeSeconds={(nextSeconds) =>
@@ -268,7 +261,7 @@ const PrequelSection = ({
                     )}
                   </div>
                   <CabinetInputField
-                    id={`prequel-${kind}-description-${item.id || itemIndex}`}
+                    id={`prequel-${prequel.id}-${kind}-description-${item.id || itemIndex}`}
                     label="Комментарий"
                     type="text"
                     value={item.description || ''}
@@ -294,7 +287,7 @@ const PrequelSection = ({
                                 : '',
                           })
                         }
-                        directory={`games/${selectedGame.id || 'draft'}/prequel/${kind}-codes/${item.id || itemIndex}`}
+                        directory={`games/${selectedGame.id || 'draft'}/prequel/${prequel.id}/${kind}-codes/${item.id || itemIndex}`}
                         imageName={`prequel-${kind}-code-${item.id || itemIndex}`}
                         maxImages={1}
                         uploadLabel="Загрузить фото"
@@ -309,9 +302,9 @@ const PrequelSection = ({
                       />
                     </div>
                   ) : null}
-                  {isStoryGame ? (
+                  {isStoryGame && !isMainKind ? (
                     <CabinetTextareaField
-                      id={`prequel-${kind}-effects-${item.id || itemIndex}`}
+                      id={`prequel-${prequel.id}-${kind}-effects-${item.id || itemIndex}`}
                       label="Story-эффекты, JSON-массив"
                       value={JSON.stringify(item.storyEffects || [], null, 2)}
                       onChange={(event) => {
@@ -334,11 +327,9 @@ const PrequelSection = ({
                     <CabinetButton
                       onClick={() =>
                         updatePrequel((currentPrequel) => ({
-                          [isPenaltyKind ? 'penaltyCodes' : 'bonusCodes']:
-                            (isPenaltyKind
-                              ? currentPrequel.penaltyCodes
-                              : currentPrequel.bonusCodes
-                            ).filter((_entry, index) => index !== itemIndex),
+                          [fieldName]: (currentPrequel[fieldName] || []).filter(
+                            (_entry, index) => index !== itemIndex,
+                          ),
                         }))
                       }
                       variant="secondary"
@@ -369,7 +360,7 @@ const PrequelSection = ({
           type="button"
           onClick={
             prequel.enabled
-              ? () => setIsPrequelExpanded((current) => !current)
+              ? () => onExpandedChange(!isExpanded)
               : undefined
           }
           className={`relative flex flex-1 items-center justify-between gap-3 overflow-hidden px-4 py-3 text-sm font-semibold text-left text-slate-700 transition dark:text-white ${
@@ -379,13 +370,14 @@ const PrequelSection = ({
           }`}
         >
           <div className="absolute top-0 left-0 shrink-0 px-3 py-0 text-[11px] font-semibold border-b border-r rounded-br-full border-violet-300/70 bg-violet-100/80 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200">
-            Приквел
+            Приквел {prequelIndex + 1}
           </div>
           <div className="min-w-0 pt-2">
-            <p>Приквел</p>
+            <p>{prequel.title || `Приквел ${prequelIndex + 1}`}</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
-              Общее задание для зарегистрированных команд до фактического старта
-              игры.
+              Основных кодов: {prequel.mainCodes.length} · Бонусных:{' '}
+              {prequel.bonusCodes.length} · Штрафных:{' '}
+              {prequel.penaltyCodes.length}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -393,32 +385,52 @@ const PrequelSection = ({
               <TaskWarningIcon title="В приквеле есть незаполненные обязательные поля" />
             ) : null}
             {prequel.enabled ? (
-              <AccordionChevronIcon isOpen={isPrequelExpanded} />
+              <AccordionChevronIcon isOpen={isExpanded} />
             ) : null}
           </div>
         </button>
-        <div className="flex items-center px-4 border-l shrink-0 border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-2 border-l px-3 shrink-0 border-slate-200 dark:border-slate-700">
           <NeonCheckbox
-            id="game-prequel-enabled"
+            id={`game-prequel-enabled-${prequel.id}`}
             checked={Boolean(prequel.enabled)}
             onChange={(eventOrChecked) => {
               const checked =
                 typeof eventOrChecked === 'boolean'
                   ? eventOrChecked
                   : Boolean(eventOrChecked?.target?.checked)
-              setIsPrequelExpanded(checked)
+              onExpandedChange(checked)
               updatePrequel({ enabled: checked })
             }}
             label="Включён"
             labelClassName="text-sm text-slate-600 dark:text-slate-200"
           />
+          <button
+            type="button"
+            onClick={() => onRemovePrequel(prequel.id)}
+            disabled={!canEditSelectedGame || isSaving}
+            title={`Удалить приквел ${prequelIndex + 1}`}
+            aria-label={`Удалить приквел ${prequelIndex + 1}`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200 bg-transparent text-lg font-semibold leading-none text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+          >
+            ×
+          </button>
         </div>
       </div>
 
-      {prequel.enabled && isPrequelExpanded ? (
+      {prequel.enabled && isExpanded ? (
         <div className="px-3 py-4 space-y-5 sm:px-4 sm:py-5">
           <CabinetInputField
-            id="game-prequel-open-at"
+            id={`game-prequel-title-${prequel.id || 'draft'}`}
+            label="Название приквела"
+            type="text"
+            value={prequel.title || ''}
+            onChange={(event) => updatePrequel({ title: event.target.value })}
+            disabled={!canEditSelectedGame || isSaving}
+            labelClassName={fieldLabelClassName}
+            inputClassName={fieldInputClassName}
+          />
+          <CabinetInputField
+            id={`game-prequel-open-at-${prequel.id}`}
             label="Открыть приквел"
             type="datetime-local"
             value={
@@ -452,7 +464,7 @@ const PrequelSection = ({
             <p className={fieldLabelClassName}>Описание приквела</p>
             <TaskRichEditor
               value={prequel.descriptionRich || prequel.description || ''}
-              directory={`games/${selectedGame.id || 'draft'}/prequel/editor`}
+              directory={`games/${selectedGame.id || 'draft'}/prequel/${prequel.id}/editor`}
               contentMaxHeight="none"
               disabled={!canEditSelectedGame || isSaving}
               placeholder="Введите описание задания приквела."
@@ -489,24 +501,102 @@ const PrequelSection = ({
             />
           </div>
 
-          <CabinetSelectField
-            id="game-prequel-mode"
-            label="Режим обработки кодов"
-            value={prequel.mode}
-            onChange={(event) => updatePrequel({ mode: event.target.value })}
-            labelClassName={fieldLabelClassName}
-            selectClassName={fieldSelectClassName}
-            containerClassName="space-y-2"
-          >
-            <option value="multi_hit">Можно собрать все коды</option>
-            <option value="single_hit">
-              Закрывать после первого найденного бонуса или штрафа
-            </option>
-          </CabinetSelectField>
+          {renderPrequelCodeList({
+            kind: 'main',
+            title: 'Основные коды приквела',
+            addLabel: 'Добавить основной код',
+            removeLabel: 'Удалить код',
+            emptyLabel:
+              'Основных кодов нет — выполнение определяется режимом бонусных и штрафных кодов либо администратором.',
+          })}
+
+          {prequel.mainCodes.length > 0 ? (
+            <CabinetNumberField
+              id={`game-prequel-required-main-${prequel.id}`}
+              label="Основных кодов для выполнения"
+              min={1}
+              max={prequel.mainCodes.length}
+              value={prequel.requiredMainCodesCount ?? ''}
+              placeholder="Все"
+              onChange={(event) =>
+                updatePrequel({
+                  requiredMainCodesCount:
+                    event.target.value === ''
+                      ? null
+                      : Math.max(1, Number(event.target.value) || 1),
+                })
+              }
+              labelClassName={fieldLabelClassName}
+              inputClassName={fieldInputClassName}
+            />
+          ) : (
+            <CabinetSelectField
+              id={`game-prequel-mode-${prequel.id}`}
+              label="Режим обработки кодов"
+              value={prequel.mode}
+              onChange={(event) => updatePrequel({ mode: event.target.value })}
+              labelClassName={fieldLabelClassName}
+              selectClassName={fieldSelectClassName}
+              containerClassName="space-y-2"
+            >
+              <option value="multi_hit">Выполнить после всех кодов</option>
+              <option value="single_hit">
+                Выполнить после первого бонусного или штрафного кода
+              </option>
+            </CabinetSelectField>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {isPhotoGame ? (
+              <CabinetNumberField
+                id={`game-prequel-completion-bonus-${prequel.id}`}
+                label="Бонус за выполнение, баллы"
+                value={prequel.completionBonus?.value ?? 0}
+                onChange={(event) =>
+                  updatePrequel({
+                    completionBonus: {
+                      ...prequel.completionBonus,
+                      value: Number(event.target.value) || 0,
+                    },
+                  })
+                }
+                labelClassName={fieldLabelClassName}
+                inputClassName={fieldInputClassName}
+              />
+            ) : (
+              <CabinetDurationField
+                id={`game-prequel-completion-bonus-${prequel.id}`}
+                label="Бонус за выполнение"
+                valueSeconds={prequel.completionBonus?.value ?? 0}
+                onChangeSeconds={(value) =>
+                  updatePrequel({
+                    completionBonus: { ...prequel.completionBonus, value },
+                  })
+                }
+                labelClassName={fieldLabelClassName}
+              />
+            )}
+            <CabinetInputField
+              id={`game-prequel-completion-description-${prequel.id}`}
+              label="Комментарий к бонусу"
+              type="text"
+              value={prequel.completionBonus?.description || ''}
+              onChange={(event) =>
+                updatePrequel({
+                  completionBonus: {
+                    ...prequel.completionBonus,
+                    description: event.target.value,
+                  },
+                })
+              }
+              labelClassName={fieldLabelClassName}
+              inputClassName={fieldInputClassName}
+            />
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <CabinetNumberField
-              id="game-prequel-wrong-limit"
+              id={`game-prequel-wrong-limit-${prequel.id}`}
               label="Лимит неверных кодов"
               min={0}
               value={prequel.wrongAttemptsLimit ?? ''}
@@ -524,7 +614,7 @@ const PrequelSection = ({
             />
             {isPhotoGame ? (
               <CabinetNumberField
-                id="game-prequel-wrong-penalty"
+                id={`game-prequel-wrong-penalty-${prequel.id}`}
                 label="Штраф за каждый пакет неверных кодов, баллы"
                 value={prequel.wrongAttemptsPenalty ?? 0}
                 onChange={(event) =>
@@ -537,7 +627,7 @@ const PrequelSection = ({
               />
             ) : (
               <CabinetDurationField
-                id="game-prequel-wrong-penalty"
+                id={`game-prequel-wrong-penalty-${prequel.id}`}
                 label="Штраф за каждый пакет неверных кодов"
                 valueSeconds={prequel.wrongAttemptsPenalty ?? 0}
                 onChangeSeconds={(nextSeconds) =>
@@ -572,10 +662,147 @@ const PrequelSection = ({
             removeLabel: 'Удалить штраф',
             emptyLabel: 'Штрафных кодов пока нет.',
           })}
+
         </div>
       ) : null}
     </div>
   )
+}
+
+const PrequelSection = ({
+  selectedGame,
+  canEditSelectedGame,
+  isSaving,
+  updateSelectedGame,
+  canViewCodePhotos,
+}) => {
+  const [expandedPrequelIds, setExpandedPrequelIds] = useState(
+    () => new Set(),
+  )
+  const prequels = normalizePrequelConfigs(
+    Array.isArray(selectedGame?.prequels) && selectedGame.prequels.length > 0
+      ? selectedGame.prequels
+      : selectedGame?.prequel
+        ? [selectedGame.prequel]
+        : [],
+  )
+
+  useEffect(() => {
+    setExpandedPrequelIds(new Set())
+  }, [selectedGame?.id])
+
+  const setPrequelExpanded = (prequelId, isExpanded) => {
+    setExpandedPrequelIds((current) => {
+      const next = new Set(current)
+      if (isExpanded) {
+        next.add(prequelId)
+      } else {
+        next.delete(prequelId)
+      }
+      return next
+    })
+  }
+
+  const updatePrequel = (prequelId, patch) => {
+    const currentPrequel = prequels.find((item) => item.id === prequelId)
+    if (!currentPrequel) return
+    const nextPatch =
+      typeof patch === 'function' ? patch(currentPrequel) : patch
+    const nextPrequel = {
+      ...currentPrequel,
+      ...(nextPatch && typeof nextPatch === 'object' ? nextPatch : {}),
+    }
+    const nextPrequels = prequels.map((item) =>
+      item.id === prequelId ? nextPrequel : item,
+    )
+    updateSelectedGame({ prequels: nextPrequels, prequel: nextPrequels[0] })
+  }
+
+  const addPrequel = () => {
+    const id = `prequel-${Date.now()}`
+    const nextPrequel = normalizePrequelConfig({
+      ...buildDefaultPrequel(),
+      id,
+      title: `Приквел ${prequels.length + 1}`,
+    })
+    const nextPrequels = [...prequels, nextPrequel]
+    updateSelectedGame({ prequels: nextPrequels, prequel: nextPrequels[0] })
+    setPrequelExpanded(id, true)
+  }
+
+  const removePrequel = (prequelId) => {
+    const nextPrequels = prequels.filter((item) => item.id !== prequelId)
+    updateSelectedGame({
+      prequels: nextPrequels,
+      prequel:
+        nextPrequels[0] || normalizePrequelConfig(buildDefaultPrequel()),
+    })
+    setPrequelExpanded(prequelId, false)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
+          Приквелы
+        </h2>
+        <CabinetButton
+          onClick={addPrequel}
+          variant="secondary"
+          size="sm"
+          disabled={!canEditSelectedGame || isSaving}
+        >
+          Добавить приквел
+        </CabinetButton>
+      </div>
+
+      {prequels.map((prequel, index) => (
+        <PrequelItem
+          key={`${selectedGame?.id || 'draft'}-${prequel.id}`}
+          prequel={prequel}
+          prequelIndex={index}
+          isExpanded={expandedPrequelIds.has(prequel.id)}
+          onExpandedChange={(nextIsExpanded) =>
+            setPrequelExpanded(prequel.id, nextIsExpanded)
+          }
+          onUpdatePrequel={updatePrequel}
+          onRemovePrequel={removePrequel}
+          selectedGame={selectedGame}
+          canEditSelectedGame={canEditSelectedGame}
+          isSaving={isSaving}
+          canViewCodePhotos={canViewCodePhotos}
+        />
+      ))}
+    </div>
+  )
+}
+
+PrequelItem.propTypes = {
+  prequel: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    title: PropTypes.string,
+    enabled: PropTypes.bool,
+    mainCodes: PropTypes.arrayOf(PropTypes.object).isRequired,
+    bonusCodes: PropTypes.arrayOf(PropTypes.object).isRequired,
+    penaltyCodes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  }).isRequired,
+  prequelIndex: PropTypes.number.isRequired,
+  isExpanded: PropTypes.bool.isRequired,
+  onExpandedChange: PropTypes.func.isRequired,
+  onUpdatePrequel: PropTypes.func.isRequired,
+  onRemovePrequel: PropTypes.func.isRequired,
+  selectedGame: PropTypes.shape({
+    id: PropTypes.string,
+    type: PropTypes.string,
+    location: PropTypes.string,
+  }).isRequired,
+  canEditSelectedGame: PropTypes.bool.isRequired,
+  isSaving: PropTypes.bool.isRequired,
+  canViewCodePhotos: PropTypes.bool,
+}
+
+PrequelItem.defaultProps = {
+  canViewCodePhotos: false,
 }
 
 PrequelSection.propTypes = {
@@ -584,6 +811,7 @@ PrequelSection.propTypes = {
     type: PropTypes.string,
     location: PropTypes.string,
     prequel: PropTypes.object,
+    prequels: PropTypes.arrayOf(PropTypes.object),
   }),
   canEditSelectedGame: PropTypes.bool.isRequired,
   isSaving: PropTypes.bool.isRequired,

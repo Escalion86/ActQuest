@@ -344,6 +344,7 @@ const handleRequest = async ({ request, params, method }) => {
         result: 1,
         type: 1,
         prequel: 1,
+        prequels: 1,
       })
       .lean()
 

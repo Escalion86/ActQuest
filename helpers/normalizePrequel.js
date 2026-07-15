@@ -1,5 +1,9 @@
 const PREQUEL_MODE_SINGLE_HIT = 'single_hit'
 const PREQUEL_MODE_MULTI_HIT = 'multi_hit'
+const PREQUEL_STATUS_COMPLETED = 'completed'
+const PREQUEL_STATUS_OPEN = 'open'
+const PREQUEL_STATUS_LOCKED = 'locked'
+const LEGACY_PREQUEL_ID = 'legacy-prequel'
 
 const PREQUEL_EFFECT_TYPES = [
   'grant_item',
@@ -131,13 +135,39 @@ const normalizePrequelCodeEntry = (entry, index = 0, kind = 'bonus') => {
   }
 }
 
+const normalizePrequelMainCodeEntry = (entry, index = 0) => {
+  const normalizedEntry =
+    typeof entry === 'string' || typeof entry === 'number'
+      ? { code: String(entry) }
+      : entry
+
+  return normalizePrequelCodeEntry(normalizedEntry, index, 'main')
+}
+
+const normalizeCompletionBonus = (value) => {
+  const source = value && typeof value === 'object' ? value : {}
+  return {
+    value: ensureNumber(source?.value ?? value, 0),
+    description: ensureString(source?.description, '').trim(),
+    storyEffects: (
+      Array.isArray(source?.storyEffects) ? source.storyEffects : []
+    ).map(normalizePrequelStoryEffect),
+  }
+}
+
 const buildDefaultPrequel = () => ({
+  id: '',
+  title: '',
   enabled: false,
   openAt: null,
   description: '',
   descriptionRich: '',
   descriptionMedia: [],
   mode: PREQUEL_MODE_MULTI_HIT,
+  mainCodesCount: 0,
+  mainCodes: [],
+  requiredMainCodesCount: null,
+  completionBonus: normalizeCompletionBonus(null),
   bonusCodesCount: 0,
   penaltyCodesCount: 0,
   bonusCodes: [],
@@ -160,6 +190,10 @@ const normalizePrequelConfig = (prequel, options = {}) => {
   const rawPenaltyCodes = Array.isArray(nextPrequel?.penaltyCodes)
     ? nextPrequel.penaltyCodes
     : []
+  const rawMainCodes = Array.isArray(nextPrequel?.mainCodes)
+    ? nextPrequel.mainCodes
+    : []
+  const normalizedMainCodes = rawMainCodes.map(normalizePrequelMainCodeEntry)
   const normalizedBonusCodes = rawBonusCodes.map((entry, index) =>
     normalizePrequelCodeEntry(entry, index, 'bonus'),
   )
@@ -172,6 +206,9 @@ const normalizePrequelConfig = (prequel, options = {}) => {
   const normalizedPenaltyCodesCount = normalizedPenaltyCodes.filter((entry) =>
     ensureString(entry?.code, '').trim(),
   ).length
+  const normalizedMainCodesCount = normalizedMainCodes.filter((entry) =>
+    ensureString(entry?.code, '').trim(),
+  ).length
   const effectiveBonusCodesCount =
     normalizedBonusCodesCount > 0
       ? normalizedBonusCodesCount
@@ -182,6 +219,8 @@ const normalizePrequelConfig = (prequel, options = {}) => {
       : ensureNumber(nextPrequel?.penaltyCodesCount, 0)
 
   return {
+    id: ensureString(nextPrequel?.id, options.fallbackId || '').trim(),
+    title: ensureString(nextPrequel?.title, '').trim(),
     enabled: ensureBoolean(nextPrequel?.enabled, false),
     openAt: ensureNullableDateISOString(nextPrequel?.openAt),
     description: ensureString(nextPrequel?.description, ''),
@@ -193,6 +232,15 @@ const normalizePrequelConfig = (prequel, options = {}) => {
       .map((item, index) => normalizeMediaItem(item, index, 'prequel-media'))
       .filter((item) => item.url !== ''),
     mode,
+    mainCodesCount:
+      normalizedMainCodesCount > 0
+        ? normalizedMainCodesCount
+        : ensureNumber(nextPrequel?.mainCodesCount, 0),
+    mainCodes: includeCodes ? normalizedMainCodes : [],
+    requiredMainCodesCount: ensureNullableNumber(
+      nextPrequel?.requiredMainCodesCount,
+    ),
+    completionBonus: normalizeCompletionBonus(nextPrequel?.completionBonus),
     bonusCodesCount: effectiveBonusCodesCount,
     penaltyCodesCount: effectivePenaltyCodesCount,
     bonusCodes: includeCodes ? normalizedBonusCodes : [],
@@ -207,7 +255,55 @@ const normalizePrequelConfig = (prequel, options = {}) => {
   }
 }
 
+const normalizePrequelConfigs = (value, options = {}) => {
+  const rawItems = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object'
+      ? [value]
+      : []
+
+  return rawItems.map((item, index) => {
+    const fallbackId =
+      index === 0 && !Array.isArray(value)
+        ? LEGACY_PREQUEL_ID
+        : `prequel-${index + 1}`
+    const normalized = normalizePrequelConfig(item, {
+      ...options,
+      fallbackId,
+    })
+    return {
+      ...normalized,
+      id: normalized.id || fallbackId,
+      title: normalized.title || `Приквел ${index + 1}`,
+    }
+  })
+}
+
+const getGamePrequels = (game, options = {}) => {
+  if (Array.isArray(game?.prequels) && game.prequels.length > 0) {
+    return normalizePrequelConfigs(game.prequels, options)
+  }
+  if (game?.prequel && typeof game.prequel === 'object') {
+    return normalizePrequelConfigs(game.prequel, options)
+  }
+  return []
+}
+
+const resolveRequiredPrequelMainCodesCount = (prequel) => {
+  const normalized = normalizePrequelConfig(prequel, { includeCodes: false })
+  const total = Math.max(0, Math.trunc(Number(normalized.mainCodesCount) || 0))
+  if (total <= 0) return 0
+
+  const requested = Number(normalized.requiredMainCodesCount)
+  if (!Number.isInteger(requested) || requested < 1 || requested > total) {
+    return total
+  }
+  return requested
+}
+
 const buildDefaultPrequelProgress = () => ({
+  prequelId: '',
+  foundMainCodes: [],
   foundBonusCodes: [],
   foundPenaltyCodes: [],
   wrongCodes: [],
@@ -217,6 +313,10 @@ const buildDefaultPrequelProgress = () => ({
   appliedStoryEffects: [],
   isClosed: false,
   closedReason: null,
+  completedAt: null,
+  completedSource: null,
+  completedByUserId: null,
+  completionBonusApplied: false,
   lastSubmittedAt: null,
 })
 
@@ -224,6 +324,8 @@ const normalizePrequelProgress = (progress) => {
   const nextProgress = progress && typeof progress === 'object' ? progress : {}
 
   return {
+    prequelId: ensureString(nextProgress?.prequelId, '').trim(),
+    foundMainCodes: normalizeStringArray(nextProgress?.foundMainCodes),
     foundBonusCodes: normalizeStringArray(nextProgress?.foundBonusCodes),
     foundPenaltyCodes: normalizeStringArray(nextProgress?.foundPenaltyCodes),
     wrongCodes: normalizeStringArray(nextProgress?.wrongCodes),
@@ -234,11 +336,12 @@ const normalizePrequelProgress = (progress) => {
           `prequel-attempt-${index}`,
         code: ensureString(attempt?.code, ''),
         normalizedCode: ensureString(attempt?.normalizedCode, '').trim(),
-        category:
-          attempt?.category === 'bonus' || attempt?.category === 'penalty'
-            ? attempt.category
-            : 'wrong',
+        category: ['main', 'bonus', 'penalty'].includes(attempt?.category)
+          ? attempt.category
+          : 'wrong',
         matchedCode: ensureString(attempt?.matchedCode, ''),
+        source: attempt?.source === 'admin' ? 'admin' : 'player',
+        actorUserId: ensureString(attempt?.actorUserId, '').trim() || null,
         createdAt: attempt?.createdAt || null,
       }),
     ),
@@ -256,12 +359,15 @@ const normalizePrequelProgress = (progress) => {
         `prequel-adjustment-${index}`,
       type: item?.type === 'bonus' ? 'bonus' : 'penalty',
       source:
-        item?.source === 'wrong_attempts_limit'
+        item?.source === 'completion_bonus'
+          ? 'completion_bonus'
+          : item?.source === 'wrong_attempts_limit'
           ? 'wrong_attempts_limit'
           : item?.source === 'penalty_code'
             ? 'penalty_code'
             : 'bonus_code',
       code: ensureString(item?.code, ''),
+      codeId: ensureString(item?.codeId, '').trim(),
       value: ensureNumber(item?.value, 0),
       description: ensureString(item?.description, ''),
       createdAt: item?.createdAt || null,
@@ -276,7 +382,9 @@ const normalizePrequelProgress = (progress) => {
         `prequel-applied-effect-${index}`,
       effectId: ensureString(item?.effectId, '').trim(),
       source:
-        item?.source === 'wrong_attempts_limit'
+        item?.source === 'completion_bonus'
+          ? 'completion_bonus'
+          : item?.source === 'wrong_attempts_limit'
           ? 'wrong_attempts_limit'
           : item?.source === 'penalty_code'
             ? 'penalty_code'
@@ -293,18 +401,64 @@ const normalizePrequelProgress = (progress) => {
     })),
     isClosed: ensureBoolean(nextProgress?.isClosed, false),
     closedReason: ensureString(nextProgress?.closedReason, '').trim() || null,
+    completedAt: nextProgress?.completedAt || null,
+    completedSource:
+      nextProgress?.completedSource === 'manual' ? 'manual' :
+        nextProgress?.completedSource === 'codes' ? 'codes' : null,
+    completedByUserId:
+      ensureString(nextProgress?.completedByUserId, '').trim() || null,
+    completionBonusApplied: ensureBoolean(
+      nextProgress?.completionBonusApplied,
+      false,
+    ),
     lastSubmittedAt: nextProgress?.lastSubmittedAt || null,
   }
+}
+
+const normalizePrequelProgresses = (value, prequels = []) => {
+  const normalizedPrequels = normalizePrequelConfigs(prequels)
+  const rawItems = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object'
+      ? [value]
+      : []
+
+  return rawItems.map((item, index) => {
+    const normalized = normalizePrequelProgress(item)
+    return {
+      ...normalized,
+      prequelId:
+        normalized.prequelId ||
+        normalizedPrequels[index]?.id ||
+        (index === 0 ? LEGACY_PREQUEL_ID : `prequel-${index + 1}`),
+    }
+  })
+}
+
+const getGameTeamPrequelProgresses = (gameTeam, prequels = []) => {
+  if (
+    Array.isArray(gameTeam?.prequelProgresses) &&
+    gameTeam.prequelProgresses.length > 0
+  ) {
+    return normalizePrequelProgresses(gameTeam.prequelProgresses, prequels)
+  }
+  if (gameTeam?.prequelProgress && typeof gameTeam.prequelProgress === 'object') {
+    return normalizePrequelProgresses(gameTeam.prequelProgress, prequels)
+  }
+  return []
 }
 
 const hasPrequelAdjustments = (progress) => {
   const normalized = normalizePrequelProgress(progress)
   return (
     normalized.foundBonusCodes.length > 0 ||
+    normalized.foundMainCodes.length > 0 ||
     normalized.foundPenaltyCodes.length > 0 ||
     normalized.wrongPenaltyAppliedCount > 0 ||
     normalized.appliedAdjustments.length > 0 ||
-    normalized.appliedStoryEffects.length > 0
+    normalized.appliedStoryEffects.length > 0 ||
+    Boolean(normalized.completedAt) ||
+    normalized.isClosed
   )
 }
 
@@ -313,6 +467,11 @@ const isPrequelProgressExhaustedForConfig = (progress, prequel) => {
   const normalizedPrequel = normalizePrequelConfig(prequel, {
     includeCodes: false,
   })
+
+  const requiredMainCodes = resolveRequiredPrequelMainCodesCount(normalizedPrequel)
+  if (requiredMainCodes > 0) {
+    return normalizedProgress.foundMainCodes.length >= requiredMainCodes
+  }
 
   const totalCodes =
     Math.max(0, Number(normalizedPrequel.bonusCodesCount) || 0) +
@@ -334,7 +493,7 @@ const isPrequelProgressClosedForConfig = (progress, prequel) => {
     return true
   }
   if (!normalizedProgress.isClosed) {
-    return false
+    return Boolean(normalizedProgress.completedAt)
   }
 
   const normalizedPrequel = normalizePrequelConfig(prequel, {
@@ -380,22 +539,71 @@ const isPrequelReadyForPlayers = (prequel) => {
     ensureString(normalizedPrequel.description, '').trim() !== '' ||
     ensureString(normalizedPrequel.descriptionRich, '').trim() !== '' ||
     normalizedPrequel.descriptionMedia.length > 0
-  const hasBonusCode = Math.max(0, Number(normalizedPrequel.bonusCodesCount) || 0) > 0
+  const hasAnyCode =
+    Math.max(0, Number(normalizedPrequel.mainCodesCount) || 0) > 0 ||
+    Math.max(0, Number(normalizedPrequel.bonusCodesCount) || 0) > 0 ||
+    Math.max(0, Number(normalizedPrequel.penaltyCodesCount) || 0) > 0
 
-  return hasDescription && hasBonusCode
+  return hasDescription && hasAnyCode
+}
+
+const resolvePrequelStatusForDate = (
+  prequel,
+  progress,
+  now = new Date(),
+) => {
+  if (isPrequelProgressClosedForConfig(progress, prequel)) {
+    return PREQUEL_STATUS_COMPLETED
+  }
+  if (isPrequelOpenForDate(prequel, now)) {
+    return PREQUEL_STATUS_OPEN
+  }
+  return PREQUEL_STATUS_LOCKED
+}
+
+const resolveDefaultPrequelForDate = (prequels, now = new Date()) => {
+  const normalizedPrequels = normalizePrequelConfigs(prequels, {
+    includeCodes: false,
+  })
+
+  return (
+    normalizedPrequels.find(
+      (prequel) =>
+        isPrequelReadyForPlayers(prequel) &&
+        isPrequelOpenForDate(prequel, now),
+    ) ||
+    normalizedPrequels.find((prequel) =>
+      isPrequelReadyForPlayers(prequel),
+    ) ||
+    normalizedPrequels.find((prequel) => prequel.enabled) ||
+    normalizedPrequels[0] ||
+    null
+  )
 }
 
 export {
   PREQUEL_EFFECT_TYPES,
   PREQUEL_MODE_MULTI_HIT,
   PREQUEL_MODE_SINGLE_HIT,
+  PREQUEL_STATUS_COMPLETED,
+  PREQUEL_STATUS_OPEN,
+  PREQUEL_STATUS_LOCKED,
+  LEGACY_PREQUEL_ID,
   buildDefaultPrequel,
   buildDefaultPrequelProgress,
   hasPrequelAdjustments,
   isPrequelOpenForDate,
   isPrequelReadyForPlayers,
+  resolvePrequelStatusForDate,
+  resolveDefaultPrequelForDate,
   isPrequelProgressClosedForConfig,
   isPrequelProgressExhaustedForConfig,
+  getGamePrequels,
+  getGameTeamPrequelProgresses,
+  normalizeCompletionBonus,
+  normalizePrequelConfigs,
+  normalizePrequelProgresses,
+  resolveRequiredPrequelMainCodesCount,
   normalizePrequelCodeEntry,
   normalizePrequelConfig,
   normalizePrequelProgress,
