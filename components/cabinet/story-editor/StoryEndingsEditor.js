@@ -5,6 +5,12 @@ import dynamic from 'next/dynamic'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import ImagesInput from '@components/cabinet/ImagesInput'
+import {
+  getStoryCoverImage,
+  mergeStoryEditorMedia,
+  setStoryCoverImage,
+} from '@helpers/storyCoverMedia'
 
 const TaskRichEditor = dynamic(
   () => import('@components/cabinet/TaskRichEditor'),
@@ -86,6 +92,7 @@ const StoryEndingsEditor = ({
   const items = normalizeArray(game?.storyItems)
   const interactions = normalizeArray(game?.storyInteractions)
   const selectedEnding = endings.find((ending) => ending.id === selectedEndingId)
+  const selectedEndingCoverImage = getStoryCoverImage(selectedEnding?.media)
 
   const references = useMemo(() => {
     if (!selectedEndingId) return []
@@ -265,6 +272,23 @@ const StoryEndingsEditor = ({
             </label>
 
             <div className="mt-4">
+              <ImagesInput
+                label="Изображение концовки"
+                images={selectedEndingCoverImage ? [selectedEndingCoverImage] : []}
+                onChange={(nextImages) => onUpdateEnding(selectedEnding.id, (ending) => ({
+                  ...ending,
+                  media: setStoryCoverImage(ending.media, nextImages?.[0] ?? ''),
+                }))}
+                directory={`games/${gameId || 'draft'}/story/endings/${selectedEnding.id}/cover`}
+                imageName="ending-cover"
+                disabled={disabled}
+                maxImages={1}
+                previewShape="square"
+                uploadLabel="Загрузить обложку"
+              />
+            </div>
+
+            <div className="mt-4">
               <p className="mb-1 text-sm text-slate-600 dark:text-slate-300">Литературное описание финала и медиа</p>
               <TaskRichEditor
                 value={selectedEnding.descriptionRich || ''}
@@ -275,7 +299,7 @@ const StoryEndingsEditor = ({
                 onChange={({ html, media }) => onUpdateEnding(selectedEnding.id, (ending) => ({
                   ...ending,
                   descriptionRich: typeof html === 'string' ? html : '',
-                  media: Array.isArray(media) ? media : [],
+                  media: mergeStoryEditorMedia(ending.media, media),
                 }))}
               />
             </div>

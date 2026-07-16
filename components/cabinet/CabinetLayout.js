@@ -25,6 +25,7 @@ import {
   faSun,
   faCode,
   faXmark,
+  faArrowLeft,
 } from '@fortawesome/free-solid-svg-icons'
 import { LOCATIONS } from '@server/serverConstants'
 import { useBootstrapTheme } from '@app/providers'
@@ -316,6 +317,10 @@ const CabinetLayout = ({
   activePage,
   headerTitle,
   showPageTitle,
+  hideSidebar,
+  backHref,
+  backLabel,
+  fullWidth,
 }) => {
   const router = useRouter()
   const pathname = usePathname()
@@ -920,13 +925,14 @@ const CabinetLayout = ({
             className={`absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl ${decorClass.three}`}
           />
         </div>
-        <div
-          className={`fixed left-0 top-0 z-40 flex h-[100dvh] max-h-[100dvh] border-r backdrop-blur-xl transition-all duration-200 laptop:inset-y-0 laptop:h-screen laptop:max-h-screen laptop:w-64 laptop:translate-x-0 ${sidebarClass} ${
-            isSidebarExpanded
-              ? 'w-64 translate-x-0 shadow-xl'
-              : 'w-16 -translate-x-full'
-          }`}
-        >
+        {hideSidebar ? null : (
+          <div
+            className={`fixed left-0 top-0 z-40 flex h-[100dvh] max-h-[100dvh] border-r backdrop-blur-xl transition-all duration-200 laptop:inset-y-0 laptop:h-screen laptop:max-h-screen laptop:w-64 laptop:translate-x-0 ${sidebarClass} ${
+              isSidebarExpanded
+                ? 'w-64 translate-x-0 shadow-xl'
+                : 'w-16 -translate-x-full'
+            }`}
+          >
           <div className="flex flex-col w-full h-full overflow-hidden">
             <div
               className={`flex h-16 items-center justify-center border-b ${sidebarHeaderClass}`}
@@ -1155,30 +1161,44 @@ const CabinetLayout = ({
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
-        {isSidebarExpanded && (
+        {!hideSidebar && isSidebarExpanded ? (
           <div
             className={`fixed inset-0 z-30 laptop:hidden ${overlayClass}`}
             aria-hidden="true"
             onClick={() => setIsSidebarExpanded(false)}
           />
-        )}
+        ) : null}
 
-        <div className="flex h-[100dvh] min-h-0 flex-1 flex-col overflow-hidden laptop:pl-64 laptop:min-h-screen">
+        <div className={`flex h-[100dvh] min-h-0 flex-1 flex-col overflow-hidden laptop:min-h-screen ${hideSidebar ? '' : 'laptop:pl-64'}`}>
           <header
             className={`z-20 shrink-0 border-b backdrop-blur-xl ${headerClass}`}
           >
             <div className="flex items-center justify-between px-4 py-4 laptop:px-8">
               <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-colors duration-150 laptop:hidden ${mobileMenuBtnClass}`}
-                  onClick={() => setIsSidebarExpanded((prev) => !prev)}
-                  aria-label="Открыть меню"
-                >
-                  <FontAwesomeIcon icon={faBars} className="w-4 h-4" />
-                </button>
+                {backHref ? (
+                  <Link
+                    href={backHref}
+                    onClick={(event) => handleNavLinkClick(backHref, event)}
+                    aria-label={backLabel}
+                    className={`inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors duration-150 ${mobileMenuBtnClass}`}
+                  >
+                    <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" />
+                    <span className="hidden sm:inline">{backLabel}</span>
+                    <span className="sm:hidden">Выйти</span>
+                  </Link>
+                ) : hideSidebar ? null : (
+                  <button
+                    type="button"
+                    className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-colors duration-150 laptop:hidden ${mobileMenuBtnClass}`}
+                    onClick={() => setIsSidebarExpanded((prev) => !prev)}
+                    aria-label="Открыть меню"
+                  >
+                    <FontAwesomeIcon icon={faBars} className="w-4 h-4" />
+                  </button>
+                )}
                 <div>
                   <h1
                     className={`text-xl font-semibold laptop:text-2xl ${userNameClass}`}
@@ -1218,7 +1238,7 @@ const CabinetLayout = ({
           <main
             className={`relative z-10 flex-1 overflow-y-auto px-4 py-6 laptop:px-8 ${mainTextClass}`}
           >
-            <div className="max-w-5xl mx-auto">
+            <div className={fullWidth ? 'w-full' : 'max-w-5xl mx-auto'}>
               {showPageTitle ? (
                 <div className="mb-6">
                   <h2 className={`text-2xl font-semibold ${pageTitleClass}`}>
@@ -1310,12 +1330,20 @@ CabinetLayout.propTypes = {
   activePage: PropTypes.string.isRequired,
   headerTitle: PropTypes.string,
   showPageTitle: PropTypes.bool,
+  hideSidebar: PropTypes.bool,
+  backHref: PropTypes.string,
+  backLabel: PropTypes.string,
+  fullWidth: PropTypes.bool,
 }
 
 CabinetLayout.defaultProps = {
   description: null,
   headerTitle: null,
   showPageTitle: false,
+  hideSidebar: false,
+  backHref: null,
+  backLabel: 'Назад',
+  fullWidth: false,
 }
 
 export default CabinetLayout

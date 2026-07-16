@@ -23,6 +23,19 @@ const getDefaultPosition = (index) => ({
   y: 80 + Math.floor(index / 4) * 160,
 })
 
+const evidenceCategoryLabels = {
+  time: 'Время события',
+  opportunity: 'Возможность совершить преступление',
+  'false-timeline': 'Ложная хронология',
+  motive: 'Мотив',
+  weapon: 'Орудие преступления',
+  alibi: 'Алиби',
+  'false-alibi': 'Ложное алиби',
+  'red-herring': 'Отвлекающая версия',
+}
+
+const evidenceCategoryOrder = Object.keys(evidenceCategoryLabels)
+
 const ReferenceChecklist = ({ label, options, value, onChange, disabled }) => {
   const selectedIds = new Set(normalizeArray(value))
 
@@ -357,7 +370,7 @@ const emptyOutcomeConditions = {
   maxUsedClues: null,
 }
 
-const AccusationEditorModal = ({ isOpen, onClose, game, updateGame, disabled }) => {
+const AccusationEditorModal = ({ isOpen, onClose, game, updateGame, initialOutcomeId, disabled }) => {
   const accusation = game?.storyAccusation && typeof game.storyAccusation === 'object' ? game.storyAccusation : {}
   const nodes = normalizeArray(game?.storyNodes)
   const topics = normalizeArray(game?.storyTopics)
@@ -367,6 +380,35 @@ const AccusationEditorModal = ({ isOpen, onClose, game, updateGame, disabled }) 
   const endings = normalizeArray(game?.storyEndings)
   const motives = normalizeArray(accusation.motives)
   const outcomes = normalizeArray(accusation.outcomes)
+  const evidenceCategoryOptions = useMemo(() => {
+    const counts = new Map()
+    evidence.forEach((entry) => {
+      normalizeArray(entry.tags).forEach((tag) => {
+        if (typeof tag !== 'string' || !tag.trim()) return
+        const normalizedTag = tag.trim()
+        counts.set(normalizedTag, (counts.get(normalizedTag) || 0) + 1)
+      })
+    })
+    outcomes.forEach((outcome) => {
+      normalizeArray(outcome.conditions?.requiredEvidenceTags).forEach((tag) => {
+        if (typeof tag === 'string' && tag.trim() && !counts.has(tag.trim())) {
+          counts.set(tag.trim(), 0)
+        }
+      })
+    })
+
+    return Array.from(counts, ([id, count]) => ({
+      id,
+      title: `${evidenceCategoryLabels[id] || id} · ${count > 0 ? `доказательств: ${count}` : 'нет доказательств'}`,
+    })).toSorted((left, right) => {
+      const leftIndex = evidenceCategoryOrder.indexOf(left.id)
+      const rightIndex = evidenceCategoryOrder.indexOf(right.id)
+      if (leftIndex === -1 && rightIndex === -1) return left.title.localeCompare(right.title, 'ru')
+      if (leftIndex === -1) return 1
+      if (rightIndex === -1) return -1
+      return leftIndex - rightIndex
+    })
+  }, [evidence, outcomes])
   const culpritCandidates = characters.filter((character) =>
     normalizeArray(accusation.culpritCharacterIds).includes(character.id),
   )
@@ -376,6 +418,16 @@ const AccusationEditorModal = ({ isOpen, onClose, game, updateGame, disabled }) 
   useEffect(() => {
     if (!outcomes.some((outcome) => outcome.id === selectedOutcomeId)) setSelectedOutcomeId(outcomes[0]?.id || '')
   }, [outcomes, selectedOutcomeId])
+
+  useEffect(() => {
+    if (
+      isOpen &&
+      initialOutcomeId &&
+      outcomes.some((outcome) => outcome.id === initialOutcomeId)
+    ) {
+      setSelectedOutcomeId(initialOutcomeId)
+    }
+  }, [initialOutcomeId, isOpen, outcomes])
 
   const patchAccusation = useCallback((patch) => {
     updateGame((previous) => ({ ...previous, storyAccusation: { ...(previous.storyAccusation || {}), ...patch } }))
@@ -453,7 +505,15 @@ const AccusationEditorModal = ({ isOpen, onClose, game, updateGame, disabled }) 
                   <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">Не позже минуты<input type="number" min="0" value={selectedOutcome.conditions?.maxElapsedMinutes ?? ''} disabled={disabled} onChange={(event) => patchOutcomeConditions(selectedOutcome.id, { maxElapsedMinutes: event.target.value === '' ? null : Math.max(0, Number(event.target.value) || 0) })} className={fieldClassName} placeholder="Без ограничения" /></label>
                   <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">Не больше подсказок<input type="number" min="0" value={selectedOutcome.conditions?.maxUsedClues ?? ''} disabled={disabled} onChange={(event) => patchOutcomeConditions(selectedOutcome.id, { maxUsedClues: event.target.value === '' ? null : Math.max(0, Number(event.target.value) || 0) })} className={fieldClassName} placeholder="Без ограничения" /></label>
                 </div>
-                <div className="mt-4 grid gap-4 xl:grid-cols-2"><ReferenceChecklist label="Обязательные доказательства" options={evidence} value={selectedOutcome.conditions?.requiredEvidenceIds} disabled={disabled} onChange={(value) => patchOutcomeConditions(selectedOutcome.id, { requiredEvidenceIds: value })} /><label className="grid content-start gap-1 text-sm text-slate-600 dark:text-slate-300">Обязательные категории доказательств<input value={normalizeArray(selectedOutcome.conditions?.requiredEvidenceTags).join(', ')} disabled={disabled} onChange={(event) => patchOutcomeConditions(selectedOutcome.id, { requiredEvidenceTags: event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) })} className={fieldClassName} placeholder="время, возможность, мотив" /></label></div>
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  <ReferenceChecklist label="Обязательные доказательства" options={evidence} value={selectedOutcome.conditions?.requiredEvidenceIds} disabled={disabled} onChange={(value) => patchOutcomeConditions(selectedOutcome.id, { requiredEvidenceIds: value })} />
+                  <div>
+                    <ReferenceChecklist label="Обязательные категории доказательств" options={evidenceCategoryOptions} value={selectedOutcome.conditions?.requiredEvidenceTags} disabled={disabled} onChange={(value) => patchOutcomeConditions(selectedOutcome.id, { requiredEvidenceTags: value })} />
+                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      Исход сработает, если среди выбранных игроком доказательств есть хотя бы одно доказательство каждой отмеченной категории.
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">Добавьте исход или выберите его слева.</p>}
           </div>
@@ -468,23 +528,31 @@ AccusationEditorModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   game: PropTypes.object.isRequired,
   updateGame: PropTypes.func.isRequired,
+  initialOutcomeId: PropTypes.string,
   disabled: PropTypes.bool,
 }
 
-AccusationEditorModal.defaultProps = { disabled: false }
+AccusationEditorModal.defaultProps = { initialOutcomeId: '', disabled: false }
 
-const InvestigationScenarioEditors = ({ game, gameId, updateGame, disabled }) => {
-  const [openEditor, setOpenEditor] = useState('')
+const InvestigationScenarioEditors = ({
+  game,
+  gameId,
+  updateGame,
+  openEditor,
+  onOpenEditorChange,
+  selectedOutcomeId,
+  disabled,
+}) => {
   const buttonClassName = 'rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10'
 
   return (
     <>
-      <button type="button" onClick={() => setOpenEditor('topics')} className={buttonClassName}>Темы · {normalizeArray(game?.storyTopics).length}</button>
-      <button type="button" onClick={() => setOpenEditor('evidence')} className={buttonClassName}>Доказательства · {normalizeArray(game?.storyEvidence).length}</button>
-      <button type="button" onClick={() => setOpenEditor('accusation')} className={buttonClassName}>Финальное обвинение</button>
-      <TopicsEditorModal isOpen={openEditor === 'topics'} onClose={() => setOpenEditor('')} game={game} gameId={gameId} updateGame={updateGame} disabled={disabled} />
-      <EvidenceEditorModal isOpen={openEditor === 'evidence'} onClose={() => setOpenEditor('')} game={game} gameId={gameId} updateGame={updateGame} disabled={disabled} />
-      <AccusationEditorModal isOpen={openEditor === 'accusation'} onClose={() => setOpenEditor('')} game={game} updateGame={updateGame} disabled={disabled} />
+      <button type="button" onClick={() => onOpenEditorChange('topics')} className={buttonClassName}>Темы · {normalizeArray(game?.storyTopics).length}</button>
+      <button type="button" onClick={() => onOpenEditorChange('evidence')} className={buttonClassName}>Доказательства · {normalizeArray(game?.storyEvidence).length}</button>
+      <button type="button" onClick={() => onOpenEditorChange('accusation')} className={buttonClassName}>Финальное обвинение</button>
+      <TopicsEditorModal isOpen={openEditor === 'topics'} onClose={() => onOpenEditorChange('')} game={game} gameId={gameId} updateGame={updateGame} disabled={disabled} />
+      <EvidenceEditorModal isOpen={openEditor === 'evidence'} onClose={() => onOpenEditorChange('')} game={game} gameId={gameId} updateGame={updateGame} disabled={disabled} />
+      <AccusationEditorModal isOpen={openEditor === 'accusation'} onClose={() => onOpenEditorChange('')} game={game} updateGame={updateGame} initialOutcomeId={selectedOutcomeId} disabled={disabled} />
     </>
   )
 }
@@ -493,9 +561,12 @@ InvestigationScenarioEditors.propTypes = {
   game: PropTypes.object.isRequired,
   gameId: PropTypes.string,
   updateGame: PropTypes.func.isRequired,
+  openEditor: PropTypes.oneOf(['', 'topics', 'evidence', 'accusation']).isRequired,
+  onOpenEditorChange: PropTypes.func.isRequired,
+  selectedOutcomeId: PropTypes.string,
   disabled: PropTypes.bool,
 }
 
-InvestigationScenarioEditors.defaultProps = { gameId: '', disabled: false }
+InvestigationScenarioEditors.defaultProps = { gameId: '', selectedOutcomeId: '', disabled: false }
 
 export default InvestigationScenarioEditors

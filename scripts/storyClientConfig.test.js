@@ -2,6 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import buildStoryClientConfig from '../helpers/buildStoryClientConfig.js'
+import { buildStoryInvestigationGraph } from '../helpers/buildStoryInvestigationGraph.js'
+import {
+  getStoryCoverImage,
+  mergeStoryEditorMedia,
+  setStoryCoverImage,
+} from '../helpers/storyCoverMedia.js'
+import lastBroadcastScenario from '../data/storyLastBroadcastScenario.js'
 
 test('игроковая проекция сохраняет режим расследования', () => {
   assert.deepEqual(
@@ -18,4 +25,159 @@ test('обычный story-квест не превращается в расс�
     experienceMode: 'quest',
   })
   assert.equal(buildStoryClientConfig({ type: 'classic' }), null)
+})
+
+test('обложка story-сущности сохраняется отдельно от медиа rich-text редактора', () => {
+  const withCover = setStoryCoverImage(
+    [{ id: 'audio-1', type: 'audio', url: '/audio.mp3' }],
+    '/cover.jpg',
+  )
+
+  assert.equal(getStoryCoverImage(withCover), '/cover.jpg')
+  assert.deepEqual(
+    mergeStoryEditorMedia(withCover, [
+      { id: 'image-1', type: 'image', url: '/inside.jpg' },
+    ]),
+    [
+      {
+        id: 'story-cover-image',
+        type: 'image',
+        url: '/cover.jpg',
+        title: '',
+      },
+      { id: 'image-1', type: 'image', url: '/inside.jpg' },
+    ],
+  )
+  assert.equal(getStoryCoverImage(setStoryCoverImage(withCover, '')), '')
+})
+
+test('карта расследования строит причинную цепочку Soundcheck 17:21', () => {
+  const graph = buildStoryInvestigationGraph(lastBroadcastScenario)
+
+  assert.equal(graph.nodes.filter((node) => node.type === 'location-group').length, 7)
+  assert.equal(graph.nodes.filter((node) => node.type === 'interaction').length, 38)
+  assert.deepEqual(graph.diagnostics, [])
+  assert.ok(
+    graph.edges.some((edge) =>
+      edge.source === 'int_kirill_voice' &&
+      edge.target === 'act_inspect_echo_log' &&
+      edge.refKey === 'flag:flag_echo_queue_identified'),
+  )
+  assert.ok(
+    graph.edges.some((edge) =>
+      edge.source === 'act_find_soundcheck_source' &&
+      edge.target === 'act_compare_audio' &&
+      edge.label === 'Soundcheck 17:21'),
+  )
+  assert.deepEqual(
+    graph.index.producers.get('item:item_audio_1721'),
+    ['act_find_soundcheck_source'],
+  )
+  assert.deepEqual(
+    graph.nodes
+      .find((node) => node.id === 'act_reconcile_charity_reports')
+      ?.required.map((entry) => entry.label),
+    ['После: Спросить Тамару об отчётах'],
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'int_tamara_victim')
+      ?.results.find((entry) => entry.id === 'ev_tamara_video_call')
+      ?.shortLabel,
+    'Видеозвонок Тамары',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'int_tamara_victim')
+      ?.results.find((entry) => entry.id === 'ev_tamara_video_call')
+      ?.label,
+    'Улика: Видеозвонок Тамары',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'int_pavel_camera_confrontation')
+      ?.required.find((entry) => entry.id === 'ev_kirill_sale_chat')
+      ?.label,
+    'Улика: Переписка Кирилла о продаже микрофонов',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'int_kirill_voice')
+      ?.results.find((entry) => entry.type === 'flag')
+      ?.label,
+    'Условие для: Проверить очередь «Эхо-9»',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'act_inspect_echo_log')
+      ?.required.find((entry) => entry.type === 'flag')
+      ?.label,
+    'После: Спросить Кирилла о голосе или Спросить Кирилла о несостоявшемся эфире',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'act_search_warm_city_box')
+      ?.required.find((entry) => entry.type === 'flag')
+      ?.label,
+    'После: Прижать Павла журналом карты',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'int_pavel_trophy')
+      ?.results.find((entry) => entry.id === 'flag_warm_city_box_identified')
+      ?.label,
+    'Условие для: Обыскать коробку «Тёплого города»',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'int_pavel_trophy')
+      ?.results.some((entry) => entry.id === 'flag_pavel_confessed'),
+    false,
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'act_inspect_badge_log')
+      ?.required.find((entry) => entry.id === 'topic_access_cards')
+      ?.label,
+    'Тема: Карты доступа',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'act_export_watch_data')
+      ?.required.find((entry) => entry.id === 'item_smartwatch')
+      ?.label,
+    'Предмет: Умные часы Артёма',
+  )
+  assert.equal(
+    graph.nodes
+      .find((node) => node.id === 'act_inspect_body')
+      ?.results.find((entry) => entry.id === 'loc_police_lab')
+      ?.label,
+    'Локация: Мобильная лаборатория',
+  )
+  assert.ok(
+    graph.nodes
+      .find((node) => node.id === 'int_vera_broadcast')
+      ?.results.some((entry) => entry.label === 'Тема: Марафон «Тёплый город»'),
+  )
+  assert.ok(
+    graph.nodes
+      .find((node) => node.id === 'int_marina_victim')
+      ?.results.some((entry) => entry.label === 'Персонаж: Тамара Воронцова'),
+  )
+})
+
+test('карта расследования отдельно показывает локации и дерево финалов', () => {
+  const locations = buildStoryInvestigationGraph(lastBroadcastScenario, {
+    mode: 'locations',
+  })
+  const finals = buildStoryInvestigationGraph(lastBroadcastScenario, {
+    mode: 'finals',
+  })
+
+  assert.equal(locations.nodes.length, 7)
+  assert.ok(locations.edges.some((edge) => edge.relation === 'unlock'))
+  assert.equal(finals.nodes.filter((node) => node.type === 'outcome').length, 5)
+  assert.equal(finals.nodes.filter((node) => node.type === 'ending').length, 6)
+  assert.equal(finals.edges.length, 10)
 })

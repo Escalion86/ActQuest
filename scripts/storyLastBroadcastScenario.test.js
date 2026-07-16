@@ -187,6 +187,17 @@ test('сюжетные действия открываются только по
   assert.equal(availableIds.has('act_reconcile_charity_reports'), true)
 })
 
+test('сверка отчётов требует разговора с Тамарой без дублирующего условия темы', () => {
+  const interaction = game.storyInteractions.find(
+    ({ id }) => id === 'act_reconcile_charity_reports',
+  )
+
+  assert.deepEqual(interaction.conditions.requiredInteractionIds, [
+    'int_tamara_warm_city',
+  ])
+  assert.deepEqual(interaction.conditions.requiredTopicIds, [])
+})
+
 test('журнал «Эхо-9» требует наводку Кирилла и только затем открывает soundcheck', () => {
   let progress = buildInitialInvestigationProgress(game, { now: NOW })
   progress = travel(progress, 'loc_studio_b')

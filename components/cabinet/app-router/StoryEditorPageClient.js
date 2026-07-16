@@ -9,8 +9,15 @@ import Modal from '@components/Modal'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import InvestigationFlowEditor from '@components/cabinet/story-editor/InvestigationFlowEditor'
+import StoryEntityCatalogModal from '@components/cabinet/story-editor/StoryEntityCatalogModal'
 import StoryEndingsEditor from '@components/cabinet/story-editor/StoryEndingsEditor'
+import StorySettingsEditor from '@components/cabinet/story-editor/StorySettingsEditor'
 import requestApiJson from '@helpers/requestApiJson'
+import {
+  getStoryCoverImage,
+  mergeStoryEditorMedia,
+  setStoryCoverImage,
+} from '@helpers/storyCoverMedia'
 
 const TaskRichEditor = dynamic(
   () => import('@components/cabinet/TaskRichEditor'),
@@ -441,148 +448,6 @@ StoryEffectFields.propTypes = {
   onChange: PropTypes.func.isRequired,
 }
 
-const JsonScenarioField = ({ label, value, expectedType, onChange }) => {
-  const [draft, setDraft] = useState(() => JSON.stringify(value, null, 2))
-  const [jsonError, setJsonError] = useState('')
-  const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    setDraft(JSON.stringify(value, null, 2))
-  }, [value])
-
-  const visibleItems = Array.isArray(value)
-    ? value.filter((item) =>
-        JSON.stringify(item).toLowerCase().includes(search.toLowerCase()),
-      )
-    : []
-
-  const applyJson = () => {
-    try {
-      const parsed = JSON.parse(draft)
-      const valid =
-        expectedType === 'array'
-          ? Array.isArray(parsed)
-          : parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      if (!valid) {
-        throw new Error(
-          expectedType === 'array' ? 'Ожидается JSON-массив.' : 'Ожидается JSON-объект.',
-        )
-      }
-      onChange(parsed)
-      setJsonError('')
-    } catch (parseError) {
-      setJsonError(parseError?.message || 'Некорректный JSON')
-    }
-  }
-
-  return (
-    <details className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-      <summary className="cursor-pointer font-semibold text-slate-800 dark:text-slate-100">
-        {label}{Array.isArray(value) ? ` · ${value.length}` : ''}
-      </summary>
-      {Array.isArray(value) && value.length > 0 ? (
-        <div className="mt-3">
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Фильтр по ID или названию" className={fieldClassName} />
-          <div className="mt-2 max-h-28 space-y-1 overflow-y-auto text-xs text-slate-500">
-            {visibleItems.slice(0, 30).map((item, index) => (
-              <p key={item?.id || index}>{item?.title || item?.label || 'Без названия'}</p>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={12} spellCheck={false} className={`${fieldClassName} mt-3 font-mono text-xs`} />
-      {jsonError ? <p className="mt-2 text-sm text-rose-600">{jsonError}</p> : null}
-      <button type="button" onClick={applyJson} className="mt-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white">Применить JSON</button>
-    </details>
-  )
-}
-
-JsonScenarioField.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.oneOfType([PropTypes.array, PropTypes.object]).isRequired,
-  expectedType: PropTypes.oneOf(['array', 'object']).isRequired,
-  onChange: PropTypes.func.isRequired,
-}
-
-const InvestigationEditorSection = ({ game, updateGame }) => {
-  const investigation = {
-    ...emptyGame.storyConfig.investigation,
-    ...(game?.storyConfig?.investigation || {}),
-  }
-  const setInvestigationField = (field, value) =>
-    updateGame((previous) => ({
-      ...previous,
-      storyConfig: {
-        ...previous.storyConfig,
-        investigation: {
-          ...previous.storyConfig?.investigation,
-          [field]: value,
-        },
-      },
-    }))
-  const numberFields = [
-    ['startClockMinutes', 'Старт, минут от начала суток'],
-    ['deadlineMinutes', 'Дедлайн, минут'],
-    ['defaultTravelTimeMinutes', 'Переход, минут'],
-    ['defaultInteractionTimeMinutes', 'Взаимодействие, минут'],
-    ['accusationTimeMinutes', 'Обвинение, минут'],
-  ]
-
-  return (
-    <section className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-500/30 dark:bg-violet-500/5">
-      <h2 className="font-semibold text-slate-900 dark:text-slate-100">Настройки расследования</h2>
-      <p className="mt-1 text-xs text-slate-500">Основные справочники редактируются через визуальные окна над картой логики. JSON ниже оставлен для точечной диагностики и сложных массовых правок.</p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-1 text-sm">Стартовая локация
-          <select value={investigation.startNodeId || ''} onChange={(event) => setInvestigationField('startNodeId', event.target.value || null)} className={fieldClassName}>
-            <option value="">Выберите локацию</option>
-            {normalizeArray(game?.storyNodes).map((node) => <option key={node.id} value={node.id}>{node.title || 'Локация без названия'}</option>)}
-          </select>
-        </label>
-        {numberFields.map(([field, label]) => (
-          <label key={field} className="grid gap-1 text-sm">{label}
-            <input type="number" min="0" value={investigation[field] ?? ''} onChange={(event) => setInvestigationField(field, event.target.value === '' ? null : Number(event.target.value))} className={fieldClassName} />
-          </label>
-        ))}
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {[
-          ['allowFreeReplay', 'Бесплатное повторное воспроизведение'],
-          ['showClockToTeam', 'Показывать игровые часы'],
-          ['showEvidenceToTeam', 'Показывать доску доказательств'],
-          ['autoFailOnDeadline', 'Автофинал по дедлайну'],
-          ['revealSolutionAfterFinish', 'Раскрывать решение после финала'],
-        ].map(([field, label]) => (
-          <label key={field} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={Boolean(investigation[field])} onChange={(event) => setInvestigationField(field, event.target.checked)} />{label}
-          </label>
-        ))}
-      </div>
-      <details className="mt-4 rounded-xl border border-dashed border-slate-300 p-3 dark:border-slate-700">
-        <summary className="cursor-pointer text-sm font-semibold text-slate-600 dark:text-slate-300">
-          Расширенный режим: редактирование JSON
-        </summary>
-        <div className="mt-3 space-y-3">
-          {[
-            ['Персонажи', 'storyCharacters'],
-            ['Темы', 'storyTopics'],
-            ['Взаимодействия', 'storyInteractions'],
-            ['Доказательства', 'storyEvidence'],
-          ].map(([label, field]) => (
-            <JsonScenarioField key={field} label={label} value={normalizeArray(game?.[field])} expectedType="array" onChange={(value) => updateGame((previous) => ({ ...previous, [field]: value }))} />
-          ))}
-          <JsonScenarioField label="Финальное обвинение и варианты исхода" value={game?.storyAccusation && typeof game.storyAccusation === 'object' ? game.storyAccusation : {}} expectedType="object" onChange={(value) => updateGame((previous) => ({ ...previous, storyAccusation: value }))} />
-        </div>
-      </details>
-    </section>
-  )
-}
-
-InvestigationEditorSection.propTypes = {
-  game: PropTypes.object.isRequired,
-  updateGame: PropTypes.func.isRequired,
-}
-
 const StoryEditorPageClient = ({ session: _session }) => {
   const searchParams = useSearchParams()
   const gameId = searchParams.get('gameId') || ''
@@ -595,6 +460,9 @@ const StoryEditorPageClient = ({ session: _session }) => {
   const [selectedItemId, setSelectedItemId] = useState('')
   const [selectedEndingId, setSelectedEndingId] = useState('')
   const [isEndingsEditorOpen, setIsEndingsEditorOpen] = useState(false)
+  const [isLocationsEditorOpen, setIsLocationsEditorOpen] = useState(false)
+  const [isItemsEditorOpen, setIsItemsEditorOpen] = useState(false)
+  const [isSettingsEditorOpen, setIsSettingsEditorOpen] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState('')
   const [editingItemId, setEditingItemId] = useState('')
   const [connectSource, setConnectSource] = useState(null)
@@ -609,6 +477,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
   const endings = normalizeArray(game?.storyEndings)
   const edges = normalizeArray(game?.storyEdges)
   const editingNode = nodes.find((node) => node.id === editingNodeId) || null
+  const editingNodeCoverImage = getStoryCoverImage(editingNode?.media)
   const editingItem = items.find((item) => item.id === editingItemId) || null
 
   const agents = useMemo(
@@ -733,6 +602,8 @@ const StoryEditorPageClient = ({ session: _session }) => {
     updateGame((prev) => {
       const nextNode = buildNode(normalizeArray(prev.storyNodes).length)
       setSelectedNodeId(nextNode.id)
+      setEditingNodeId(nextNode.id)
+      setIsLocationsEditorOpen(false)
       return {
         ...prev,
         storyNodes: [...normalizeArray(prev.storyNodes), nextNode],
@@ -744,6 +615,8 @@ const StoryEditorPageClient = ({ session: _session }) => {
     updateGame((prev) => {
       const nextItem = buildItem(normalizeArray(prev.storyItems).length)
       setSelectedItemId(nextItem.id)
+      setEditingItemId(nextItem.id)
+      setIsItemsEditorOpen(false)
       return {
         ...prev,
         storyItems: [...normalizeArray(prev.storyItems), nextItem],
@@ -1118,6 +991,10 @@ const StoryEditorPageClient = ({ session: _session }) => {
         title="Story-редактор"
         description="Откройте редактор из карточки конкретной story-игры."
         activePage="admin"
+        hideSidebar
+        backHref="/cabinet/games"
+        backLabel="Выйти из редактора"
+        fullWidth
       >
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
           Не указан `gameId`. Откройте редактор по ссылке вида
@@ -1132,6 +1009,10 @@ const StoryEditorPageClient = ({ session: _session }) => {
       title="Story-редактор"
       description={game?.name || 'Редактирование сценарного графа'}
       activePage="admin"
+      hideSidebar
+      backHref="/cabinet/games"
+      backLabel="Выйти из редактора"
+      fullWidth
     >
       <div className="space-y-4">
         {isScenarioLocked ? (
@@ -1140,40 +1021,41 @@ const StoryEditorPageClient = ({ session: _session }) => {
             просмотра. Для изменений создайте копию игры.
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Редактируется игра
+            </p>
+            <h2 className="mt-1 break-words text-xl font-bold text-slate-900 dark:text-slate-100">
+              {game?.name || 'Игра без названия'}
+            </h2>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {game?.storyConfig?.experienceMode !== 'investigation' ? (
+              <button
+                type="button"
+                onClick={() => setIsEndingsEditorOpen(true)}
+                className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10"
+              >
+                Концовки · {endings.length}
+              </button>
+            ) : null}
             <button
               type="button"
-              onClick={addNode}
-              disabled={isScenarioLocked}
-              className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => setIsSettingsEditorOpen(true)}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              Добавить локацию
+              Настройки
             </button>
             <button
               type="button"
-              onClick={addItem}
-              disabled={isScenarioLocked}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => void saveEditor()}
+              disabled={saving || loading || isScenarioLocked}
+              className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Добавить предмет
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsEndingsEditorOpen(true)}
-              className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10"
-            >
-              Концовки · {endings.length}
+              {saving ? 'Сохраняем...' : 'Сохранить сценарий'}
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => void saveEditor()}
-            disabled={saving || loading || isScenarioLocked}
-            className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? 'Сохраняем...' : 'Сохранить сценарий'}
-          </button>
         </div>
 
         {error ? (
@@ -1205,10 +1087,13 @@ const StoryEditorPageClient = ({ session: _session }) => {
             gameId={gameId}
             updateGame={updateGame}
             disabled={isScenarioLocked}
+            onOpenLocations={() => setIsLocationsEditorOpen(true)}
+            onOpenItems={() => setIsItemsEditorOpen(true)}
+            onOpenEndings={() => setIsEndingsEditorOpen(true)}
           />
         ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        {game?.storyConfig?.experienceMode !== 'investigation' ? (
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900">
               <span className="font-semibold text-slate-900 dark:text-slate-100">
@@ -1541,119 +1426,54 @@ const StoryEditorPageClient = ({ session: _session }) => {
               </div>
             </div>
           </section>
-
-          <aside className="space-y-4">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-                Настройки
-              </h2>
-              <div className="mt-3 grid gap-3">
-                <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-                  Формат story-игры
-                  <select
-                    value={game?.storyConfig?.experienceMode || 'quest'}
-                    onChange={(event) =>
-                      updateGame((prev) => ({
-                        ...prev,
-                        storyConfig: {
-                          ...prev.storyConfig,
-                          experienceMode: event.target.value,
-                        },
-                      }))
-                    }
-                    className={fieldClassName}
-                  >
-                    <option value="quest">Сюжетный квест</option>
-                    <option value="investigation">Цифровое расследование</option>
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-                  Название блока
-                  <input
-                    value={game?.storyConfig?.nodeLabel || 'Локация'}
-                    onChange={(event) =>
-                      updateGame((prev) => ({
-                        ...prev,
-                        storyConfig: {
-                          ...prev.storyConfig,
-                          nodeLabel: event.target.value,
-                        },
-                      }))
-                    }
-                    className={fieldClassName}
-                  />
-                </label>
-                <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-                  Режим старта
-                  <select
-                    value={game?.storyConfig?.startMode || 'common'}
-                    onChange={(event) =>
-                      updateGame((prev) => ({
-                        ...prev,
-                        storyConfig: {
-                          ...prev.storyConfig,
-                          startMode: event.target.value,
-                        },
-                      }))
-                    }
-                    className={fieldClassName}
-                  >
-                    <option value="common">Общий старт</option>
-                    <option value="individual">Индивидуальный старт</option>
-                  </select>
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(game?.storyConfig?.showScoreToTeam)}
-                    onChange={(event) =>
-                      updateGame((prev) => ({
-                        ...prev,
-                        storyConfig: {
-                          ...prev.storyConfig,
-                          showScoreToTeam: event.target.checked,
-                        },
-                      }))
-                    }
-                  />
-                  Показывать баллы команде
-                </label>
-                {[
-                  ['showInventory', 'Показывать инвентарь'],
-                  ['showFinalHistoryToTeam', 'Показывать историю после финала'],
-                  ['hideTotalNodes', 'Скрывать общее число локаций'],
-                  ['hideTotalItems', 'Скрывать общее число предметов'],
-                ].map(([field, label]) => (
-                  <label
-                    key={field}
-                    className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={Boolean(game?.storyConfig?.[field])}
-                      onChange={(event) =>
-                        updateGame((prev) => ({
-                          ...prev,
-                          storyConfig: {
-                            ...prev.storyConfig,
-                            [field]: event.target.checked,
-                          },
-                        }))
-                      }
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </section>
-
-            {game?.storyConfig?.experienceMode === 'investigation' ? (
-              <InvestigationEditorSection game={game} updateGame={updateGame} />
-            ) : null}
-
-          </aside>
-        </div>
+        ) : null}
       </div>
+
+      {game ? (
+        <>
+          <StoryEntityCatalogModal
+            isOpen={isLocationsEditorOpen}
+            onClose={() => setIsLocationsEditorOpen(false)}
+            title="Локации"
+            addLabel="Добавить локацию"
+            emptyLabel="Локаций пока нет."
+            entities={nodes}
+            selectedId={selectedNodeId}
+            onAdd={addNode}
+            onOpenEntity={(nodeId) => {
+              setSelectedNodeId(nodeId)
+              setIsLocationsEditorOpen(false)
+              setEditingNodeId(nodeId)
+            }}
+            disabled={isScenarioLocked}
+            tone="location"
+          />
+          <StoryEntityCatalogModal
+            isOpen={isItemsEditorOpen}
+            onClose={() => setIsItemsEditorOpen(false)}
+            title="Предметы"
+            addLabel="Добавить предмет"
+            emptyLabel="Предметов пока нет."
+            entities={items}
+            selectedId={selectedItemId}
+            onAdd={addItem}
+            onOpenEntity={(itemId) => {
+              setSelectedItemId(itemId)
+              setIsItemsEditorOpen(false)
+              setEditingItemId(itemId)
+            }}
+            disabled={isScenarioLocked}
+            tone="item"
+          />
+          <StorySettingsEditor
+            isOpen={isSettingsEditorOpen}
+            onClose={() => setIsSettingsEditorOpen(false)}
+            game={game}
+            updateGame={updateGame}
+            disabled={isScenarioLocked}
+          />
+        </>
+      ) : null}
 
       {game ? (
         <StoryEndingsEditor
@@ -1718,6 +1538,22 @@ const StoryEditorPageClient = ({ session: _session }) => {
                   placeholder="Название"
                   className={fieldClassName}
                 />
+                <ImagesInput
+                  label="Изображение локации"
+                  images={editingNodeCoverImage ? [editingNodeCoverImage] : []}
+                  onChange={(nextImages) =>
+                    updateNode(editingNode.id, (node) => ({
+                      ...node,
+                      media: setStoryCoverImage(node.media, nextImages?.[0] ?? ''),
+                    }))
+                  }
+                  directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/cover`}
+                  imageName="location-cover"
+                  disabled={isScenarioLocked}
+                  maxImages={1}
+                  previewShape="square"
+                  uploadLabel="Загрузить обложку"
+                />
                 <TaskRichEditor
                   value={editingNode.descriptionRich || ''}
                   directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/description/editor`}
@@ -1727,7 +1563,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     updateNode(editingNode.id, (node) => ({
                       ...node,
                       descriptionRich: typeof html === 'string' ? html : '',
-                      media: Array.isArray(media) ? media : [],
+                      media: mergeStoryEditorMedia(node.media, media),
                     }))
                   }
                 />
