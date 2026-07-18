@@ -24,7 +24,7 @@ const REASON_MESSAGES = {
 const getReasonMessage = (reason) =>
   REASON_MESSAGES[reason] || 'Действие не применено. Обновите состояние.'
 
-const StoryInvestigationProcess = ({ gameId, teamId, isActive }) => {
+const StoryInvestigationProcess = ({ gameId, teamId, testRunId, isActive }) => {
   const [state, setState] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
@@ -42,6 +42,7 @@ const StoryInvestigationProcess = ({ gameId, teamId, isActive }) => {
     setError('')
     try {
       const params = new URLSearchParams({ teamId })
+      if (testRunId) params.set('testRunId', testRunId)
       const response = await fetch(
         `/api/cabinet/games/${encodeURIComponent(gameId)}/story-state?${params.toString()}`,
       )
@@ -55,7 +56,7 @@ const StoryInvestigationProcess = ({ gameId, teamId, isActive }) => {
     } finally {
       setIsLoading(false)
     }
-  }, [gameId, isActive, teamId])
+  }, [gameId, isActive, teamId, testRunId])
 
   const mutate = useCallback(
     async (route, payload) => {
@@ -64,7 +65,11 @@ const StoryInvestigationProcess = ({ gameId, teamId, isActive }) => {
       setError('')
       try {
         const response = await fetch(
-          `/api/cabinet/games/${encodeURIComponent(gameId)}/story/${route}`,
+          `/api/cabinet/games/${encodeURIComponent(gameId)}/story/${route}${
+            testRunId
+              ? `?testRunId=${encodeURIComponent(testRunId)}`
+              : ''
+          }`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -86,7 +91,7 @@ const StoryInvestigationProcess = ({ gameId, teamId, isActive }) => {
         setIsMutating(false)
       }
     },
-    [gameId, isMutating, teamId],
+    [gameId, isMutating, teamId, testRunId],
   )
 
   useEffect(() => {
@@ -272,9 +277,18 @@ const StoryInvestigationProcess = ({ gameId, teamId, isActive }) => {
               <h3 className="text-lg font-bold">Персонажи и темы</h3>
               <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
                 {charactersHere.map((character) => (
-                  <button key={character.id} type="button" onClick={() => setSelectedCharacterId(character.id)} className={`shrink-0 rounded-xl border px-3 py-2 text-left ${activeCharacterId === character.id ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10' : 'border-slate-300 dark:border-slate-700'}`}>
-                    <span className="block font-semibold">{character.title}</span>
-                    {character.subtitle ? <span className="block text-xs text-slate-500">{character.subtitle}</span> : null}
+                  <button key={character.id} type="button" onClick={() => setSelectedCharacterId(character.id)} className={`flex shrink-0 items-center gap-3 rounded-xl border p-2 pr-3 text-left ${activeCharacterId === character.id ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10' : 'border-slate-300 dark:border-slate-700'}`}>
+                    {character.image ? (
+                      <img
+                        src={character.image}
+                        alt=""
+                        className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : null}
+                    <span>
+                      <span className="block font-semibold">{character.title}</span>
+                      {character.subtitle ? <span className="block text-xs text-slate-500">{character.subtitle}</span> : null}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -418,9 +432,10 @@ const StoryInvestigationProcess = ({ gameId, teamId, isActive }) => {
 StoryInvestigationProcess.propTypes = {
   gameId: PropTypes.string.isRequired,
   teamId: PropTypes.string.isRequired,
+  testRunId: PropTypes.string,
   isActive: PropTypes.bool,
 }
 
-StoryInvestigationProcess.defaultProps = { isActive: true }
+StoryInvestigationProcess.defaultProps = { isActive: true, testRunId: '' }
 
 export default StoryInvestigationProcess

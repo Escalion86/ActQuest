@@ -469,7 +469,7 @@ const formatStoryHistoryDate = (value) => {
   }).format(date)
 }
 
-const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
+const StoryQuestProcess = ({ gameId, teamId, testRunId, isActive }) => {
   const [state, setState] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
@@ -485,6 +485,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
     setError('')
     try {
       const params = new URLSearchParams({ teamId })
+      if (testRunId) params.set('testRunId', testRunId)
       const response = await fetch(
         `/api/cabinet/games/${encodeURIComponent(gameId)}/story-state?${params.toString()}`,
       )
@@ -500,7 +501,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
     } finally {
       setIsLoading(false)
     }
-  }, [gameId, isActive, teamId])
+  }, [gameId, isActive, teamId, testRunId])
 
   useEffect(() => {
     void loadState()
@@ -514,7 +515,11 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
       setError('')
       try {
         const response = await fetch(
-          `/api/cabinet/games/${encodeURIComponent(gameId)}/story/${endpoint}`,
+          `/api/cabinet/games/${encodeURIComponent(gameId)}/story/${endpoint}${
+            testRunId
+              ? `?testRunId=${encodeURIComponent(testRunId)}`
+              : ''
+          }`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -551,7 +556,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
         setIsMutating(false)
       }
     },
-    [gameId, isMutating, teamId],
+    [gameId, isMutating, teamId, testRunId],
   )
 
   const handleCodeSubmit = useCallback(
@@ -922,10 +927,12 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
 StoryQuestProcess.propTypes = {
   gameId: PropTypes.string.isRequired,
   teamId: PropTypes.string.isRequired,
+  testRunId: PropTypes.string,
   isActive: PropTypes.bool,
 }
 
 StoryQuestProcess.defaultProps = {
+  testRunId: '',
   isActive: false,
 }
 
@@ -951,6 +958,7 @@ function GameTeamPage({
   session: initialSession,
   gameId,
   teamId,
+  testRunId,
   shouldClearMessageParam,
 }) {
   const { data: session } = useSession()
@@ -959,6 +967,8 @@ function GameTeamPage({
   const searchParams = useSearchParams()
 
   const [theme, setTheme] = useState(null)
+  const [isTestRunUpdating, setIsTestRunUpdating] = useState(false)
+  const isTestMode = Boolean(testRunId)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isFinishingBreak, setIsFinishingBreak] = useState(false)
@@ -1224,6 +1234,7 @@ function GameTeamPage({
             location,
             gameId,
             teamId,
+            testRunId: testRunId || undefined,
           }),
         })
 
@@ -1253,12 +1264,13 @@ function GameTeamPage({
         setIsTaskRefreshing(false)
       }
     },
-    [gameId, isTaskRefreshing, location, teamId, updateTaskData],
+    [gameId, isTaskRefreshing, location, teamId, testRunId, updateTaskData],
   )
 
   const loadGameMessages = useCallback(
     async ({ markRead = false } = {}) => {
       if (!gameId || !teamId) return false
+      if (isTestMode) return false
 
       setGameMessagesLoading(true)
       try {
@@ -1295,7 +1307,7 @@ function GameTeamPage({
         setGameMessagesLoading(false)
       }
     },
-    [gameId, teamId],
+    [gameId, isTestMode, teamId],
   )
 
   const handleSendGameMessage = useCallback(async () => {
@@ -1332,8 +1344,9 @@ function GameTeamPage({
   }, [])
 
   useEffect(() => {
+    if (isTestMode) return
     void loadGameMessages({ markRead: false })
-  }, [loadGameMessages])
+  }, [isTestMode, loadGameMessages])
 
   useEffect(() => {
     if (!isGameMessagesModalOpen) return
@@ -1341,14 +1354,14 @@ function GameTeamPage({
   }, [isGameMessagesModalOpen, loadGameMessages])
 
   useEffect(() => {
-    if (!gameId || !teamId) return undefined
+    if (isTestMode || !gameId || !teamId) return undefined
 
     const intervalId = window.setInterval(() => {
       void loadGameMessages({ markRead: isGameMessagesModalOpen })
     }, 15000)
 
     return () => window.clearInterval(intervalId)
-  }, [gameId, isGameMessagesModalOpen, loadGameMessages, teamId])
+  }, [gameId, isGameMessagesModalOpen, isTestMode, loadGameMessages, teamId])
 
   useEffect(() => {
     if (!isGameMessagesModalOpen) return
@@ -1374,6 +1387,7 @@ function GameTeamPage({
   }, [gameMessageDraft, isGameMessagesModalOpen])
 
   useEffect(() => {
+    if (isTestMode) return undefined
     if (typeof window === 'undefined') return undefined
 
     const intervalId = window.setInterval(() => {
@@ -1381,11 +1395,56 @@ function GameTeamPage({
     }, 30000)
 
     return () => window.clearInterval(intervalId)
-  }, [loadGameMessages])
+  }, [isTestMode, loadGameMessages])
 
   const handleLeaveGame = useCallback(() => {
-    router.push(`/game/${gameId}`)
-  }, [gameId, location, router])
+    router.push(isTestMode ? '/cabinet/games-upcoming' : `/game/${gameId}`)
+  }, [gameId, isTestMode, router])
+
+  const handleResetTestRun = useCallback(async () => {
+    if (!testRunId || isTestRunUpdating) return
+    if (!window.confirm('Сбросить весь прогресс тестового прогона?')) return
+
+    setIsTestRunUpdating(true)
+    try {
+      const response = await fetch('/api/cabinet/admin/game-test-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'reset' }),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.success || !data?.data?.url) {
+        throw new Error(data?.error || 'Не удалось сбросить тестовый прогон')
+      }
+      router.replace(data.data.url)
+    } catch (resetError) {
+      setTaskRefreshError(
+        resetError?.message || 'Не удалось сбросить тестовый прогон',
+      )
+      setIsTestRunUpdating(false)
+    }
+  }, [gameId, isTestRunUpdating, router, testRunId])
+
+  const handleDeleteTestRun = useCallback(async () => {
+    if (!testRunId || isTestRunUpdating) return
+    setIsTestRunUpdating(true)
+    try {
+      const response = await fetch(
+        `/api/cabinet/admin/game-test-runs?runId=${encodeURIComponent(testRunId)}`,
+        { method: 'DELETE' },
+      )
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Не удалось завершить тестовый прогон')
+      }
+      router.push('/cabinet/games-upcoming')
+    } catch (deleteError) {
+      setTaskRefreshError(
+        deleteError?.message || 'Не удалось завершить тестовый прогон',
+      )
+      setIsTestRunUpdating(false)
+    }
+  }, [isTestRunUpdating, router, testRunId])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -1405,6 +1464,7 @@ function GameTeamPage({
           location,
           gameId,
           teamId,
+          testRunId: testRunId || undefined,
           message: trimmedAnswer,
         }),
       })
@@ -1446,6 +1506,7 @@ function GameTeamPage({
           location,
           gameId,
           teamId,
+          testRunId: testRunId || undefined,
           action: 'finishBreak',
         }),
       })
@@ -1469,6 +1530,7 @@ function GameTeamPage({
     isTaskRefreshing,
     location,
     teamId,
+    testRunId,
     updateTaskData,
   ])
 
@@ -1504,6 +1566,7 @@ function GameTeamPage({
           location,
           gameId,
           teamId,
+          testRunId: testRunId || undefined,
           action: 'forceClue',
         }),
       })
@@ -1527,6 +1590,7 @@ function GameTeamPage({
     isTaskRefreshing,
     location,
     teamId,
+    testRunId,
     updateTaskData,
   ])
 
@@ -1562,6 +1626,7 @@ function GameTeamPage({
           location,
           gameId,
           teamId,
+          testRunId: testRunId || undefined,
           action: 'failTask',
         }),
       })
@@ -1583,6 +1648,7 @@ function GameTeamPage({
     isTaskRefreshing,
     location,
     teamId,
+    testRunId,
     updateTaskData,
   ])
 
@@ -1611,6 +1677,7 @@ function GameTeamPage({
         location,
         gameId,
         teamId,
+        testRunId: testRunId || undefined,
         message: photoUrl,
       }),
     })
@@ -1640,7 +1707,9 @@ function GameTeamPage({
         const uploadResult = await sendImage(
           file,
           null,
-          `game-photo-answers/${gameId}/${teamId}`,
+          isTestMode
+            ? `game-test-photo-answers/${gameId}/${testRunId}`
+            : `game-photo-answers/${gameId}/${teamId}`,
           null,
           'actquest',
           (message) => setPhotoUploadError(message || 'Ошибка загрузки фото'),
@@ -1883,6 +1952,8 @@ function GameTeamPage({
   ])
 
   const isBreakState = currentTaskState === 'break'
+  const isBonusTask =
+    !isBreakState && Boolean(currentTaskDisplayMeta?.isBonusTask)
   const canCaptainFinishBreak =
     isBreakState && Boolean(currentCaptainActions?.canFinishBreak)
   const canCaptainForceClue =
@@ -2276,22 +2347,24 @@ function GameTeamPage({
                */}
             </nav>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsGameMessagesModalOpen(true)}
-                className="relative inline-flex items-center justify-center w-10 h-10 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-                aria-label="Открыть переписку с организатором"
-                title="Переписка с организатором"
-              >
-                <ChatHeaderIcon />
-                {unreadAdminMessagesCount > 0 ? (
-                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow">
-                    {unreadAdminMessagesCount > 99
-                      ? '99+'
-                      : unreadAdminMessagesCount}
-                  </span>
-                ) : null}
-              </button>
+              {!isTestMode ? (
+                <button
+                  type="button"
+                  onClick={() => setIsGameMessagesModalOpen(true)}
+                  className="relative inline-flex items-center justify-center w-10 h-10 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                  aria-label="Открыть переписку с организатором"
+                  title="Переписка с организатором"
+                >
+                  <ChatHeaderIcon />
+                  {unreadAdminMessagesCount > 0 ? (
+                    <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow">
+                      {unreadAdminMessagesCount > 99
+                        ? '99+'
+                        : unreadAdminMessagesCount}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={handleThemeToggle}
@@ -2322,6 +2395,37 @@ function GameTeamPage({
             </div>
           </div>
         </header>
+
+        {isTestMode ? (
+          <aside className="border-b border-amber-300 bg-amber-100 px-4 py-3 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100">
+            <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-bold">Тестовый режим</p>
+                <p className="text-sm">
+                  Ответы и прогресс изолированы и не попадут в результаты игры.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleResetTestRun()}
+                  disabled={isTestRunUpdating}
+                  className="rounded-xl border border-amber-500 bg-white/80 px-3 py-2 text-sm font-semibold transition hover:bg-white disabled:opacity-60 dark:bg-slate-950/40 dark:hover:bg-slate-950/70"
+                >
+                  Сбросить прогресс
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteTestRun()}
+                  disabled={isTestRunUpdating}
+                  className="rounded-xl bg-amber-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:opacity-60 dark:bg-amber-500 dark:text-slate-950"
+                >
+                  Завершить тест
+                </button>
+              </div>
+            </div>
+          </aside>
+        ) : null}
 
         <main className="px-4">
           <div className="flex flex-col w-full max-w-5xl gap-8 mx-auto mt-10">
@@ -2645,12 +2749,14 @@ function GameTeamPage({
                 <StoryInvestigationProcess
                   gameId={gameId}
                   teamId={teamId}
+                  testRunId={testRunId}
                   isActive={isStoryGame}
                 />
               ) : (
                 <StoryQuestProcess
                   gameId={gameId}
                   teamId={teamId}
+                  testRunId={testRunId}
                   isActive={isStoryGame}
                 />
               ) : null}
@@ -2658,13 +2764,22 @@ function GameTeamPage({
             {shouldShowCurrentTaskBlock ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
-                  <h2
-                    className={`font-semibold text-primary dark:text-white ${
-                      isBreakState ? 'text-2xl uppercase' : 'text-lg'
-                    }`}
-                  >
-                    {isBreakState ? 'ПЕРЕРЫВ' : `Задание ${currentTaskNumber}`}
-                  </h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2
+                      className={`font-semibold text-primary dark:text-white ${
+                        isBreakState ? 'text-2xl uppercase' : 'text-lg'
+                      }`}
+                    >
+                      {isBreakState
+                        ? 'ПЕРЕРЫВ'
+                        : `Задание ${currentTaskNumber}`}
+                    </h2>
+                    {isBonusTask ? (
+                      <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold tracking-wide text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100">
+                        БОНУСНОЕ
+                      </span>
+                    ) : null}
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
@@ -2834,6 +2949,12 @@ function GameTeamPage({
                     className="font-mono tracking-wide"
                   />
                 </div>
+                {isBonusTask ? (
+                  <p className="mt-4 border-t border-amber-200 pt-4 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:text-amber-100">
+                    Время, проведённое на этом задании, не учитывается в
+                    итоговом результате.
+                  </p>
+                ) : null}
                 {taskRefreshError ? (
                   <p className="mt-3 text-sm text-red-600 dark:text-red-300">
                     {taskRefreshError}
@@ -3191,6 +3312,7 @@ GameTeamPage.propTypes = {
     }),
   ),
   taskDisplayMeta: PropTypes.shape({
+    isBonusTask: PropTypes.bool,
     mainCodesCount: PropTypes.number,
     requiredCodesCount: PropTypes.number,
     bonusCodesCount: PropTypes.number,
@@ -3211,6 +3333,7 @@ GameTeamPage.propTypes = {
   session: PropTypes.shape({}),
   gameId: PropTypes.string.isRequired,
   teamId: PropTypes.string.isRequired,
+  testRunId: PropTypes.string,
   shouldClearMessageParam: PropTypes.bool,
 }
 
@@ -3230,6 +3353,7 @@ GameTeamPage.defaultProps = {
   postCompletionMessage: '',
   error: null,
   session: null,
+  testRunId: '',
   shouldClearMessageParam: false,
 }
 

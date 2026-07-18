@@ -22,6 +22,7 @@ import CardActionIconButton, {
   StatusCardIcon,
   TargetCardIcon,
   TeamCardIcon,
+  TestRunCardIcon,
 } from '@components/cabinet/CardActionIconButton'
 import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
@@ -1258,6 +1259,7 @@ const GamesPage = ({
   const [editingGame, setEditingGame] = useState(null)
   const [editingBaselineGame, setEditingBaselineGame] = useState(null)
   const [toastEvent, setToastEvent] = useState(null)
+  const [testingGameId, setTestingGameId] = useState('')
   const setFeedback = useCallback((feedback) => {
     if (!feedback) {
       return
@@ -5175,6 +5177,39 @@ const GamesPage = ({
     [canManageGame, prepareGameDraftForModal],
   )
 
+  const handleStartTestRun = useCallback(
+    async (game) => {
+      if (!game || !canManageGame(game) || testingGameId) return
+
+      setTestingGameId(game.id)
+      try {
+        const { response, json } = await requestApiJson(
+          '/api/cabinet/admin/game-test-runs',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId: game.id, action: 'start' }),
+            fallbackMessage: 'Не удалось запустить тестовый прогон',
+          },
+        )
+        if (!response.ok || !json?.success || !json?.data?.url) {
+          throw new Error(json?.error || 'Не удалось запустить тестовый прогон')
+        }
+        router.push(json.data.url)
+      } catch (testError) {
+        setFeedback({
+          type: 'error',
+          message: extractErrorMessage(
+            testError,
+            'Не удалось запустить тестовый прогон',
+          ),
+        })
+        setTestingGameId('')
+      }
+    },
+    [canManageGame, router, setFeedback, testingGameId],
+  )
+
   const handleOpenFinancesModal = useCallback(
     (game) => {
       if (
@@ -6577,6 +6612,19 @@ const GamesPage = ({
                             <AgentCardIcon />
                           </CardActionIconButton>
                         )}
+                        {canManageThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void handleStartTestRun(game)
+                            }}
+                            disabled={Boolean(testingGameId)}
+                            label="Тестовый прогон"
+                            title="Открыть игру в изолированном тестовом режиме"
+                          >
+                            <TestRunCardIcon />
+                          </CardActionIconButton>
+                        )}
                         {canEditThisGame && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -6740,6 +6788,7 @@ const GamesPage = ({
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
+      handleStartTestRun,
       handleOpenFinancesModal,
       handleOpenGameHistoryModal,
       handleManageTeamsFromList,
@@ -6756,6 +6805,7 @@ const GamesPage = ({
       handleSelectGameCard,
       router,
       selectedGameId,
+      testingGameId,
     ],
   )
 
@@ -7055,6 +7105,20 @@ const GamesPage = ({
                           <AgentCardIcon />
                         </CardActionIconButton>
                       )}
+                      {canManageThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void handleStartTestRun(game)
+                          }}
+                          disabled={Boolean(testingGameId)}
+                          label="Тестовый прогон"
+                          title="Открыть игру в изолированном тестовом режиме"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-amber-300 bg-white/90 text-amber-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-500/50 dark:bg-slate-900/80 dark:text-amber-200"
+                        >
+                          <TestRunCardIcon />
+                        </CardActionIconButton>
+                      )}
                       {canEditThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -7229,6 +7293,7 @@ const GamesPage = ({
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
+      handleStartTestRun,
       handleOpenFinancesModal,
       handleOpenGameHistoryModal,
       handleManageTeamsFromList,
@@ -7245,6 +7310,7 @@ const GamesPage = ({
       handleSelectGameCard,
       router,
       selectedGameId,
+      testingGameId,
     ],
   )
 

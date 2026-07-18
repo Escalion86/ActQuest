@@ -50,13 +50,14 @@ export async function POST(request) {
   }
 
   const body = (await request.json().catch(() => ({}))) || {}
-  const { location, gameId, teamId, message, action } = body
+  const { location, gameId, teamId, message, action, testRunId } = body
 
   const normalizedLocation = normalizeString(location)
   const normalizedGameId = normalizeString(gameId)
   const normalizedTeamId = normalizeString(teamId)
   const sanitizedMessage = normalizeString(message)
   const normalizedAction = normalizeString(action)
+  const normalizedTestRunId = normalizeString(testRunId)
 
   gameTaskDebugLog('request_received', {
     sessionUserId: sessionUserId ? String(sessionUserId) : null,
@@ -66,6 +67,7 @@ export async function POST(request) {
     gameId: normalizedGameId,
     teamId: normalizedTeamId,
     action: normalizedAction,
+    testRunId: normalizedTestRunId,
   })
 
   if (!normalizedLocation || !normalizedGameId || !normalizedTeamId) {
@@ -84,6 +86,7 @@ export async function POST(request) {
       userId: sessionUserId,
       message: sanitizedMessage,
       action: normalizedAction,
+      testRunId: normalizedTestRunId,
     })
 
     if (!stateResult.success) {

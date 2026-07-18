@@ -252,12 +252,13 @@ const webGameProcessUnlocked = async ({
   gameTeamId,
   location,
   message,
+  progressModel,
 }) => {
   if (!db) {
     return { message: 'Нет подключения к базе данных.' }
   }
 
-  const GamesTeams = db.model('GamesTeams')
+  const GamesTeams = progressModel || db.model('GamesTeams')
   const Games = db.model('Games')
 
   const effectiveTeamId = gameTeamId || gameTeam?._id
@@ -864,7 +865,7 @@ const webGameProcess = async (options) => {
     return webGameProcessUnlocked(options)
   }
 
-  const GamesTeams = db.model('GamesTeams')
+  const GamesTeams = options?.progressModel || db.model('GamesTeams')
   const expectedActiveStep = Number.isInteger(gameTeam?.activeNum)
     ? gameTeam.activeNum
     : 0

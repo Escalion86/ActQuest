@@ -274,6 +274,7 @@ export const notifyAgentsForGameTeamProgress = async ({
   team,
 }) => {
   if (!db || !game || !gameTeam) return
+  if (game?.runtimeMode === 'test') return
 
   try {
     const activeGameAgents = resolveGameAgents(game)

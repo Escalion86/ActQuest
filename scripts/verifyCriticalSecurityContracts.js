@@ -145,6 +145,35 @@ requireText('server/getTeamGameTaskState.js', [
   'webGameProcess',
 ])
 
+// Тестовый прогон должен использовать отдельное хранилище, проверять владельца
+// на каждом игроком запросе и не инициировать реальные уведомления.
+requireText('app/api/cabinet/admin/game-test-runs/route.js', [
+  'getServerSession(authOptions)',
+  'canManageGame',
+  "db.model('GameTestRuns')",
+  'isTestRunOwner',
+])
+forbidText('app/api/cabinet/admin/game-test-runs/route.js', [
+  "db.model('GamesTeams')",
+])
+requireText('server/gameTestRuns.js', [
+  'isTestRunOwner',
+  'loadOwnedTestRun',
+  "runtimeMode: 'test'",
+])
+requireText('server/getTeamGameTaskState.js', [
+  "db.model('GameTestRuns')",
+  'loadOwnedTestRun',
+  'progressModel: gamesTeamsModel',
+])
+requireText('app/api/cabinet/_lib/storyApi.js', [
+  "db.model('GameTestRuns')",
+  'loadOwnedTestRun',
+])
+requireText('server/agentNotifications.js', [
+  "game?.runtimeMode === 'test'",
+])
+
 for (const legacyCrudRoute of [
   'app/api/[location]/users/[id]/route.js',
   'app/api/[location]/teams/[id]/route.js',

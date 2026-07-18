@@ -19,6 +19,7 @@ import siteEventsSchema from '@schemas/siteEventsSchema'
 import aiSystemPromptsSchema from '@schemas/aiSystemPromptsSchema'
 import agentNotificationsLogSchema from '@schemas/agentNotificationsLogSchema'
 import gameHistoryEntriesSchema from '@schemas/gameHistoryEntriesSchema'
+import gameTestRunsSchema from '@schemas/gameTestRunsSchema'
 
 let globalConnections = global.mongooseGlobal
 
@@ -126,6 +127,9 @@ async function dbConnectGlobal() {
     ensureModel(globalConnections.global, 'GameHistoryEntries', () =>
       mongoose.Schema(gameHistoryEntriesSchema, { timestamps: true }),
     )
+    ensureModel(globalConnections.global, 'GameTestRuns', () =>
+      mongoose.Schema(gameTestRunsSchema, { timestamps: true }),
+    )
   }
 
   ensureModel(globalConnections.global, 'Games', () =>
@@ -151,6 +155,9 @@ async function dbConnectGlobal() {
   )
   ensureModel(globalConnections.global, 'GameHistoryEntries', () =>
     mongoose.Schema(gameHistoryEntriesSchema, { timestamps: true }),
+  )
+  ensureModel(globalConnections.global, 'GameTestRuns', () =>
+    mongoose.Schema(gameTestRunsSchema, { timestamps: true }),
   )
 
   const connection = await globalConnections.global.asPromise()

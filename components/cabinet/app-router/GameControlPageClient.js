@@ -29,7 +29,6 @@ import CardActionIconButton, {
 import GameTasksViewModal from '@components/modals/GameTasksViewModal'
 import GameControlTeamStatsModal from '@components/modals/GameControlTeamStatsModal'
 import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
-import TeamPrequelsModal from '@components/modals/TeamPrequelsModal'
 
 const formatTime = (totalSeconds) => {
   const sec = Math.max(0, Math.floor(totalSeconds))
@@ -919,7 +918,6 @@ export default function GameControlPageClient({ session: _session }) {
   const [selectedTeamForTaskPreviewId, setSelectedTeamForTaskPreviewId] =
     useState('')
   const [selectedTeamForStatsId, setSelectedTeamForStatsId] = useState('')
-  const [selectedTeamForPrequelsId, setSelectedTeamForPrequelsId] = useState('')
   const [selectedTeamForContactsId, setSelectedTeamForContactsId] = useState('')
   const [selectedTeamForPushId, setSelectedTeamForPushId] = useState('')
   const [isGameConversationsModalOpen, setIsGameConversationsModalOpen] =
@@ -1055,14 +1053,6 @@ export default function GameControlPageClient({ session: _session }) {
       ) || null
     )
   }, [data?.teams, selectedTeamForStatsId])
-  const selectedTeamForPrequels = useMemo(() => {
-    const teamsList = Array.isArray(data?.teams) ? data.teams : []
-    return (
-      teamsList.find(
-        (item) => String(item?.teamId) === selectedTeamForPrequelsId,
-      ) || null
-    )
-  }, [data?.teams, selectedTeamForPrequelsId])
   const selectedTeamForManualActions = useMemo(() => {
     const teamsList = Array.isArray(data?.teams) ? data.teams : []
     return (
@@ -1819,20 +1809,6 @@ export default function GameControlPageClient({ session: _session }) {
                         </CardActionIconButton>
                         <CardActionIconButton
                           onClick={() =>
-                            setSelectedTeamForPrequelsId(String(team.teamId || ''))
-                          }
-                          label="Открыть приквелы команды"
-                          title="Приквелы команды"
-                          className="w-8 h-8"
-                        >
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                            <path d="M4 6h16v12H4z" />
-                            <path d="m8 10 4-3 4 3v5H8z" />
-                            <path d="M10 18v-4h4v4" />
-                          </svg>
-                        </CardActionIconButton>
-                        <CardActionIconButton
-                          onClick={() =>
                             setSelectedTeamForStatsId(String(team.teamId || ''))
                           }
                           label="Открыть статистику команды"
@@ -2208,14 +2184,6 @@ export default function GameControlPageClient({ session: _session }) {
         teamName={selectedTeamForStats?.teamName || ''}
         gameType={gameType}
         stats={selectedTeamForStats?.teamProgressStats || null}
-      />
-      <TeamPrequelsModal
-        isOpen={Boolean(selectedTeamForPrequelsId)}
-        onClose={() => setSelectedTeamForPrequelsId('')}
-        gameId={String(data?.gameId || gameId || '')}
-        gameTeamId={String(selectedTeamForPrequels?.gameTeamId || '')}
-        teamName={selectedTeamForPrequels?.teamName || ''}
-        onUpdated={refetchStatus}
       />
       <Modal
         isOpen={Boolean(selectedTeamForContactsId)}

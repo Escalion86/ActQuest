@@ -127,6 +127,23 @@ test('диалоги стоят 5 минут, а переезды — 10 мин�
   )
 })
 
+test('расследование начинается в 20:40 и стартовые тексты не раскрывают разгадку', () => {
+  const investigation = game.storyConfig.investigation
+  const timeoutEnding = game.storyEndings.find(({ id }) => id === 'ending_timeout')
+  const initialCopy = [
+    game.description,
+    game.descriptionRich,
+    ...game.storyNodes.map(({ descriptionRich }) => descriptionRich),
+  ].join('\n')
+
+  assert.equal(investigation.startClockMinutes, 1240)
+  assert.equal(investigation.deadlineMinutes, 240)
+  assert.match(game.descriptionRich, /20:40/)
+  assert.match(game.descriptionRich, /00:40/)
+  assert.match(timeoutEnding?.descriptionRich || '', /00:40/)
+  assert.doesNotMatch(initialCopy, /00:20|старая запись|голос и время смерти не совпадали|запись в алиби/i)
+})
+
 test('«Последний эфир» проходит минимальный доказательный маршрут', () => {
   const progress = buildSolvedRoute()
   const result = submitInvestigationAccusation({

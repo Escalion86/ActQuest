@@ -63,6 +63,29 @@ export const TeamCardIcon = () => (
   </svg>
 )
 
+export const TestRunCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M7 3.25h6M8 3.25v4.1l-4.1 6.7A1.75 1.75 0 005.4 16.75h9.2a1.75 1.75 0 001.5-2.7L12 7.35v-4.1"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M6.15 12h7.7"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 export const AgentCardIcon = () => (
   <svg
     className="h-5 w-5"

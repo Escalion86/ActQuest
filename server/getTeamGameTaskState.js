@@ -22,6 +22,11 @@ import {
   resolveRequiredMainCodesCount,
 } from '@helpers/classicGameRules'
 import buildStoryClientConfig from '@helpers/buildStoryClientConfig'
+import {
+  buildTestGameFromRun,
+  buildTestTeamFromRun,
+  loadOwnedTestRun,
+} from '@server/gameTestRuns'
 
 const isGameTaskDebugEnabled =
   process.env.GAME_TASK_DEBUG === '1' || process.env.SESSION_DEBUG === '1'
@@ -152,6 +157,7 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex) => {
 
   return {
     taskIndex: safeTaskIndex,
+    isBonusTask: Boolean(task?.isBonusTask),
     mainCodesCount,
     requiredCodesCount: resolveRequiredMainCodesCount(task),
     bonusCodesCount: Array.isArray(task?.bonusCodes)
@@ -1476,16 +1482,61 @@ const getTeamGameTaskState = async ({
   userId,
   message,
   action,
+  testRunId,
 }) => {
   if (!location || !gameId || !teamId) {
     return buildError(GAME_TASK_ERRORS.INVALID_PARAMS)
   }
 
   try {
-    const [game, team] = await Promise.all([
-      fetchGame(location, gameId),
-      fetchTeam(location, teamId),
-    ])
+    const isTestRun = Boolean(testRunId)
+    let db
+    let game
+    let team
+    let testRun = null
+
+    if (isTestRun) {
+      db = await dbConnectGlobal()
+      if (db) {
+        const GameTestRuns = db.model('GameTestRuns')
+        testRun = await loadOwnedTestRun({
+          GameTestRuns,
+          testRunId,
+          gameId,
+          userId,
+          telegramId,
+        })
+        game = buildTestGameFromRun(testRun)
+        team = buildTestTeamFromRun(testRun)
+      }
+    } else {
+      const normalContext = await Promise.all([
+        fetchGame(location, gameId),
+        fetchTeam(location, teamId),
+      ])
+      game = normalContext[0]
+      team = normalContext[1]
+      db = await dbConnectGlobal()
+    }
+
+    if (!db) {
+      return buildError(GAME_TASK_ERRORS.DB_CONNECTION_FAILED, {
+        game: safeSerializeGameForClient(game),
+        team: safeSerialize(team),
+        status: game?.status || 'active',
+        isGameStarted: game?.status === 'started',
+        isGameFinished:
+          game?.status === 'finished' || game?.status === 'closed',
+      })
+    }
+
+    const gamesTeamsModel = isTestRun
+      ? db.model('GameTestRuns')
+      : db.model('GamesTeams')
+    const teamsUsersModel = isTestRun ? null : db.model('TeamsUsers')
+    if (isTestRun && !testRun?._id) {
+      return buildError(GAME_TASK_ERRORS.TEAM_ACCESS_DENIED, { statusCode: 403 })
+    }
 
     if (!game || !game._id) {
       return buildError(GAME_TASK_ERRORS.GAME_NOT_FOUND, { statusCode: 404 })
@@ -1499,35 +1550,31 @@ const getTeamGameTaskState = async ({
     const isGameStarted = status === 'started'
     const isGameFinished = status === 'finished' || status === 'closed'
 
-    const db = await dbConnectGlobal()
-
-    if (!db) {
-      return buildError(GAME_TASK_ERRORS.DB_CONNECTION_FAILED, {
-        game: safeSerializeGameForClient(game),
-        team: safeSerialize(team),
-        status,
-        isGameStarted,
-        isGameFinished,
-      })
-    }
-
-    const gamesTeamsModel = db.model('GamesTeams')
-    const teamsUsersModel = db.model('TeamsUsers')
-
-    let gameTeam = await gamesTeamsModel.findOne({ gameId, teamId }).lean()
+    let gameTeam = isTestRun
+      ? testRun
+      : await gamesTeamsModel.findOne({ gameId, teamId }).lean()
 
     if (!gameTeam) {
       return buildError(GAME_TASK_ERRORS.TEAM_NOT_FOUND, { statusCode: 404 })
     }
 
     // Проверка принадлежности пользователя к команде
-    const teamUsers = await teamsUsersModel.find({ teamId }).lean()
+    const teamUsers = isTestRun
+      ? []
+      : await teamsUsersModel.find({ teamId }).lean()
 
-    const membershipResolution = resolveTeamMembershipForIdentity({
-      teamUsers,
-      userId,
-      telegramId,
-    })
+    const membershipResolution = isTestRun
+      ? {
+          isTeamMember: true,
+          isCaptain: testRun?.testerRole !== 'participant',
+          matchedBy: 'test_run_owner',
+          matchedMemberships: [],
+        }
+      : resolveTeamMembershipForIdentity({
+          teamUsers,
+          userId,
+          telegramId,
+        })
     const isTeamMember = membershipResolution.isTeamMember
     const isCaptain = membershipResolution.isCaptain
 
@@ -1653,6 +1700,7 @@ const getTeamGameTaskState = async ({
           gameTeamId: gameTeam._id,
           location,
           message,
+          progressModel: gamesTeamsModel,
         })
         if (processResult) {
           const updatedGameTeam = await gamesTeamsModel
@@ -1691,12 +1739,14 @@ const getTeamGameTaskState = async ({
       gamesTeamsModel,
     })
 
-    await notifyAgentsForGameTeamProgress({
-      db,
-      game,
-      gameTeam: effectiveGameTeam || gameTeam,
-      team,
-    })
+    if (!isTestRun) {
+      await notifyAgentsForGameTeamProgress({
+        db,
+        game,
+        gameTeam: effectiveGameTeam || gameTeam,
+        team,
+      })
+    }
 
     return {
       success: true,
@@ -1734,6 +1784,7 @@ const getTeamGameTaskState = async ({
           typeof postCompletionMessage === 'string'
             ? postCompletionMessage
             : null,
+        testRunId: isTestRun ? String(testRun._id) : null,
       },
     }
   } catch (error) {

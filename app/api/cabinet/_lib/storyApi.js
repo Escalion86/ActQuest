@@ -27,6 +27,12 @@ import {
   acquireGameProcessLock,
   releaseGameProcessLock,
 } from '@server/gameProcessLock'
+import {
+  buildTestGameFromRun,
+  buildTestTeamFromRun,
+  loadOwnedTestRun,
+  normalizeTestRunId,
+} from '@server/gameTestRuns'
 
 export const normalizeStringId = (value) => {
   const id = toStringId(value)
@@ -626,9 +632,54 @@ export const loadPlayerStoryContext = async ({
   }
 
   const Games = db.model('Games')
-  const GamesTeams = db.model('GamesTeams')
+  let GamesTeams = db.model('GamesTeams')
   const Teams = db.model('Teams')
   const TeamsUsers = db.model('TeamsUsers')
+
+  const identity = resolveSessionIdentity(session)
+  const testRunId = normalizeTestRunId(
+    requestUrl.searchParams.get('testRunId'),
+  )
+  if (testRunId) {
+    GamesTeams = db.model('GameTestRuns')
+    const testRun = await loadOwnedTestRun({
+      GameTestRuns: GamesTeams,
+      testRunId,
+      gameId,
+      userId: identity.userId,
+      telegramId: identity.userTelegramId,
+    })
+    if (!testRun?._id) {
+      return { response: jsonError('Тестовый прогон не найден', 404) }
+    }
+
+    const game = buildTestGameFromRun(testRun)
+    if (game.type !== 'story') {
+      return { response: jsonError('Игра не является story-квестом', 400) }
+    }
+
+    const team = buildTestTeamFromRun(testRun)
+    const progress = await ensureStoryProgress({
+      GamesTeams,
+      game,
+      gameTeam: testRun,
+      actor: 'team',
+      save: true,
+    })
+
+    return {
+      db,
+      GamesTeams,
+      game,
+      gameTeam: testRun,
+      team,
+      progress,
+      session,
+      identity,
+      isTestRun: true,
+      testRunId,
+    }
+  }
 
   const game = await findGameByAnyId(Games, gameId)
   if (!game?._id) {
@@ -660,7 +711,6 @@ export const loadPlayerStoryContext = async ({
     return { response: jsonError('Команда не зарегистрирована на игру', 404) }
   }
 
-  const identity = resolveSessionIdentity(session)
   const allowed = await userHasTeamAccess({ TeamsUsers, identity, teamId })
   if (!allowed) {
     return { response: jsonError('Нет доступа к этой команде', 403) }
