@@ -715,6 +715,7 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
 
   const taskResults = tasks.map((task, taskIndex) => {
     const isCanceled = Boolean(task?.canceled)
+    const isBonusTask = Boolean(task?.isBonusTask)
     const checks = getPhotoTaskChecks(gameTeam, taskIndex)
     const accepted = Boolean(checks?.accepted)
 
@@ -734,7 +735,8 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
 
     const codeResult = getTaskPenaltyAndBonus(task, gameTeam, taskIndex)
     const wrongCodePenalty = getWrongCodePenalty(game, gameTeam, taskIndex)
-    const taskFailurePoints = !isCanceled && !accepted ? taskFailurePenalty : 0
+    const taskFailurePoints =
+      !isCanceled && !isBonusTask && !accepted ? taskFailurePenalty : 0
 
     taskPoints += baseTaskPoints
     subTaskPoints += acceptedSubTaskPoints

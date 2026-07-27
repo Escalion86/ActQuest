@@ -19,6 +19,7 @@ import CardActionIconButton, {
   FinanceCardIcon,
   GameControlCardIcon,
   HistoryCardIcon,
+  MapCardIcon,
   StatusCardIcon,
   TargetCardIcon,
   TeamCardIcon,
@@ -118,6 +119,28 @@ const CLUE_EARLY_MODE_OPTIONS = [
 ]
 
 const GAMES_PAGE_SIZE = 10
+
+const hasTaskCoordinates = (game) =>
+  (Array.isArray(game?.tasks) ? game.tasks : []).some((task) => {
+    const latitudeValue = task?.coordinates?.latitude
+    const longitudeValue = task?.coordinates?.longitude
+    const latitude = Number(latitudeValue)
+    const longitude = Number(longitudeValue)
+    return (
+      latitudeValue !== null &&
+      latitudeValue !== undefined &&
+      latitudeValue !== '' &&
+      longitudeValue !== null &&
+      longitudeValue !== undefined &&
+      longitudeValue !== '' &&
+      Number.isFinite(latitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      Number.isFinite(longitude) &&
+      longitude >= -180 &&
+      longitude <= 180
+    )
+  })
 const GAMES_FILTER_LOCATION_STORAGE_KEY = 'cabinet_games_location_filter'
 const GAMES_DISPLAY_MODE_STORAGE_KEY = 'cabinet_games_display_mode'
 const CABINET_GAMES_LIST_API_BASE = '/api/cabinet/games-list'
@@ -6662,6 +6685,20 @@ const GamesPage = ({
                             <TargetCardIcon />
                           </CardActionIconButton>
                         )}
+                        {canEditAllGames && hasTaskCoordinates(game) && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              router.push(
+                                `/cabinet/admin/game-map/${encodeURIComponent(game.id)}`,
+                              )
+                            }}
+                            label="Карта заданий"
+                            title="Показать задания на карте"
+                          >
+                            <MapCardIcon />
+                          </CardActionIconButton>
+                        )}
                         {canManageStatusThisGame && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -7157,6 +7194,21 @@ const GamesPage = ({
                           className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TargetCardIcon />
+                        </CardActionIconButton>
+                      )}
+                      {canEditAllGames && hasTaskCoordinates(game) && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            router.push(
+                              `/cabinet/admin/game-map/${encodeURIComponent(game.id)}`,
+                            )
+                          }}
+                          label="Карта заданий"
+                          title="Показать задания на карте"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <MapCardIcon />
                         </CardActionIconButton>
                       )}
                       {canManageStatusThisGame && (

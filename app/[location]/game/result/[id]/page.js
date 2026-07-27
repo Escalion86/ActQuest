@@ -16,6 +16,7 @@ import SportCar from '@components/cars/SportCar'
 import SuvCar from '@components/cars/SuvCar'
 import VanCar from '@components/cars/VanCar'
 import RichTaskContentView from '@components/game/RichTaskContentView'
+import GameReviewCard from '@components/location-game/GameReviewCard'
 import PropTypes from 'prop-types'
 
 const CYBER_CAR_COLORS = [
@@ -2333,12 +2334,15 @@ function ResultPage({ params }) {
       {/* <StateLoader {...props}>
         <Header /> */}
       {game ? (
-        game?.type === 'story' ||
-        game?.result?.computed?.summary?.scoringMode === 'story' ? (
-          <StoryGameBlock game={game} />
-        ) : (
-          <GameBlock game={game} isDarkTheme={isDarkTheme} />
-        )
+        <>
+          {game?.type === 'story' ||
+          game?.result?.computed?.summary?.scoringMode === 'story' ? (
+            <StoryGameBlock game={game} />
+          ) : (
+            <GameBlock game={game} isDarkTheme={isDarkTheme} />
+          )}
+          <GameReviewCard gameId={String(gameId)} location={String(location)} />
+        </>
       ) : null}
       {/* </StateLoader> */}
     </>

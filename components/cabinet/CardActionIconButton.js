@@ -271,6 +271,25 @@ export const GameControlCardIcon = () => (
   </svg>
 )
 
+export const MapCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M3.5 5.25L7.75 3.5L12.25 5.25L16.5 3.5V14.75L12.25 16.5L7.75 14.75L3.5 16.5V5.25Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M7.75 3.5V14.75M12.25 5.25V16.5" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="10" cy="9.5" r="1.5" fill="currentColor" />
+  </svg>
+)
+
 export const TeamStatsCardIcon = () => (
   <svg
     className="h-5 w-5"

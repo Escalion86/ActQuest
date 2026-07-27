@@ -1,8 +1,13 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
+import isUserAdmin from '@helpers/isUserAdmin'
 
 export default async function UsersInGame(req, res) {
   const { query, method } = req
+
+  if (!isUserAdmin({ role: req.session?.user?.role })) {
+    return res?.status(403).json({ success: false, error: 'Недостаточно прав' })
+  }
 
   const id = query?.id
   const location = query?.location
@@ -77,9 +82,7 @@ export default async function UsersInGame(req, res) {
         console.log(error)
         return res?.status(400).json({ success: false, error })
       }
-      break
     default:
       return res?.status(400).json({ success: false })
-      break
   }
 }

@@ -20,6 +20,7 @@ import aiSystemPromptsSchema from '@schemas/aiSystemPromptsSchema'
 import agentNotificationsLogSchema from '@schemas/agentNotificationsLogSchema'
 import gameHistoryEntriesSchema from '@schemas/gameHistoryEntriesSchema'
 import gameTestRunsSchema from '@schemas/gameTestRunsSchema'
+import gameReviewsSchema from '@schemas/gameReviewsSchema'
 
 let globalConnections = global.mongooseGlobal
 
@@ -28,6 +29,7 @@ if (!globalConnections) {
 }
 
 let phoneUniqueIndexPromise = null
+let gameReviewsIndexPromise = null
 
 const ensureModel = (connection, name, schemaFactory) => {
   const hasModel = Boolean(connection.models?.[name])
@@ -130,6 +132,9 @@ async function dbConnectGlobal() {
     ensureModel(globalConnections.global, 'GameTestRuns', () =>
       mongoose.Schema(gameTestRunsSchema, { timestamps: true }),
     )
+    ensureModel(globalConnections.global, 'GameReviews', () =>
+      mongoose.Schema(gameReviewsSchema, { timestamps: true }),
+    )
   }
 
   ensureModel(globalConnections.global, 'Games', () =>
@@ -159,6 +164,9 @@ async function dbConnectGlobal() {
   ensureModel(globalConnections.global, 'GameTestRuns', () =>
     mongoose.Schema(gameTestRunsSchema, { timestamps: true }),
   )
+  ensureModel(globalConnections.global, 'GameReviews', () =>
+    mongoose.Schema(gameReviewsSchema, { timestamps: true }),
+  )
 
   const connection = await globalConnections.global.asPromise()
 
@@ -182,6 +190,28 @@ async function dbConnectGlobal() {
   }
 
   await phoneUniqueIndexPromise
+
+  if (!gameReviewsIndexPromise) {
+    const reviewsCollection = connection.model('GameReviews').collection
+    gameReviewsIndexPromise = Promise.all([
+      reviewsCollection.createIndex(
+        { gameId: 1, userId: 1 },
+        { unique: true, name: 'uniq_game_review_user' },
+      ),
+      reviewsCollection.createIndex(
+        { createdAt: -1 },
+        { name: 'game_reviews_created_at' },
+      ),
+      reviewsCollection.createIndex(
+        { location: 1, moderationStatus: 1, overallRating: 1 },
+        { name: 'game_reviews_admin_filters' },
+      ),
+    ]).catch((error) => {
+      console.error('dbConnectGlobal: failed to create GameReviews indexes', error)
+    })
+  }
+
+  await gameReviewsIndexPromise
   return connection
 }
 

@@ -2,6 +2,7 @@ import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import ensureRole from '@helpers/ensureRole'
 import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
 import resolveEntityRating from '@helpers/resolveEntityRating'
+import fetchUserCompletedGamesCounts from '@server/fetchUserCompletedGamesCounts'
 import {
   isCaptainRole,
   normalizeTeamRoleForWrite,
@@ -73,6 +74,7 @@ const normalizeUserForAdmin = ({
   userMemberships,
   teamsMap,
   location,
+  completedGamesCounts,
 }) => {
   const baseProfile = normalizeUserProfile(userDoc)
   const numericTelegramId = Number.isFinite(userDoc?.telegramId)
@@ -112,10 +114,9 @@ const normalizeUserForAdmin = ({
       return a.isCaptain ? -1 : 1
     })
 
-  const playedGamesCount = Number.isFinite(
-    Number(userDoc?.gameStats?.playedGamesCount),
-  )
-    ? Number(userDoc.gameStats.playedGamesCount)
+  const userId = toStringId(userDoc?._id)
+  const playedGamesCount = userId
+    ? completedGamesCounts?.get(userId) ?? 0
     : 0
 
   const normalizedRoleRaw =
@@ -402,6 +403,11 @@ const fetchAdminUsersForCabinet = async ({
       ),
     )
 
+    const completedGamesCountsForAll = await fetchUserCompletedGamesCounts({
+      db,
+      userIds: membershipUserIdsForAll,
+    })
+
     const membershipQueryForAll = []
     if (membershipUserIdsForAll.length) {
       membershipQueryForAll.push({ userId: { $in: membershipUserIdsForAll } })
@@ -456,6 +462,7 @@ const fetchAdminUsersForCabinet = async ({
         ),
         teamsMap: teamsMapForAll,
         location,
+        completedGamesCounts: completedGamesCountsForAll,
       }),
     )
 
@@ -473,6 +480,11 @@ const fetchAdminUsersForCabinet = async ({
         .filter((id) => id !== null),
     ),
   )
+
+  const completedGamesCounts = await fetchUserCompletedGamesCounts({
+    db,
+    userIds: membershipUserIds,
+  })
 
   const membershipQuery = []
   if (membershipUserIds.length) {
@@ -523,6 +535,7 @@ const fetchAdminUsersForCabinet = async ({
       userMemberships: resolveMembershipsForUser(userDoc, membershipsDocs),
       teamsMap,
       location,
+      completedGamesCounts,
     }),
   )
   return { users, hasMore }

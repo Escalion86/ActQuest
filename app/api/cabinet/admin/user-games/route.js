@@ -4,23 +4,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import isUserAdmin from '@helpers/isUserAdmin'
 import { toStringId } from '@helpers/idAndDate'
+import {
+  buildResultTeamNameMap,
+  collectSnapshotTeamIdsForUser,
+  COMPLETED_PARTICIPATION_STATUSES,
+  resolveParticipationPlace,
+} from '@helpers/gameParticipation'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
-
-const resolveTeamNameMap = (teams) => {
-  const entries = Array.isArray(teams) ? teams : []
-  return entries.reduce((acc, team) => {
-    const teamId = toStringId(team?._id)
-    if (!teamId) {
-      return acc
-    }
-
-    acc[teamId] =
-      typeof team?.name === 'string' && team.name.trim()
-        ? team.name.trim()
-        : 'Без названия'
-    return acc
-  }, {})
-}
 
 export async function GET(request) {
   const session = await getServerSession(authOptions)
@@ -56,7 +46,7 @@ export async function GET(request) {
     const games = await db
       .model('Games')
       .find({
-        status: 'closed',
+        status: { $in: COMPLETED_PARTICIPATION_STATUSES },
         'result.teamsUsers.userId': userId,
       })
       .select({
@@ -71,37 +61,12 @@ export async function GET(request) {
       .lean()
 
     const normalizedGames = games.map((game) => {
-      const teamsUsers = Array.isArray(game?.result?.teamsUsers)
-        ? game.result.teamsUsers
-        : []
-      const teamNameMap = resolveTeamNameMap(game?.result?.teams)
-      const userTeamIds = new Set()
-
-      teamsUsers.forEach((membership) => {
-        const membershipUserId = toStringId(membership?.userId)
-
-        const byUserId = userId && membershipUserId === userId
-        if (!byUserId) {
-          return
-        }
-
-        const teamId = toStringId(membership?.teamId)
-        if (teamId) {
-          userTeamIds.add(teamId)
-        }
-      })
-
-      const teams = Array.from(userTeamIds).map(
+      const userTeamIds = collectSnapshotTeamIdsForUser({ game, userId })
+      const teamNameMap = buildResultTeamNameMap(game?.result?.teams)
+      const teams = userTeamIds.map(
         (teamId) => teamNameMap[teamId] || 'Без названия',
       )
-      const teamsPlaces =
-        game?.result?.teamsPlaces && typeof game.result.teamsPlaces === 'object'
-          ? game.result.teamsPlaces
-          : {}
-      const places = Array.from(userTeamIds)
-        .map((teamId) => Number(teamsPlaces[teamId]))
-        .filter((value) => Number.isFinite(value))
-      const place = places.length > 0 ? Math.min(...places) : null
+      const place = resolveParticipationPlace({ game, teamIds: userTeamIds })
 
       return {
         id: toStringId(game?._id) || '',

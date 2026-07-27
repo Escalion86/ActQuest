@@ -42,3 +42,49 @@ test('counts mixed-case bonus and penalty codes in classic result', async () => 
   assert.equal(teamResult.codeBonusSeconds, 30)
   assert.equal(teamResult.finalSeconds, 330)
 })
+
+test('does not apply photo task failure penalty to bonus tasks', async () => {
+  const game = {
+    type: 'photo',
+    taskFailurePenalty: 10,
+    tasks: [
+      {
+        title: 'Обычное задание',
+        isBonusTask: false,
+        penaltyCodes: [],
+        bonusCodes: [],
+      },
+      {
+        title: 'Бонусное задание',
+        isBonusTask: true,
+        penaltyCodes: [],
+        bonusCodes: [],
+      },
+    ],
+    result: {
+      teams: [{ _id: 'team-1', name: 'Team' }],
+      teamsUsers: [{ teamId: 'team-1' }],
+      gameTeams: [
+        {
+          teamId: 'team-1',
+          photos: [
+            { checks: { accepted: false } },
+            { checks: { accepted: false } },
+          ],
+          findedPenaltyCodes: [[], []],
+          findedBonusCodes: [[], []],
+          wrongCodes: [[], []],
+          timeAddings: [],
+        },
+      ],
+    },
+  }
+
+  const result = await buildGameResultComputed({ game })
+  const teamResult = result.computed.teams[0]
+
+  assert.equal(teamResult.failurePenaltyPoints, 10)
+  assert.equal(teamResult.taskResults[0].failurePenaltyPoints, 10)
+  assert.equal(teamResult.taskResults[1].failurePenaltyPoints, 0)
+  assert.equal(teamResult.finalPoints, -10)
+})

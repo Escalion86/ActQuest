@@ -11,6 +11,7 @@ import {
   normalizeTeamRoleForWrite,
 } from '@helpers/teamRoles'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import fetchUserCompletedGamesCounts from '@server/fetchUserCompletedGamesCounts'
 
 const normalizeTelegramId = (value) => {
   const numeric = Number(value)
@@ -86,10 +87,13 @@ export async function GET(request) {
 
     const userTelegramId = normalizeTelegramId(userDoc?.telegramId)
     const targetUserIds = collectUserIdCandidates(userDoc)
-    const memberships = await resolveMembershipsByUserIds({
-      TeamsUsersModel,
-      userIds: targetUserIds,
-    })
+    const [memberships, completedGamesCounts] = await Promise.all([
+      resolveMembershipsByUserIds({
+        TeamsUsersModel,
+        userIds: targetUserIds,
+      }),
+      fetchUserCompletedGamesCounts({ db, userIds: targetUserIds }),
+    ])
 
     const teamIds = Array.from(
       new Set(
@@ -177,9 +181,7 @@ export async function GET(request) {
       updatedAt: ensureDateISOString(userDoc?.updatedAt),
       teams,
       teamsCount: teams.length,
-      gamesCount: Number.isFinite(Number(userDoc?.gameStats?.playedGamesCount))
-        ? Number(userDoc.gameStats.playedGamesCount)
-        : 0,
+      gamesCount: completedGamesCounts.get(toStringId(userDoc?._id)) ?? 0,
       rating:
         userDoc?.rating && typeof userDoc.rating === 'object'
           ? userDoc.rating

@@ -25,6 +25,7 @@ import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler
 import { canManageGame } from '@server/gameHistory/gameManageAccess'
 import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 import protectStoryScenarioUpdate from '@helpers/protectStoryScenarioUpdate'
+import { resolveParticipationMetricsTransition } from '@helpers/gameParticipation'
 
 const buildResetPayload = ({
   clearTimeAddings = true,
@@ -676,8 +677,16 @@ const execute = (request, params) =>
           nextStatusNormalized === 'finished' &&
           previousStatus !== 'finished' &&
           previousStatus !== 'closed'
-        const shouldUpdateParticipantsMetrics =
-          nextStatusNormalized === 'closed' && previousStatus !== 'closed'
+        const {
+          shouldUpdateParticipationStats,
+          shouldUpdateRatings,
+        } = resolveParticipationMetricsTransition({
+          previousStatus,
+          nextStatus: nextStatusNormalized,
+        })
+        const shouldRebuildResult =
+          shouldCreateResultSnapshot ||
+          (nextStatusNormalized === 'closed' && previousStatus !== 'closed')
 
         const updateData = protectStoryScenarioUpdate({
           updateData: { ...updatePayload, status: resolvedStatus },
@@ -962,7 +971,7 @@ const execute = (request, params) =>
           })
         }
 
-        if (shouldCreateResultSnapshot || shouldUpdateParticipantsMetrics) {
+        if (shouldRebuildResult) {
           try {
             const gameForMetrics = updatedGame?.toObject ? updatedGame.toObject() : updatedGame
             const built = await buildGameResultComputed({ game: gameForMetrics })
@@ -980,13 +989,24 @@ const execute = (request, params) =>
               { returnDocument: 'after', runValidators: true },
             )
 
-            if (shouldUpdateParticipantsMetrics) {
-              const finalGameForMetrics = updatedGame?.toObject ? updatedGame.toObject() : updatedGame
+          } catch (metricsError) {
+            console.error('Failed to rebuild game result on status change', metricsError)
+          }
+        }
 
+        if (shouldUpdateParticipationStats || shouldUpdateRatings) {
+          try {
+            const finalGameForMetrics = updatedGame?.toObject
+              ? updatedGame.toObject()
+              : updatedGame
+
+            if (shouldUpdateParticipationStats) {
               await updateParticipantsClosedStats({
                 db,
                 game: finalGameForMetrics,
               })
+            }
+            if (shouldUpdateRatings) {
               await updateParticipantsRatings({
                 db,
                 game: finalGameForMetrics,
@@ -994,7 +1014,10 @@ const execute = (request, params) =>
               })
             }
           } catch (metricsError) {
-            console.error('Failed to update participants metrics on game close', metricsError)
+            console.error(
+              'Failed to update participants metrics on status change',
+              metricsError,
+            )
           }
         }
 

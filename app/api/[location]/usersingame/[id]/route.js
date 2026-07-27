@@ -5,6 +5,7 @@ const execute = (request, params) =>
   runLocationLegacyHandler({
     request,
     params,
+    requireAuth: true,
     handler: async (req, res) => UsersInGame(req, res),
   })
 

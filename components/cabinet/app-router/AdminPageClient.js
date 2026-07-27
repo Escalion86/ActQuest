@@ -9,6 +9,14 @@ import useMergedSession from '@helpers/useMergedSession'
 
 const adminTools = [
   {
+    id: 'game-reviews',
+    title: 'Отзывы об играх',
+    description:
+      'Просматривайте оценки участников, замечания и согласия на публикацию отзывов.',
+    action: 'Открыть отзывы',
+    href: '/cabinet/admin/reviews',
+  },
+  {
     id: 'game-orders',
     title: 'Заявки на игры',
     description:

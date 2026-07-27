@@ -250,7 +250,7 @@ export const loadCabinetAppOverview = async (session) => {
 
   const inProgressGame = inProgressCandidates[0] ?? null
 
-  const personalProgressGames = (Array.isArray(pastGames) ? pastGames : [])
+  const personalProgressGamesBase = (Array.isArray(pastGames) ? pastGames : [])
     .map((game) => {
       const place = toFiniteNumberOrNull(game?.userTeamPlace)
       if (place === null || place <= 0) {
@@ -264,6 +264,8 @@ export const loadCabinetAppOverview = async (session) => {
       return {
         id: game?.id ? String(game.id) : null,
         gameName: typeof game?.name === 'string' ? game.name : 'Без названия',
+        location:
+          typeof game?.location === 'string' ? game.location.trim() : '',
         image: typeof game?.image === 'string' ? game.image : '',
         dateLabel: formatDateLabel(game?.dateStart),
         teamName:
@@ -284,6 +286,31 @@ export const loadCabinetAppOverview = async (session) => {
       return second - first
     })
     .slice(0, 30)
+
+  const progressGameIds = personalProgressGamesBase
+    .map((game) => game?.id)
+    .filter(Boolean)
+  const reviewDocs =
+    progressGameIds.length > 0
+      ? await db
+          .model('GameReviews')
+          .find({
+            userId: normalizedUserId,
+            gameId: { $in: progressGameIds },
+          })
+          .select({ gameId: 1, overallRating: 1 })
+          .lean()
+      : []
+  const reviewRatingByGameId = new Map(
+    reviewDocs.map((review) => [
+      String(review.gameId),
+      Number(review.overallRating),
+    ]),
+  )
+  const personalProgressGames = personalProgressGamesBase.map((game) => ({
+    ...game,
+    reviewRating: reviewRatingByGameId.get(game.id) || null,
+  }))
 
   const completedGamesCountFromProgress = personalProgressGames.length
   const averageFinishedPlace =

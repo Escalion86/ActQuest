@@ -61,6 +61,13 @@
 - Story: `storyProgress` (status, inventory, history)
 - Приквел: `prequelProgress` (найденные коды, неверные попытки, корректировки, story-эффекты)
 
+**GameReviews** (`gameReviewsSchema.js`)
+- Один персональный отзыв участника на проведённую игру (`gameId + userId`).
+- Общая оценка — целое число от 1 до 10; теги и текст необязательны.
+- `publicationConsent` не публикует отзыв автоматически: публичное использование
+  возможно только после отдельной модерации.
+- `moderationStatus`: `pending`, `approved`, `rejected`.
+
 ### Связи в БД
 
 ```
@@ -121,6 +128,24 @@ TeamsUsers (члены команды - текущие)
   - для `admin/dev` и модераторов игры (проверка `canManageGameStatus`) — кнопка доступна всегда, если игра `finished|closed` и есть `result.computed`,
   - для обычного пользователя — только если игра `finished|closed`, есть `result.computed` и `hideResult !== true`.
 - Если snapshot'ов нет, результат пересобрать нельзя (игра пропускается в таких операциях).
+- Для заданий с `isBonusTask = true` не применяется `taskFailurePenalty`: в
+  `classic` их время также не входит в итог, а в `photo` провал не уменьшает
+  баллы. Отдельные штрафные коды и пакетный штраф за неверные коды считаются по
+  общим правилам.
+
+### Отзывы участников
+
+- Форма доступна на странице результата для игр в статусе `finished|closed`.
+- Право на отзыв проверяется сервером по `Games.result.teamsUsers`, а не по
+  текущему составу `TeamsUsers`: выход из команды после игры не лишает права
+  отредактировать отзыв.
+- Пользователь не передаёт доверенные `userId` и `teamId`; они определяются из
+  сессии и snapshot результата.
+- Пользовательский API: `GET|PUT /api/cabinet/games/[gameId]/review`.
+- Административный просмотр и модерация:
+  `/cabinet/admin/reviews` и `GET|PATCH /api/cabinet/admin/game-reviews`.
+- Повторная отправка обновляет существующий отзыв и возвращает его в статус
+  `pending`.
 
 ### Приквелы
 
@@ -242,7 +267,16 @@ result: {
   - `server/updateParticipantsRatings.js`
   - `server/updateParticipantsClosedStats.js`
   - `app/api/cabinet/dev/recalculate-ratings/route.js`
+- Обычное «сыграно/завершено игр» считается по snapshot-участию
+  `result.teamsUsers` для статусов `finished|closed`; текущее членство в команде
+  не должно менять историческое участие и место.
 - В рейтинге учитываются только `closed` + `isRated !== false`.
+- Для аудита и исправления сохранённых `gameStats` всех пользователей и команд:
+  - dry-run: `npm run backfill:participation-stats`;
+  - применение: `npm run backfill:participation-stats -- --apply --confirm-db=<MONGODB_GLOBAL_DBNAME>`.
+  Скрипт не изменяет `rating`/`ratingsByLocation` и по умолчанию ничего не пишет.
+  Apply блокируется при unresolved пользователях или дублях Telegram; обход
+  возможен только явным `--allow-unresolved` после ручной проверки отчёта.
 - Для Dev-пересчета: перед метриками нужно пересобирать `teamsPlaces` и `computed` (если есть snapshots).
 - Глобальный рейтинг: без разделения по городам (location в snapshot может быть `null`).
 - При равном `finalScore` место должно быть одинаковым (tie rank).

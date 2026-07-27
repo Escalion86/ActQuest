@@ -6,6 +6,11 @@ import { buildGameTasksStats } from '@helpers/gameTaskCounts'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 import { isCaptainRole } from '@helpers/teamRoles'
+import {
+  isCompletedParticipationStatus,
+  resolveParticipationPlace,
+  resolveUserParticipationTeams,
+} from '@helpers/gameParticipation'
 
 const toPositiveInteger = (value, fallback) => {
   const numeric = Number(value)
@@ -175,10 +180,20 @@ const fetchGamesForCabinet = async ({
       )
     }
 
+    const hiddenVisibilityConditions = [{ hidden: { $ne: true } }]
     if (hiddenGameIds.length > 0) {
+      hiddenVisibilityConditions.push({ _id: { $in: hiddenGameIds } })
+    }
+    if (currentUserIdString) {
+      hiddenVisibilityConditions.push({
+        'result.teamsUsers.userId': currentUserIdString,
+      })
+    }
+
+    if (hiddenVisibilityConditions.length > 1) {
       query.$and = [
         {
-          $or: [{ hidden: { $ne: true } }, { _id: { $in: hiddenGameIds } }],
+          $or: hiddenVisibilityConditions,
         },
       ]
     } else {
@@ -280,6 +295,7 @@ const fetchGamesForCabinet = async ({
       'result.computed': 1,
       'result.teamsPlaces': 1,
       'result.teams': 1,
+      'result.teamsUsers': 1,
     })
     .populate({
       path: 'moderators',
@@ -534,6 +550,23 @@ const fetchGamesForCabinet = async ({
 
     const gameId = game?._id ? game._id.toString() : null
     const gameStatus = String(game?.status).toLowerCase()
+    const currentParticipation = gameId
+      ? participationByGameId[gameId] || []
+      : []
+    // После СТОП ИГРА исторический snapshot авторитетнее текущего состава:
+    // пользователь мог позднее перейти в другую команду или выйти из старой.
+    const resolvedParticipation = resolveUserParticipationTeams({
+      game,
+      userId: currentUserIdString,
+      currentParticipation,
+    })
+
+    const userTeamPlace = isCompletedParticipationStatus(gameStatus)
+      ? resolveParticipationPlace({
+          game,
+          teamIds: resolvedParticipation.map((team) => team.teamId),
+        })
+      : null
     const creatorTelegramIdNumber = normalizeTelegramId(game?.creatorTelegramId)
     const creatorUserId = toStringId(game?.creatorUserId)
     const creatorKey = creatorTelegramIdNumber !== null
@@ -564,7 +597,7 @@ const fetchGamesForCabinet = async ({
             ),
         }),
         hasUserParticipation: gameId
-          ? (participationByGameId[gameId] || []).length > 0
+          ? resolvedParticipation.length > 0
           : false,
       }),
       tasksStats: buildGameTasksStats(game?.tasks),
@@ -573,8 +606,8 @@ const fetchGamesForCabinet = async ({
       adminUnreadMessagesCount: gameId
         ? adminUnreadMessagesCountByGameId[gameId] || 0
         : 0,
-      userTeamPlace: null,
-      userParticipationTeams: gameId ? participationByGameId[gameId] || [] : [],
+      userTeamPlace,
+      userParticipationTeams: resolvedParticipation,
       agents: (Array.isArray(game?.agents) ? game.agents : []).map((agent) => {
         const userId = toStringId(agent?.userId)
         const user = userId ? agentsByUserId[userId] : null

@@ -1,6 +1,7 @@
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
 import { ensureDateISOString } from '@helpers/idAndDate'
 import resolveEntityRating from '@helpers/resolveEntityRating'
+import { isCompletedParticipationStatus } from '@helpers/gameParticipation'
 import {
   isCaptainRole,
   isLiaisonRole,
@@ -132,9 +133,7 @@ const resolvePlayedGamesCount = ({ team, normalizedGames }) => {
   }
 
   return normalizedGames.reduce((acc, game) => {
-    const status =
-      typeof game?.status === 'string' ? game.status.trim().toLowerCase() : ''
-    return status === 'closed' ? acc + 1 : acc
+    return isCompletedParticipationStatus(game?.status) ? acc + 1 : acc
   }, 0)
 }
 
