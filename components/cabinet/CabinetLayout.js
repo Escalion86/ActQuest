@@ -125,6 +125,11 @@ const developerMenuItem = {
 
 const adminSubmenuItems = [
   {
+    id: 'admin-reviews',
+    label: 'Отзывы об играх',
+    href: '/cabinet/admin/reviews',
+  },
+  {
     id: 'admin-game-orders',
     label: 'Заявки на игры',
     href: '/cabinet/admin/game-orders',
@@ -1048,7 +1053,7 @@ const CabinetLayout = ({
                       <div
                         className={`overflow-hidden transition-all duration-300 ease-out ${
                           isAdminMenuOpen
-                            ? 'max-h-64 opacity-100 translate-y-0'
+                            ? 'max-h-72 opacity-100 translate-y-0'
                             : 'max-h-0 opacity-0 -translate-y-1'
                         }`}
                         aria-hidden={!isAdminMenuOpen}
