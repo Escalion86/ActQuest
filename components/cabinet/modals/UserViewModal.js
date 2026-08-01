@@ -17,6 +17,7 @@ import requestApiJson from '@helpers/requestApiJson'
 import CopyableId from '@components/cabinet/CopyableId'
 import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
 import isUserAdmin from '@helpers/isUserAdmin'
+import getTelegramUserHref from '@helpers/getTelegramUserHref'
 import { LOCATIONS } from '@server/serverConstants'
 
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
@@ -186,7 +187,6 @@ const UserViewModal = ({
   const displayName = user?.name || 'Без имени'
   const phoneValue = formatPhoneValue(user?.phone)
   const phoneHref = normalizePhoneHref(user?.phone)
-  const telegramByPhonePath = phoneHref || ''
   const telegramUsername = normalizeTelegramUsername(user?.username)
   const userTelegramId = user?.telegramId || ''
 
@@ -431,9 +431,9 @@ const UserViewModal = ({
                     <p className="text-xs text-slate-500">Telegram username</p>
                     {telegramUsername ? (
                       <a
-                        href={`https://t.me/${telegramUsername}`}
-                        target="_blank"
-                        rel="noreferrer"
+                        href={getTelegramUserHref(telegramUsername, {
+                          type: 'username',
+                        })}
                         className="inline-block mt-1 text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
                       >
                         @{telegramUsername}
@@ -459,18 +459,16 @@ const UserViewModal = ({
                       </p>
                     )}
                   </div>
-                  {telegramByPhonePath ? (
+                  {phoneHref ? (
                     <div>
                       <p className="text-xs text-slate-500">
                         Telegram по номеру телефона
                       </p>
                       <a
-                        href={`https://t.me/${telegramByPhonePath}`}
-                        target="_blank"
-                        rel="noreferrer"
+                        href={getTelegramUserHref(phoneHref, { type: 'phone' })}
                         className="inline-block mt-1 text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
                       >
-                        {`t.me/${telegramByPhonePath}`}
+                        {phoneValue}
                       </a>
                     </div>
                   ) : null}

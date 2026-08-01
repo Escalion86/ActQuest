@@ -1,3 +1,5 @@
+import getTelegramUserHref from '@helpers/getTelegramUserHref'
+
 const normalizeContactValue = (value) =>
   typeof value === 'string' ? value.trim() : ''
 
@@ -19,8 +21,5 @@ export const getGameOrderTelegramHref = (telegram) => {
   if (!normalized) {
     return ''
   }
-  if (/^https?:\/\//i.test(normalized)) {
-    return normalized
-  }
-  return `https://t.me/${normalized.replace(/^@+/, '')}`
+  return getTelegramUserHref(normalized)
 }

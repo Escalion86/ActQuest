@@ -13,6 +13,7 @@ import {
 
 import requestApiJson from '@helpers/requestApiJson'
 import { resolveRequiredMainCodesCount } from '@helpers/classicGameRules'
+import getTelegramUserHref from '@helpers/getTelegramUserHref'
 import Modal from '@components/Modal'
 import FullscreenImageViewer from '@components/FullscreenImageViewer'
 import FeedbackToast from '@components/FeedbackToast'
@@ -2252,9 +2253,9 @@ export default function GameControlPageClient({ session: _session }) {
                       </p>
                       {username ? (
                         <a
-                          href={`https://t.me/${username}`}
-                          target="_blank"
-                          rel="noreferrer"
+                          href={getTelegramUserHref(username, {
+                            type: 'username',
+                          })}
                           className="inline-block mt-1 text-sm text-cyan-300 underline-offset-2 hover:underline"
                         >
                           @{username}
@@ -2286,12 +2287,12 @@ export default function GameControlPageClient({ session: _session }) {
                       </p>
                       {phoneValue ? (
                         <a
-                          href={`https://t.me/+${phoneValue.replace(/^\+/, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
+                          href={getTelegramUserHref(phoneValue, {
+                            type: 'phone',
+                          })}
                           className="inline-block mt-1 text-sm text-cyan-300 underline-offset-2 hover:underline"
                         >
-                          t.me/+{phoneValue.replace(/^\+/, '')}
+                          {phoneValue}
                         </a>
                       ) : (
                         <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">

@@ -8,6 +8,7 @@ import TiptapContentView from '@components/cabinet/TiptapContentView'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import requestApiJson from '@helpers/requestApiJson'
+import getTelegramUserHref from '@helpers/getTelegramUserHref'
 import {
   buildDefaultPrequelProgress,
   isPrequelOpenForDate,
@@ -462,9 +463,10 @@ const GameDescriptionModal = ({
                       {' '}
                       (
                       <a
-                        href={`https://t.me/${selectedGame.creator.username.trim()}`}
-                        target="_blank"
-                        rel="noreferrer"
+                        href={getTelegramUserHref(
+                          selectedGame.creator.username,
+                          { type: 'username' },
+                        )}
                         className="cursor-pointer text-cyan-700 underline underline-offset-2 transition hover:text-cyan-600 dark:text-cyan-200 dark:hover:text-cyan-100"
                       >
                         @{selectedGame.creator.username.trim()}
