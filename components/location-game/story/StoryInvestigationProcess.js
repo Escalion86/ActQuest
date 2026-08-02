@@ -136,6 +136,9 @@ const StoryInvestigationProcess = ({ gameId, teamId, testRunId, isActive }) => {
   const evidence = Array.isArray(investigation?.discoveredEvidence)
     ? investigation.discoveredEvidence
     : []
+  const accusation = investigation?.accusation
+  const accusationRequiredNodeTitle = accusation?.requiredNodeTitle || ''
+  const canOpenAccusation = accusation?.isAtRequiredNode !== false
 
   const handleInteraction = async (interactionId) => {
     const data = await mutate('interaction', { interactionId })
@@ -178,6 +181,19 @@ const StoryInvestigationProcess = ({ gameId, teamId, testRunId, isActive }) => {
       evidenceIds: selectedEvidenceIds,
     })
     if (data?.applied) setIsAccusationOpen(false)
+  }
+
+  const handleOpenAccusation = () => {
+    if (!canOpenAccusation) {
+      setError(
+        accusationRequiredNodeTitle
+          ? `Обвинение можно предъявить только в локации «${accusationRequiredNodeTitle}».`
+          : 'Обвинение можно предъявить только в назначенной локации.',
+      )
+      return
+    }
+    setError('')
+    setIsAccusationOpen(true)
   }
 
   if (isLoading && !state) {
@@ -385,8 +401,15 @@ const StoryInvestigationProcess = ({ gameId, teamId, testRunId, isActive }) => {
             </article>
           </div>
 
-          {investigation?.accusation?.available ? (
-            <button type="button" onClick={() => setIsAccusationOpen(true)} className="w-full rounded-2xl bg-rose-600 px-5 py-4 text-lg font-bold text-white shadow-lg hover:bg-rose-700">Предъявить обвинение</button>
+          {accusation?.available ? (
+            <div className="rounded-2xl border border-rose-300 bg-rose-50 p-3 dark:border-rose-500/30 dark:bg-rose-500/10">
+              <button type="button" onClick={handleOpenAccusation} className="w-full rounded-2xl bg-rose-600 px-5 py-4 text-lg font-bold text-white shadow-lg hover:bg-rose-700">Предъявить обвинение</button>
+              {accusationRequiredNodeTitle ? (
+                <p className="mt-2 text-center text-sm font-semibold text-rose-800 dark:text-rose-200">
+                  Обвинение можно предъявить только в локации «{accusationRequiredNodeTitle}».
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </>
       )}
@@ -421,7 +444,7 @@ const StoryInvestigationProcess = ({ gameId, teamId, testRunId, isActive }) => {
                 ))}
               </div>
             </fieldset>
-            <button type="button" disabled={isMutating} onClick={() => void handleAccusation()} className="mt-6 w-full rounded-xl bg-rose-600 px-4 py-3 font-bold text-white disabled:opacity-60">Отправить версию · +{state?.game?.storyConfig?.investigation?.accusationTimeMinutes || 10} мин.</button>
+            <button type="button" disabled={isMutating} onClick={() => void handleAccusation()} className="mt-6 w-full rounded-xl bg-rose-600 px-4 py-3 font-bold text-white disabled:opacity-60">Отправить версию</button>
           </div>
         </div>
       ) : null}

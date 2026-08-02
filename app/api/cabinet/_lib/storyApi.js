@@ -470,6 +470,14 @@ const buildTeamInvestigationStatePayload = ({ game, progress }) => {
   })
   const accusationConfig = game?.storyAccusation || {}
   const accusationTopicId = normalizeText(accusationConfig?.unlockTopicId)
+  const accusationRequiredNodeId = normalizeText(
+    accusationConfig?.requiredNodeId,
+  )
+  const accusationRequiredNode = (
+    Array.isArray(game?.storyNodes) ? game.storyNodes : []
+  ).find(
+    (node) => normalizeText(node?.id) === accusationRequiredNodeId,
+  )
 
   return {
     clock: getInvestigationClock(game, progress),
@@ -549,7 +557,10 @@ const buildTeamInvestigationStatePayload = ({ game, progress }) => {
         accusationConfig?.enabled === true &&
         (!accusationTopicId || unlockedTopicIds.has(accusationTopicId)) &&
         !progress?.accusation?.submittedAt,
-      requiredNodeId: normalizeText(accusationConfig?.requiredNodeId),
+      requiredNodeId: accusationRequiredNodeId,
+      requiredNodeTitle: normalizeText(accusationRequiredNode?.title),
+      isAtRequiredNode:
+        !accusationRequiredNodeId || currentNodeId === accusationRequiredNodeId,
       culpritOptions: (Array.isArray(accusationConfig?.culpritCharacterIds)
         ? accusationConfig.culpritCharacterIds
         : []

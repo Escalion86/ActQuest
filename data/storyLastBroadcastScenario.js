@@ -314,7 +314,7 @@ export const storyLastBroadcastScenario = {
       deadlineMinutes: 240,
       defaultTravelTimeMinutes: 10,
       defaultInteractionTimeMinutes: 10,
-      accusationTimeMinutes: 10,
+      accusationTimeMinutes: 0,
       allowFreeReplay: true,
       showClockToTeam: true,
       showEvidenceToTeam: true,

@@ -117,6 +117,7 @@ test('диалоги стоят 5 минут, а переезды — 10 мин�
     assert.equal(dialogue.timeCostMinutes, 5, dialogue.id)
   })
   assert.equal(game.storyConfig.investigation.defaultTravelTimeMinutes, 10)
+  assert.equal(game.storyConfig.investigation.accusationTimeMinutes, 0)
   assert.equal(
     game.storyInteractions.find(({ id }) => id === 'act_inspect_body')?.timeCostMinutes,
     10,
