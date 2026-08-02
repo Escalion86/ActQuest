@@ -17,7 +17,8 @@ export const resolveParticipantStatsKey = ({ userId, telegramId }) => {
 }
 
 const resolveGameDate = (game) => {
-  const value = game?.dateStart || game?.dateStartFact || game?.updatedAt || null
+  const value =
+    game?.dateStart || game?.dateStartFact || game?.updatedAt || null
   const date = value ? new Date(value) : null
   return date && !Number.isNaN(date.getTime()) ? date.toISOString() : null
 }
@@ -91,12 +92,9 @@ export const buildCompletedParticipationStats = (games) => {
       return
     }
 
-    const result = game?.result && typeof game.result === 'object'
-      ? game.result
-      : {}
-    const teamsUsers = Array.isArray(result.teamsUsers)
-      ? result.teamsUsers
-      : []
+    const result =
+      game?.result && typeof game.result === 'object' ? game.result : {}
+    const teamsUsers = Array.isArray(result.teamsUsers) ? result.teamsUsers : []
     const resultTeams = Array.isArray(result.teams) ? result.teams : []
     const teamIds = new Set()
 
@@ -119,16 +117,19 @@ export const buildCompletedParticipationStats = (games) => {
 
     const startedAtIso = resolveGameDate(game)
     const placeByTeamId = new Map()
+    const tracksTeamStats = game?.participationMode !== 'player'
     teamIds.forEach((teamId) => {
       const place = resolveParticipationPlace({ game, teamIds: [teamId] })
       placeByTeamId.set(teamId, place)
-      addGameParticipation({
-        map: teamGamesById,
-        key: teamId,
-        gameId,
-        place,
-        startedAtIso,
-      })
+      if (tracksTeamStats) {
+        addGameParticipation({
+          map: teamGamesById,
+          key: teamId,
+          gameId,
+          place,
+          startedAtIso,
+        })
+      }
     })
 
     teamsUsers.forEach((membership) => {
@@ -159,4 +160,3 @@ export const buildCompletedParticipationStats = (games) => {
 
   return { userGamesByKey, teamGamesById, diagnostics }
 }
-

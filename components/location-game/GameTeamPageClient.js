@@ -431,7 +431,8 @@ const STORY_ACTION_ERROR_MESSAGES = {
   bonus_code_used: 'Этот бонусный код уже использован.',
   code_already_used: 'Этот код уже использован.',
   code_not_found: 'Код не подходит.',
-  consumed_items_missing: 'Для действия не хватает предмета, который нужно отдать.',
+  consumed_items_missing:
+    'Для действия не хватает предмета, который нужно отдать.',
   ending_requirements_not_met: 'Условия выбранной концовки ещё не выполнены.',
   ending_score_too_low: 'Для этой концовки пока недостаточно баллов.',
   item_not_active: 'Нужного предмета нет в активном инвентаре.',
@@ -516,9 +517,7 @@ const StoryQuestProcess = ({ gameId, teamId, testRunId, isActive }) => {
       try {
         const response = await fetch(
           `/api/cabinet/games/${encodeURIComponent(gameId)}/story/${endpoint}${
-            testRunId
-              ? `?testRunId=${encodeURIComponent(testRunId)}`
-              : ''
+            testRunId ? `?testRunId=${encodeURIComponent(testRunId)}` : ''
           }`,
           {
             method: 'POST',
@@ -2454,10 +2453,15 @@ function GameTeamPage({
                           </div>
                           <div className="flex flex-col">
                             <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                              Команда
+                              {game?.participationMode === 'player'
+                                ? 'Игрок'
+                                : 'Команда'}
                             </span>
                             <span className="font-medium text-gray-800 dark:text-slate-100">
-                              {team?.name || 'Команда без названия'}
+                              {team?.name ||
+                                (game?.participationMode === 'player'
+                                  ? 'Игрок'
+                                  : 'Команда без названия')}
                             </span>
                           </div>
                           <div className="flex flex-col">
@@ -2745,7 +2749,8 @@ function GameTeamPage({
 
             {isStoryGame &&
             ['started', 'finished', 'closed'].includes(status) &&
-            !error ? game?.storyConfig?.experienceMode === 'investigation' ? (
+            !error ? (
+              game?.storyConfig?.experienceMode === 'investigation' ? (
                 <StoryInvestigationProcess
                   gameId={gameId}
                   teamId={teamId}
@@ -2759,7 +2764,8 @@ function GameTeamPage({
                   testRunId={testRunId}
                   isActive={isStoryGame}
                 />
-              ) : null}
+              )
+            ) : null}
 
             {shouldShowCurrentTaskBlock ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">

@@ -102,7 +102,10 @@ export async function GET(request) {
     )
 
     const teamsDocs = teamIds.length
-      ? await TeamsModel.find({ _id: { $in: teamIds } })
+      ? await TeamsModel.find({
+          _id: { $in: teamIds },
+          kind: { $ne: 'personal' },
+        })
           .select({
             _id: 1,
             name: 1,

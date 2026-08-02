@@ -9,6 +9,7 @@ import { buildGameTeamPaymentsSummary } from '@server/gameTeamPaymentsSummary'
 import { createTransaction } from '@server/transactionsService'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
+import { findOrCreatePersonalTeam, isPersonalTeam } from '@server/personalTeams'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { isScheduledGameForTeamEvent } from '@helpers/adminEventNotifications'
 import logSiteEvent from '@helpers/logSiteEvent'
@@ -428,21 +429,24 @@ const buildTransactionResponse = (transaction) => ({
 })
 
 const calculatePaymentTotals = (transactions) =>
-  transactions.reduce((totals, item) => {
-    if (item?.direction !== 'income' || item?.status !== 'completed') {
-      return totals
-    }
-    const amount = Number(item?.amount)
-    if (!Number.isFinite(amount)) return totals
+  transactions.reduce(
+    (totals, item) => {
+      if (item?.direction !== 'income' || item?.status !== 'completed') {
+        return totals
+      }
+      const amount = Number(item?.amount)
+      if (!Number.isFinite(amount)) return totals
 
-    if (item?.paymentMethod === 'discount') {
-      totals.totalDiscount += amount
-    } else {
-      totals.totalPaid += amount
-    }
-    totals.totalCredited += amount
-    return totals
-  }, { totalPaid: 0, totalDiscount: 0, totalCredited: 0 })
+      if (item?.paymentMethod === 'discount') {
+        totals.totalDiscount += amount
+      } else {
+        totals.totalPaid += amount
+      }
+      totals.totalCredited += amount
+      return totals
+    },
+    { totalPaid: 0, totalDiscount: 0, totalCredited: 0 },
+  )
 
 const loadGamePaymentContext = async ({ db, gameId, session }) => {
   const GamesModel = db.model('Games')
@@ -503,6 +507,7 @@ const buildTeamPaymentsSummaryResponse = async ({ db, game, gameId }) => {
         db,
         teamIds,
         location: game?.location || null,
+        includePersonal: true,
       })
     : []
 
@@ -901,6 +906,7 @@ export async function GET(request, { params }) {
           db,
           teamIds: uniqueTeamIds,
           location: gameLocation,
+          includePersonal: true,
         })
       : []
 
@@ -949,11 +955,11 @@ export async function POST(request, { params }) {
     return handleTeamPaymentCreate({ payload, params, session })
   }
 
-  const teamId = toStringId(payload?.teamId)
+  let teamId = toStringId(payload?.teamId)
 
-  if (!gameId || !teamId) {
+  if (!gameId) {
     return NextResponse.json(
-      { success: false, error: 'Не передан идентификатор игры или команды' },
+      { success: false, error: 'Не передан идентификатор игры' },
       { status: 400 },
     )
   }
@@ -968,12 +974,14 @@ export async function POST(request, { params }) {
     const TeamsModel = db.model('Teams')
     const TeamsUsersModel = db.model('TeamsUsers')
     const GamesTeamsModel = db.model('GamesTeams')
+    const UsersModel = db.model('Users')
 
     const game = await findGameByAnyId(GamesModel, gameId, {
       _id: 1,
       name: 1,
       status: 1,
       registrationOpen: 1,
+      participationMode: 1,
       location: 1,
       dateStartFact: 1,
       dateEndFact: 1,
@@ -994,93 +1002,162 @@ export async function POST(request, { params }) {
       )
     }
 
-    const team = await TeamsModel.findById(teamId)
-      .select({ _id: 1, location: 1, name: 1 })
-      .lean()
-    if (!team?._id) {
-      return NextResponse.json(
-        { success: false, error: 'Команда не найдена' },
-        { status: 404 },
-      )
-    }
-
     const identity = resolveSessionIdentity(session)
-    const membershipOr = resolveMembershipFilter(identity)
-    if (!isElevatedRole(identity.role)) {
-      if (membershipOr.length === 0) {
+    const participationMode =
+      game?.participationMode === 'player' ? 'player' : 'team'
+    let team = null
+
+    if (participationMode === 'player') {
+      if (teamId) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Недостаточно прав для регистрации команды',
+            error:
+              'Для индивидуальной игры команда определяется автоматически.',
+          },
+          { status: 400 },
+        )
+      }
+
+      if (!identity.userId || !isObjectIdLike(identity.userId)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Для индивидуальной регистрации требуется профиль пользователя.',
           },
           { status: 403 },
         )
       }
 
-      const captainMembership = await TeamsUsersModel.findOne({
-        teamId,
-        role: getCaptainRoleQuery(),
-        $or: membershipOr,
-      })
-        .select({ _id: 1 })
+      const user = await UsersModel.findById(identity.userId)
+        .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
         .lean()
-
-      if (!captainMembership?._id) {
+      if (!user?._id) {
         return NextResponse.json(
-          {
-            success: false,
-            error: 'Регистрация доступна только капитану команды',
-          },
-          { status: 403 },
+          { success: false, error: 'Пользователь не найден' },
+          { status: 404 },
         )
       }
 
-      const gameLocation = normalizeLocation(game?.location)
-      const teamLocation = normalizeLocation(team?.location)
-      if (gameLocation && gameLocation !== teamLocation) {
-        const captainMemberships = await TeamsUsersModel.find({
-          role: getCaptainRoleQuery(),
-          $or: membershipOr,
-        })
-          .select({ teamId: 1 })
-          .lean()
-
-        const captainTeamIds = Array.from(
-          new Set(
-            captainMemberships
-              .map((membership) => toStringId(membership?.teamId))
-              .filter(Boolean),
-          ),
+      team = await findOrCreatePersonalTeam({
+        db,
+        user,
+        location: game?.location,
+      })
+      teamId = toStringId(team?._id)
+    } else {
+      if (!teamId) {
+        return NextResponse.json(
+          { success: false, error: 'Не передан идентификатор команды' },
+          { status: 400 },
         )
+      }
 
-        const captainTeamsInGameLocation = captainTeamIds.length
-          ? await TeamsModel.find({
-              _id: { $in: captainTeamIds },
-              location: gameLocation,
-            })
-              .select({ _id: 1 })
-              .lean()
-          : []
+      team = await TeamsModel.findById(teamId)
+        .select({
+          _id: 1,
+          location: 1,
+          name: 1,
+          kind: 1,
+          ownerUserId: 1,
+        })
+        .lean()
+      if (!team?._id) {
+        return NextResponse.json(
+          { success: false, error: 'Команда не найдена' },
+          { status: 404 },
+        )
+      }
+      if (isPersonalTeam(team)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Персональную команду нельзя зарегистрировать в командную игру.',
+          },
+          { status: 400 },
+        )
+      }
 
-        if (!captainTeamsInGameLocation.length) {
-          const cityLabel = resolveLocationLabel(gameLocation)
+      const membershipOr = resolveMembershipFilter(identity)
+      if (!isElevatedRole(identity.role)) {
+        if (membershipOr.length === 0) {
           return NextResponse.json(
             {
               success: false,
-              error: `У вас нет команд, где вы капитан, для города «${cityLabel}».`,
+              error: 'Недостаточно прав для регистрации команды',
             },
             { status: 403 },
           )
         }
 
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'Выбранная команда привязана к другому городу. Для регистрации выберите команду из того же города, что и игра.',
-          },
-          { status: 403 },
-        )
+        const captainMembership = await TeamsUsersModel.findOne({
+          teamId,
+          role: getCaptainRoleQuery(),
+          $or: membershipOr,
+        })
+          .select({ _id: 1 })
+          .lean()
+
+        if (!captainMembership?._id) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Регистрация доступна только капитану команды',
+            },
+            { status: 403 },
+          )
+        }
+
+        const gameLocation = normalizeLocation(game?.location)
+        const teamLocation = normalizeLocation(team?.location)
+        if (gameLocation && gameLocation !== teamLocation) {
+          const captainMemberships = await TeamsUsersModel.find({
+            role: getCaptainRoleQuery(),
+            $or: membershipOr,
+          })
+            .select({ teamId: 1 })
+            .lean()
+
+          const captainTeamIds = Array.from(
+            new Set(
+              captainMemberships
+                .map((membership) => toStringId(membership?.teamId))
+                .filter(Boolean),
+            ),
+          )
+
+          const captainTeamsInGameLocation = captainTeamIds.length
+            ? await TeamsModel.find({
+                _id: { $in: captainTeamIds },
+                location: gameLocation,
+                kind: { $ne: 'personal' },
+              })
+                .select({ _id: 1 })
+                .lean()
+            : []
+
+          if (!captainTeamsInGameLocation.length) {
+            const cityLabel = resolveLocationLabel(gameLocation)
+            return NextResponse.json(
+              {
+                success: false,
+                error: `У вас нет команд, где вы капитан, для города «${cityLabel}».`,
+              },
+              { status: 403 },
+            )
+          }
+
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                'Выбранная команда привязана к другому городу. Для регистрации выберите команду из того же города, что и игра.',
+            },
+            { status: 403 },
+          )
+        }
       }
     }
 
@@ -1092,7 +1169,13 @@ export async function POST(request, { params }) {
       .lean()
     if (existing?._id) {
       return NextResponse.json(
-        { success: false, error: 'Команда уже зарегистрирована на эту игру' },
+        {
+          success: false,
+          error:
+            participationMode === 'player'
+              ? 'Вы уже зарегистрированы на эту игру'
+              : 'Команда уже зарегистрирована на эту игру',
+        },
         { status: 409 },
       )
     }
@@ -1113,7 +1196,7 @@ export async function POST(request, { params }) {
         db,
         type: 'team_registered_to_game',
         location: normalizeLocation(game?.location),
-        message: `Команда «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирована на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
+        message: `${participationMode === 'player' ? 'Игрок' : 'Команда'} «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирован${participationMode === 'player' ? '' : 'а'} на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
         actorUserId: identity.userId,
         actorTelegramId: null,
         teamId,
@@ -1139,7 +1222,7 @@ export async function POST(request, { params }) {
       afterState: afterHistoryState,
       snapshot: buildGameHistorySnapshot(afterHistoryState),
       context: {
-        summary: `Команда «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирована на игру`,
+        summary: `${participationMode === 'player' ? 'Игрок' : 'Команда'} «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирован${participationMode === 'player' ? '' : 'а'} на игру`,
       },
     })
 
@@ -1150,6 +1233,8 @@ export async function POST(request, { params }) {
           id: toStringId(created?._id),
           gameId: normalizedResolvedGameId,
           teamId,
+          teamName: typeof team?.name === 'string' ? team.name : '',
+          participationMode,
         },
       },
       { status: 201 },
@@ -1202,6 +1287,7 @@ export async function DELETE(request, { params }) {
       _id: 1,
       name: 1,
       location: 1,
+      participationMode: 1,
       status: 1,
       dateStartFact: 1,
       dateEndFact: 1,
@@ -1244,7 +1330,10 @@ export async function DELETE(request, { params }) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Отмена регистрации доступна только капитану команды',
+            error:
+              game?.participationMode === 'player'
+                ? 'Можно отменить только собственную регистрацию'
+                : 'Отмена регистрации доступна только капитану команды',
           },
           { status: 403 },
         )
@@ -1297,7 +1386,7 @@ export async function DELETE(request, { params }) {
             db,
             type: 'team_unregistered_from_game',
             location: normalizeLocation(game?.location),
-            message: `Команда «${teamNameById[currentTeamId] || ''}» снята с регистрации на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
+            message: `${game?.participationMode === 'player' ? 'Игрок' : 'Команда'} «${teamNameById[currentTeamId] || ''}» снят${game?.participationMode === 'player' ? '' : 'а'} с регистрации на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
             actorUserId: identity.userId,
             actorTelegramId: null,
             teamId: currentTeamId,
@@ -1332,8 +1421,10 @@ export async function DELETE(request, { params }) {
         context: {
           summary:
             deletedNames.length > 1
-              ? `Сняты с игры команды: ${deletedNames.join(', ')}`
-              : `Команда «${deletedNames[0] || ''}» снята с игры`,
+              ? `${game?.participationMode === 'player' ? 'Сняты с игры игроки' : 'Сняты с игры команды'}: ${deletedNames.join(', ')}`
+              : game?.participationMode === 'player'
+                ? `Игрок «${deletedNames[0] || ''}» снят с игры`
+                : `Команда «${deletedNames[0] || ''}» снята с игры`,
         },
       })
     }
@@ -1352,7 +1443,7 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     console.error('Failed to cancel team registration for game (app)', error)
     return NextResponse.json(
-      { success: false, error: 'Не удалось отменить регистрацию команды' },
+      { success: false, error: 'Не удалось отменить регистрацию' },
       { status: 500 },
     )
   }
@@ -1455,7 +1546,10 @@ export async function PATCH(request, { params }) {
       )
 
       if (template.length > 0) {
-        const validation = validateTaskDistributionTemplate(template, tasksCount)
+        const validation = validateTaskDistributionTemplate(
+          template,
+          tasksCount,
+        )
         if (!validation.valid) {
           return NextResponse.json(
             {

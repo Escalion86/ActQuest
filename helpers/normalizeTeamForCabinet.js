@@ -147,10 +147,14 @@ const normalizeTeamForCabinet = ({ team, members, games, location = null }) => {
   const normalizedGames = normalizeGames(games)
 
   const captain = normalizedMembers.find((member) => member.isCaptain) ?? null
-  const liaison = normalizedMembers.find((member) => member.isLiaison) ?? captain
+  const liaison =
+    normalizedMembers.find((member) => member.isLiaison) ?? captain
 
   return {
     id,
+    kind: team?.kind === 'personal' ? 'personal' : 'regular',
+    ownerUserId: ensureString(team?.ownerUserId, ''),
+    systemManaged: ensureBoolean(team?.systemManaged, false),
     name: ensureString(team?.name, ''),
     description: ensureString(team?.description, ''),
     image: ensureString(team?.image, ''),

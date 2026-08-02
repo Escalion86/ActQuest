@@ -193,6 +193,7 @@ export async function GET(request, { params }) {
             db: context.db,
             teamIds,
             location: context.game?.location || null,
+            includePersonal: true,
           })
         : []
       const Transactions = context.db.model('Transactions')

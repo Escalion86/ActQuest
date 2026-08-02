@@ -66,14 +66,16 @@ export const getNounServicesUsers = (number) =>
 export const getNounTeams = (number) =>
   getNoun(number, 'команда', 'команды', 'команд')
 
+export const getNounPlayers = (number) =>
+  getNoun(number, 'игрок', 'игрока', 'игроков')
+
 export const getNounTasks = (number) =>
   getNoun(number, 'задание', 'задания', 'заданий')
 
 export const getNounBonus = (number) =>
   getNoun(number, 'бонусное', 'бонусные', 'бонусных')
 
-export const getNounBonusTasks = (number) =>
-  getNounBonus(number)
+export const getNounBonusTasks = (number) => getNounBonus(number)
 
 export const getNounPoints = (number) =>
   getNoun(number, 'балл', 'балла', 'баллов')

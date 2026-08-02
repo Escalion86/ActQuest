@@ -1,0 +1,1244 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-02T13:56:58.323Z",
+  "project": "actquest_dev",
+  "remoteRoot": "actquest_dev/story-last-broadcast",
+  "files": [
+    {
+      "key": "image:cover:game",
+      "group": "cover",
+      "id": "game",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "game.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2141433,
+      "duration": 0,
+      "title": "game",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/cover/game.png",
+      "path": "actquest_dev/story-last-broadcast/images/cover/game.png"
+    },
+    {
+      "key": "image:characters:char_marina_lebedeva",
+      "group": "characters",
+      "id": "char_marina_lebedeva",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "char_marina_lebedeva.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 1926290,
+      "duration": 0,
+      "title": "char_marina_lebedeva",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/characters/char_marina_lebedeva.png",
+      "path": "actquest_dev/story-last-broadcast/images/characters/char_marina_lebedeva.png"
+    },
+    {
+      "key": "image:characters:char_gleb_orlov",
+      "group": "characters",
+      "id": "char_gleb_orlov",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "char_gleb_orlov.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2066691,
+      "duration": 0,
+      "title": "char_gleb_orlov",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/characters/char_gleb_orlov.png",
+      "path": "actquest_dev/story-last-broadcast/images/characters/char_gleb_orlov.png"
+    },
+    {
+      "key": "image:characters:char_kirill_anokhin",
+      "group": "characters",
+      "id": "char_kirill_anokhin",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "char_kirill_anokhin.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2046643,
+      "duration": 0,
+      "title": "char_kirill_anokhin",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/characters/char_kirill_anokhin.png",
+      "path": "actquest_dev/story-last-broadcast/images/characters/char_kirill_anokhin.png"
+    },
+    {
+      "key": "image:characters:char_vera_zimina",
+      "group": "characters",
+      "id": "char_vera_zimina",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "char_vera_zimina.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 1977797,
+      "duration": 0,
+      "title": "char_vera_zimina",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/characters/char_vera_zimina.png",
+      "path": "actquest_dev/story-last-broadcast/images/characters/char_vera_zimina.png"
+    },
+    {
+      "key": "image:characters:char_denis_karelin",
+      "group": "characters",
+      "id": "char_denis_karelin",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "char_denis_karelin.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2005411,
+      "duration": 0,
+      "title": "char_denis_karelin",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/characters/char_denis_karelin.png",
+      "path": "actquest_dev/story-last-broadcast/images/characters/char_denis_karelin.png"
+    },
+    {
+      "key": "image:characters:char_tamara_vorontsova",
+      "group": "characters",
+      "id": "char_tamara_vorontsova",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "char_tamara_vorontsova.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 1915013,
+      "duration": 0,
+      "title": "char_tamara_vorontsova",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/characters/char_tamara_vorontsova.png",
+      "path": "actquest_dev/story-last-broadcast/images/characters/char_tamara_vorontsova.png"
+    },
+    {
+      "key": "image:characters:char_pavel_rogozov",
+      "group": "characters",
+      "id": "char_pavel_rogozov",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "char_pavel_rogozov.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2187748,
+      "duration": 0,
+      "title": "char_pavel_rogozov",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/characters/char_pavel_rogozov.png",
+      "path": "actquest_dev/story-last-broadcast/images/characters/char_pavel_rogozov.png"
+    },
+    {
+      "key": "image:locations:loc_reception",
+      "group": "locations",
+      "id": "loc_reception",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "loc_reception.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 1961876,
+      "duration": 0,
+      "title": "loc_reception",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/locations/loc_reception.png",
+      "path": "actquest_dev/story-last-broadcast/images/locations/loc_reception.png"
+    },
+    {
+      "key": "image:locations:loc_studio_b",
+      "group": "locations",
+      "id": "loc_studio_b",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "loc_studio_b.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 1710721,
+      "duration": 0,
+      "title": "loc_studio_b",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/locations/loc_studio_b.png",
+      "path": "actquest_dev/story-last-broadcast/images/locations/loc_studio_b.png"
+    },
+    {
+      "key": "image:locations:loc_newsroom",
+      "group": "locations",
+      "id": "loc_newsroom",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "loc_newsroom.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2052811,
+      "duration": 0,
+      "title": "loc_newsroom",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/locations/loc_newsroom.png",
+      "path": "actquest_dev/story-last-broadcast/images/locations/loc_newsroom.png"
+    },
+    {
+      "key": "image:locations:loc_control_room",
+      "group": "locations",
+      "id": "loc_control_room",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "loc_control_room.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2156598,
+      "duration": 0,
+      "title": "loc_control_room",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/locations/loc_control_room.png",
+      "path": "actquest_dev/story-last-broadcast/images/locations/loc_control_room.png"
+    },
+    {
+      "key": "image:locations:loc_loading_dock",
+      "group": "locations",
+      "id": "loc_loading_dock",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "loc_loading_dock.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2069024,
+      "duration": 0,
+      "title": "loc_loading_dock",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/locations/loc_loading_dock.png",
+      "path": "actquest_dev/story-last-broadcast/images/locations/loc_loading_dock.png"
+    },
+    {
+      "key": "image:locations:loc_cafe",
+      "group": "locations",
+      "id": "loc_cafe",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "loc_cafe.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2087313,
+      "duration": 0,
+      "title": "loc_cafe",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/locations/loc_cafe.png",
+      "path": "actquest_dev/story-last-broadcast/images/locations/loc_cafe.png"
+    },
+    {
+      "key": "image:locations:loc_police_lab",
+      "group": "locations",
+      "id": "loc_police_lab",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "loc_police_lab.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2153381,
+      "duration": 0,
+      "title": "loc_police_lab",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/locations/loc_police_lab.png",
+      "path": "actquest_dev/story-last-broadcast/images/locations/loc_police_lab.png"
+    },
+    {
+      "key": "image:items:item_smartwatch",
+      "group": "items",
+      "id": "item_smartwatch",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "item_smartwatch.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2248988,
+      "duration": 0,
+      "title": "item_smartwatch",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/items/item_smartwatch.png",
+      "path": "actquest_dev/story-last-broadcast/images/items/item_smartwatch.png"
+    },
+    {
+      "key": "image:items:item_audio_2005",
+      "group": "items",
+      "id": "item_audio_2005",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "item_audio_2005.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2283782,
+      "duration": 0,
+      "title": "item_audio_2005",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/items/item_audio_2005.png",
+      "path": "actquest_dev/story-last-broadcast/images/items/item_audio_2005.png"
+    },
+    {
+      "key": "image:items:item_audio_1721",
+      "group": "items",
+      "id": "item_audio_1721",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "item_audio_1721.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2126712,
+      "duration": 0,
+      "title": "item_audio_1721",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/items/item_audio_1721.png",
+      "path": "actquest_dev/story-last-broadcast/images/items/item_audio_1721.png"
+    },
+    {
+      "key": "image:items:item_trophy",
+      "group": "items",
+      "id": "item_trophy",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "item_trophy.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 2273959,
+      "duration": 0,
+      "title": "item_trophy",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/items/item_trophy.png",
+      "path": "actquest_dev/story-last-broadcast/images/items/item_trophy.png"
+    },
+    {
+      "key": "image:endings:ending_perfect_case",
+      "group": "endings",
+      "id": "ending_perfect_case",
+      "sceneNumber": null,
+      "target": null,
+      "fileName": "ending_perfect_case.png",
+      "type": "image",
+      "mime": "image/png",
+      "size": 1962383,
+      "duration": 0,
+      "title": "ending_perfect_case",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/images/endings/ending_perfect_case.png",
+      "path": "actquest_dev/story-last-broadcast/images/endings/ending_perfect_case.png"
+    },
+    {
+      "key": "audio:1:prologue:story_intro",
+      "group": "scenes",
+      "id": "story_intro",
+      "sceneNumber": 1,
+      "target": {
+        "type": "prologue",
+        "id": "story_intro"
+      },
+      "fileName": "01_story_intro.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1921580,
+      "duration": 59.977,
+      "title": "Последний эфир — пролог",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/01_story_intro.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/01_story_intro.mp3"
+    },
+    {
+      "key": "audio:2:location:loc_reception",
+      "group": "scenes",
+      "id": "loc_reception",
+      "sceneNumber": 2,
+      "target": {
+        "type": "location",
+        "id": "loc_reception"
+      },
+      "fileName": "02_loc_reception.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 506924,
+      "duration": 15.78,
+      "title": "Вход в локацию: Приёмная и коридор",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/02_loc_reception.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/02_loc_reception.mp3"
+    },
+    {
+      "key": "audio:3:interaction:int_marina_victim",
+      "group": "scenes",
+      "id": "int_marina_victim",
+      "sceneNumber": 3,
+      "target": {
+        "type": "interaction",
+        "id": "int_marina_victim"
+      },
+      "fileName": "03_int_marina_victim.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1637420,
+      "duration": 51.117,
+      "title": "Спросить Марину об Артёме",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/03_int_marina_victim.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/03_int_marina_victim.mp3"
+    },
+    {
+      "key": "audio:4:interaction:int_marina_timeline",
+      "group": "scenes",
+      "id": "int_marina_timeline",
+      "sceneNumber": 4,
+      "target": {
+        "type": "interaction",
+        "id": "int_marina_timeline"
+      },
+      "fileName": "04_int_marina_timeline.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1350956,
+      "duration": 42.157,
+      "title": "Проверить алиби Марины",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/04_int_marina_timeline.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/04_int_marina_timeline.mp3"
+    },
+    {
+      "key": "audio:5:interaction:int_marina_broadcast",
+      "group": "scenes",
+      "id": "int_marina_broadcast",
+      "sceneNumber": 5,
+      "target": {
+        "type": "interaction",
+        "id": "int_marina_broadcast"
+      },
+      "fileName": "05_int_marina_broadcast.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1222700,
+      "duration": 38.157,
+      "title": "Спросить Марину о выпуске",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/05_int_marina_broadcast.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/05_int_marina_broadcast.mp3"
+    },
+    {
+      "key": "audio:6:interaction:int_marina_voice",
+      "group": "scenes",
+      "id": "int_marina_voice",
+      "sceneNumber": 6,
+      "target": {
+        "type": "interaction",
+        "id": "int_marina_voice"
+      },
+      "fileName": "06_int_marina_voice.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1473836,
+      "duration": 45.987,
+      "title": "Спросить Марину о голосе в 20:05",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/06_int_marina_voice.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/06_int_marina_voice.mp3"
+    },
+    {
+      "key": "audio:7:interaction:int_marina_warm_city",
+      "group": "scenes",
+      "id": "int_marina_warm_city",
+      "sceneNumber": 7,
+      "target": {
+        "type": "interaction",
+        "id": "int_marina_warm_city"
+      },
+      "fileName": "07_int_marina_warm_city.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1491500,
+      "duration": 46.557,
+      "title": "Спросить Марину о «Тёплом городе»",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/07_int_marina_warm_city.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/07_int_marina_warm_city.mp3"
+    },
+    {
+      "key": "audio:8:interaction:int_marina_quartz",
+      "group": "scenes",
+      "id": "int_marina_quartz",
+      "sceneNumber": 8,
+      "target": {
+        "type": "interaction",
+        "id": "int_marina_quartz"
+      },
+      "fileName": "08_int_marina_quartz.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1368620,
+      "duration": 42.717,
+      "title": "Предъявить Марине реестр «Кварц Медиа»",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/08_int_marina_quartz.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/08_int_marina_quartz.mp3"
+    },
+    {
+      "key": "audio:9:interaction:int_tamara_victim",
+      "group": "scenes",
+      "id": "int_tamara_victim",
+      "sceneNumber": 9,
+      "target": {
+        "type": "interaction",
+        "id": "int_tamara_victim"
+      },
+      "fileName": "09_int_tamara_victim.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1627436,
+      "duration": 50.797,
+      "title": "Спросить Тамару об Артёме",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/09_int_tamara_victim.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/09_int_tamara_victim.mp3"
+    },
+    {
+      "key": "audio:10:interaction:int_tamara_warm_city",
+      "group": "scenes",
+      "id": "int_tamara_warm_city",
+      "sceneNumber": 10,
+      "target": {
+        "type": "interaction",
+        "id": "int_tamara_warm_city"
+      },
+      "fileName": "10_int_tamara_warm_city.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1579052,
+      "duration": 49.277,
+      "title": "Спросить Тамару об отчётах",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/10_int_tamara_warm_city.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/10_int_tamara_warm_city.mp3"
+    },
+    {
+      "key": "audio:11:interaction:int_tamara_quartz",
+      "group": "scenes",
+      "id": "int_tamara_quartz",
+      "sceneNumber": 11,
+      "target": {
+        "type": "interaction",
+        "id": "int_tamara_quartz"
+      },
+      "fileName": "11_int_tamara_quartz.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1558316,
+      "duration": 48.637,
+      "title": "Показать Тамаре данные «Кварц Медиа»",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/11_int_tamara_quartz.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/11_int_tamara_quartz.mp3"
+    },
+    {
+      "key": "audio:12:location:loc_studio_b",
+      "group": "scenes",
+      "id": "loc_studio_b",
+      "sceneNumber": 12,
+      "target": {
+        "type": "location",
+        "id": "loc_studio_b"
+      },
+      "fileName": "12_loc_studio_b.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 582956,
+      "duration": 18.16,
+      "title": "Вход в локацию: Студия B",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/12_loc_studio_b.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/12_loc_studio_b.mp3"
+    },
+    {
+      "key": "audio:13:interaction:act_inspect_body",
+      "group": "scenes",
+      "id": "act_inspect_body",
+      "sceneNumber": 13,
+      "target": {
+        "type": "interaction",
+        "id": "act_inspect_body"
+      },
+      "fileName": "13_act_inspect_body.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 622124,
+      "duration": 19.38,
+      "title": "Осмотреть тело и часы",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/13_act_inspect_body.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/13_act_inspect_body.mp3"
+    },
+    {
+      "key": "audio:14:interaction:act_inspect_trophy_case",
+      "group": "scenes",
+      "id": "act_inspect_trophy_case",
+      "sceneNumber": 14,
+      "target": {
+        "type": "interaction",
+        "id": "act_inspect_trophy_case"
+      },
+      "fileName": "14_act_inspect_trophy_case.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 683564,
+      "duration": 21.3,
+      "title": "Осмотреть витрину наград",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/14_act_inspect_trophy_case.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/14_act_inspect_trophy_case.mp3"
+    },
+    {
+      "key": "audio:15:interaction:act_inspect_studio_door",
+      "group": "scenes",
+      "id": "act_inspect_studio_door",
+      "sceneNumber": 15,
+      "target": {
+        "type": "interaction",
+        "id": "act_inspect_studio_door"
+      },
+      "fileName": "15_act_inspect_studio_door.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 675884,
+      "duration": 21.06,
+      "title": "Осмотреть дверь студии",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/15_act_inspect_studio_door.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/15_act_inspect_studio_door.mp3"
+    },
+    {
+      "key": "audio:16:interaction:act_inspect_badge_log",
+      "group": "scenes",
+      "id": "act_inspect_badge_log",
+      "sceneNumber": 16,
+      "target": {
+        "type": "interaction",
+        "id": "act_inspect_badge_log"
+      },
+      "fileName": "16_act_inspect_badge_log.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 660524,
+      "duration": 20.58,
+      "title": "Проверить журнал карт",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/16_act_inspect_badge_log.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/16_act_inspect_badge_log.mp3"
+    },
+    {
+      "key": "audio:17:location:loc_newsroom",
+      "group": "scenes",
+      "id": "loc_newsroom",
+      "sceneNumber": 17,
+      "target": {
+        "type": "location",
+        "id": "loc_newsroom"
+      },
+      "fileName": "17_loc_newsroom.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 547628,
+      "duration": 17.06,
+      "title": "Вход в локацию: Редакция и архив",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/17_loc_newsroom.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/17_loc_newsroom.mp3"
+    },
+    {
+      "key": "audio:18:interaction:int_gleb_victim",
+      "group": "scenes",
+      "id": "int_gleb_victim",
+      "sceneNumber": 18,
+      "target": {
+        "type": "interaction",
+        "id": "int_gleb_victim"
+      },
+      "fileName": "18_int_gleb_victim.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1471532,
+      "duration": 45.917,
+      "title": "Спросить Глеба об Артёме",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/18_int_gleb_victim.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/18_int_gleb_victim.mp3"
+    },
+    {
+      "key": "audio:19:interaction:int_gleb_quarrel",
+      "group": "scenes",
+      "id": "int_gleb_quarrel",
+      "sceneNumber": 19,
+      "target": {
+        "type": "interaction",
+        "id": "int_gleb_quarrel"
+      },
+      "fileName": "19_int_gleb_quarrel.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1548332,
+      "duration": 48.317,
+      "title": "Разобрать ссору Глеба",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/19_int_gleb_quarrel.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/19_int_gleb_quarrel.mp3"
+    },
+    {
+      "key": "audio:20:interaction:int_gleb_broadcast",
+      "group": "scenes",
+      "id": "int_gleb_broadcast",
+      "sceneNumber": 20,
+      "target": {
+        "type": "interaction",
+        "id": "int_gleb_broadcast"
+      },
+      "fileName": "20_int_gleb_broadcast.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1307180,
+      "duration": 40.797,
+      "title": "Спросить Глеба о выпуске",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/20_int_gleb_broadcast.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/20_int_gleb_broadcast.mp3"
+    },
+    {
+      "key": "audio:21:interaction:int_gleb_soundcheck",
+      "group": "scenes",
+      "id": "int_gleb_soundcheck",
+      "sceneNumber": 21,
+      "target": {
+        "type": "interaction",
+        "id": "int_gleb_soundcheck"
+      },
+      "fileName": "21_int_gleb_soundcheck.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1749548,
+      "duration": 54.617,
+      "title": "Дать Глебу прослушать soundcheck",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/21_int_gleb_soundcheck.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/21_int_gleb_soundcheck.mp3"
+    },
+    {
+      "key": "audio:22:interaction:int_vera_broadcast",
+      "group": "scenes",
+      "id": "int_vera_broadcast",
+      "sceneNumber": 22,
+      "target": {
+        "type": "interaction",
+        "id": "int_vera_broadcast"
+      },
+      "fileName": "22_int_vera_broadcast.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1481516,
+      "duration": 46.237,
+      "title": "Спросить Веру о выпуске",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/22_int_vera_broadcast.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/22_int_vera_broadcast.mp3"
+    },
+    {
+      "key": "audio:23:interaction:int_vera_dossier",
+      "group": "scenes",
+      "id": "int_vera_dossier",
+      "sceneNumber": 23,
+      "target": {
+        "type": "interaction",
+        "id": "int_vera_dossier"
+      },
+      "fileName": "23_int_vera_dossier.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1625132,
+      "duration": 50.717,
+      "title": "Спросить Веру о досье",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/23_int_vera_dossier.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/23_int_vera_dossier.mp3"
+    },
+    {
+      "key": "audio:24:interaction:int_vera_marina",
+      "group": "scenes",
+      "id": "int_vera_marina",
+      "sceneNumber": 24,
+      "target": {
+        "type": "interaction",
+        "id": "int_vera_marina"
+      },
+      "fileName": "24_int_vera_marina.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1312556,
+      "duration": 40.957,
+      "title": "Спросить Веру о реакции Марины",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/24_int_vera_marina.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/24_int_vera_marina.mp3"
+    },
+    {
+      "key": "audio:25:interaction:act_search_draft_email",
+      "group": "scenes",
+      "id": "act_search_draft_email",
+      "sceneNumber": 25,
+      "target": {
+        "type": "interaction",
+        "id": "act_search_draft_email"
+      },
+      "fileName": "25_act_search_draft_email.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 865580,
+      "duration": 26.99,
+      "title": "Найти черновик письма",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/25_act_search_draft_email.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/25_act_search_draft_email.mp3"
+    },
+    {
+      "key": "audio:26:interaction:act_reconcile_charity_reports",
+      "group": "scenes",
+      "id": "act_reconcile_charity_reports",
+      "sceneNumber": 26,
+      "target": {
+        "type": "interaction",
+        "id": "act_reconcile_charity_reports"
+      },
+      "fileName": "26_act_reconcile_charity_reports.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 673580,
+      "duration": 20.98,
+      "title": "Сверить отчёты марафона",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/26_act_reconcile_charity_reports.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/26_act_reconcile_charity_reports.mp3"
+    },
+    {
+      "key": "audio:27:location:loc_control_room",
+      "group": "scenes",
+      "id": "loc_control_room",
+      "sceneNumber": 27,
+      "target": {
+        "type": "location",
+        "id": "loc_control_room"
+      },
+      "fileName": "27_loc_control_room.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 527660,
+      "duration": 16.42,
+      "title": "Вход в локацию: Аппаратная",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/27_loc_control_room.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/27_loc_control_room.mp3"
+    },
+    {
+      "key": "audio:28:interaction:int_kirill_voice",
+      "group": "scenes",
+      "id": "int_kirill_voice",
+      "sceneNumber": 28,
+      "target": {
+        "type": "interaction",
+        "id": "int_kirill_voice"
+      },
+      "fileName": "28_int_kirill_voice.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1191980,
+      "duration": 37.197,
+      "title": "Спросить Кирилла о голосе",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/28_int_kirill_voice.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/28_int_kirill_voice.mp3"
+    },
+    {
+      "key": "audio:29:interaction:int_kirill_access",
+      "group": "scenes",
+      "id": "int_kirill_access",
+      "sceneNumber": 29,
+      "target": {
+        "type": "interaction",
+        "id": "int_kirill_access"
+      },
+      "fileName": "29_int_kirill_access.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1043756,
+      "duration": 32.557,
+      "title": "Спросить Кирилла о картах доступа",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/29_int_kirill_access.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/29_int_kirill_access.mp3"
+    },
+    {
+      "key": "audio:30:interaction:int_kirill_camera",
+      "group": "scenes",
+      "id": "int_kirill_camera",
+      "sceneNumber": 30,
+      "target": {
+        "type": "interaction",
+        "id": "int_kirill_camera"
+      },
+      "fileName": "30_int_kirill_camera.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1340972,
+      "duration": 41.837,
+      "title": "Спросить Кирилла о камере",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/30_int_kirill_camera.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/30_int_kirill_camera.mp3"
+    },
+    {
+      "key": "audio:31:interaction:int_kirill_broadcast",
+      "group": "scenes",
+      "id": "int_kirill_broadcast",
+      "sceneNumber": 31,
+      "target": {
+        "type": "interaction",
+        "id": "int_kirill_broadcast"
+      },
+      "fileName": "31_int_kirill_broadcast.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1253420,
+      "duration": 39.117,
+      "title": "Спросить Кирилла о несостоявшемся эфире",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/31_int_kirill_broadcast.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/31_int_kirill_broadcast.mp3"
+    },
+    {
+      "key": "audio:32:interaction:act_inspect_echo_log",
+      "group": "scenes",
+      "id": "act_inspect_echo_log",
+      "sceneNumber": 32,
+      "target": {
+        "type": "interaction",
+        "id": "act_inspect_echo_log"
+      },
+      "fileName": "32_act_inspect_echo_log.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 834860,
+      "duration": 26.02,
+      "title": "Проверить очередь «Эхо-9»",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/32_act_inspect_echo_log.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/32_act_inspect_echo_log.mp3"
+    },
+    {
+      "key": "audio:33:interaction:act_find_soundcheck_source",
+      "group": "scenes",
+      "id": "act_find_soundcheck_source",
+      "sceneNumber": 33,
+      "target": {
+        "type": "interaction",
+        "id": "act_find_soundcheck_source"
+      },
+      "fileName": "33_act_find_soundcheck_source.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 896300,
+      "duration": 27.95,
+      "title": "Найти исходный soundcheck",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/33_act_find_soundcheck_source.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/33_act_find_soundcheck_source.mp3"
+    },
+    {
+      "key": "audio:34:location:loc_loading_dock",
+      "group": "scenes",
+      "id": "loc_loading_dock",
+      "sceneNumber": 34,
+      "target": {
+        "type": "location",
+        "id": "loc_loading_dock"
+      },
+      "fileName": "34_loc_loading_dock.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 470828,
+      "duration": 14.66,
+      "title": "Вход в локацию: Погрузочная площадка",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/34_loc_loading_dock.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/34_loc_loading_dock.mp3"
+    },
+    {
+      "key": "audio:35:interaction:int_pavel_timeline",
+      "group": "scenes",
+      "id": "int_pavel_timeline",
+      "sceneNumber": 35,
+      "target": {
+        "type": "interaction",
+        "id": "int_pavel_timeline"
+      },
+      "fileName": "35_int_pavel_timeline.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1345580,
+      "duration": 41.997,
+      "title": "Спросить Павла о дежурстве",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/35_int_pavel_timeline.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/35_int_pavel_timeline.mp3"
+    },
+    {
+      "key": "audio:36:interaction:int_pavel_camera_confrontation",
+      "group": "scenes",
+      "id": "int_pavel_camera_confrontation",
+      "sceneNumber": 36,
+      "target": {
+        "type": "interaction",
+        "id": "int_pavel_camera_confrontation"
+      },
+      "fileName": "36_int_pavel_camera_confrontation.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1744940,
+      "duration": 54.477,
+      "title": "Предъявить Павлу переписку Кирилла",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/36_int_pavel_camera_confrontation.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/36_int_pavel_camera_confrontation.mp3"
+    },
+    {
+      "key": "audio:37:interaction:int_pavel_trophy",
+      "group": "scenes",
+      "id": "int_pavel_trophy",
+      "sceneNumber": 37,
+      "target": {
+        "type": "interaction",
+        "id": "int_pavel_trophy"
+      },
+      "fileName": "37_int_pavel_trophy.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1742636,
+      "duration": 54.397,
+      "title": "Прижать Павла журналом карты",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/37_int_pavel_trophy.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/37_int_pavel_trophy.mp3"
+    },
+    {
+      "key": "audio:38:interaction:act_search_warm_city_box",
+      "group": "scenes",
+      "id": "act_search_warm_city_box",
+      "sceneNumber": 38,
+      "target": {
+        "type": "interaction",
+        "id": "act_search_warm_city_box"
+      },
+      "fileName": "38_act_search_warm_city_box.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 658220,
+      "duration": 20.5,
+      "title": "Обыскать коробку «Тёплого города»",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/38_act_search_warm_city_box.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/38_act_search_warm_city_box.mp3"
+    },
+    {
+      "key": "audio:39:location:loc_cafe",
+      "group": "scenes",
+      "id": "loc_cafe",
+      "sceneNumber": 39,
+      "target": {
+        "type": "location",
+        "id": "loc_cafe"
+      },
+      "fileName": "39_loc_cafe.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 512300,
+      "duration": 15.94,
+      "title": "Вход в локацию: Кафе «Шум»",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/39_loc_cafe.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/39_loc_cafe.mp3"
+    },
+    {
+      "key": "audio:40:interaction:int_denis_broadcast",
+      "group": "scenes",
+      "id": "int_denis_broadcast",
+      "sceneNumber": 40,
+      "target": {
+        "type": "interaction",
+        "id": "int_denis_broadcast"
+      },
+      "fileName": "40_int_denis_broadcast.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1568300,
+      "duration": 48.957,
+      "title": "Спросить Дениса об угрозах",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/40_int_denis_broadcast.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/40_int_denis_broadcast.mp3"
+    },
+    {
+      "key": "audio:41:interaction:int_denis_victim",
+      "group": "scenes",
+      "id": "int_denis_victim",
+      "sceneNumber": 41,
+      "target": {
+        "type": "interaction",
+        "id": "int_denis_victim"
+      },
+      "fileName": "41_int_denis_victim.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1602092,
+      "duration": 49.997,
+      "title": "Спросить Дениса об Артёме",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/41_int_denis_victim.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/41_int_denis_victim.mp3"
+    },
+    {
+      "key": "audio:42:interaction:int_denis_cafe",
+      "group": "scenes",
+      "id": "int_denis_cafe",
+      "sceneNumber": 42,
+      "target": {
+        "type": "interaction",
+        "id": "int_denis_cafe"
+      },
+      "fileName": "42_int_denis_cafe.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1437740,
+      "duration": 44.877,
+      "title": "Спросить Дениса, когда пришла Марина",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/42_int_denis_cafe.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/42_int_denis_cafe.mp3"
+    },
+    {
+      "key": "audio:43:location:loc_police_lab",
+      "group": "scenes",
+      "id": "loc_police_lab",
+      "sceneNumber": 43,
+      "target": {
+        "type": "location",
+        "id": "loc_police_lab"
+      },
+      "fileName": "43_loc_police_lab.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 468524,
+      "duration": 14.58,
+      "title": "Вход в локацию: Мобильная лаборатория",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/43_loc_police_lab.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/43_loc_police_lab.mp3"
+    },
+    {
+      "key": "audio:44:interaction:act_export_watch_data",
+      "group": "scenes",
+      "id": "act_export_watch_data",
+      "sceneNumber": 44,
+      "target": {
+        "type": "interaction",
+        "id": "act_export_watch_data"
+      },
+      "fileName": "44_act_export_watch_data.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 816428,
+      "duration": 25.46,
+      "title": "Экспортировать данные часов",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/44_act_export_watch_data.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/44_act_export_watch_data.mp3"
+    },
+    {
+      "key": "audio:45:interaction:act_compare_audio",
+      "group": "scenes",
+      "id": "act_compare_audio",
+      "sceneNumber": 45,
+      "target": {
+        "type": "interaction",
+        "id": "act_compare_audio"
+      },
+      "fileName": "45_act_compare_audio.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1128236,
+      "duration": 35.207,
+      "title": "Сравнить записи 17:21 и 20:05",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/45_act_compare_audio.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/45_act_compare_audio.mp3"
+    },
+    {
+      "key": "audio:46:interaction:act_analyze_trophy",
+      "group": "scenes",
+      "id": "act_analyze_trophy",
+      "sceneNumber": 46,
+      "target": {
+        "type": "interaction",
+        "id": "act_analyze_trophy"
+      },
+      "fileName": "46_act_analyze_trophy.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 639788,
+      "duration": 19.94,
+      "title": "Проанализировать награду",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/46_act_analyze_trophy.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/46_act_analyze_trophy.mp3"
+    },
+    {
+      "key": "audio:47:ending:ending_perfect_case",
+      "group": "scenes",
+      "id": "ending_perfect_case",
+      "sceneNumber": 47,
+      "target": {
+        "type": "ending",
+        "id": "ending_perfect_case"
+      },
+      "fileName": "47_ending_perfect_case.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 6480428,
+      "duration": 202.442,
+      "title": "Запись окончена",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/47_ending_perfect_case.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/47_ending_perfect_case.mp3"
+    },
+    {
+      "key": "audio:48:ending:ending_solved",
+      "group": "scenes",
+      "id": "ending_solved",
+      "sceneNumber": 48,
+      "target": {
+        "type": "ending",
+        "id": "ending_solved"
+      },
+      "fileName": "48_ending_solved.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 1095980,
+      "duration": 34.177,
+      "title": "Убедительное обвинение",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/48_ending_solved.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/48_ending_solved.mp3"
+    },
+    {
+      "key": "audio:49:ending:ending_right_suspect_weak_case",
+      "group": "scenes",
+      "id": "ending_right_suspect_weak_case",
+      "sceneNumber": 49,
+      "target": {
+        "type": "ending",
+        "id": "ending_right_suspect_weak_case"
+      },
+      "fileName": "49_ending_right_suspect_weak_case.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 951596,
+      "duration": 29.68,
+      "title": "Верная версия, слабое дело",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/49_ending_right_suspect_weak_case.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/49_ending_right_suspect_weak_case.mp3"
+    },
+    {
+      "key": "audio:50:ending:ending_wrong_motive",
+      "group": "scenes",
+      "id": "ending_wrong_motive",
+      "sceneNumber": 50,
+      "target": {
+        "type": "ending",
+        "id": "ending_wrong_motive"
+      },
+      "fileName": "50_ending_wrong_motive.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 786476,
+      "duration": 24.52,
+      "title": "Половина правды",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/50_ending_wrong_motive.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/50_ending_wrong_motive.mp3"
+    },
+    {
+      "key": "audio:51:ending:ending_wrong_accusation",
+      "group": "scenes",
+      "id": "ending_wrong_accusation",
+      "sceneNumber": 51,
+      "target": {
+        "type": "ending",
+        "id": "ending_wrong_accusation"
+      },
+      "fileName": "51_ending_wrong_accusation.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 865580,
+      "duration": 27,
+      "title": "Чужая вина",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/51_ending_wrong_accusation.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/51_ending_wrong_accusation.mp3"
+    },
+    {
+      "key": "audio:52:ending:ending_timeout",
+      "group": "scenes",
+      "id": "ending_timeout",
+      "sceneNumber": 52,
+      "target": {
+        "type": "ending",
+        "id": "ending_timeout"
+      },
+      "fileName": "52_ending_timeout.mp3",
+      "type": "audio",
+      "mime": "audio/mpeg",
+      "size": 923180,
+      "duration": 28.78,
+      "title": "Последний поезд",
+      "url": "https://cloud.escalion.ru/uploads/actquest_dev/story-last-broadcast/audio/scenes/52_ending_timeout.mp3",
+      "path": "actquest_dev/story-last-broadcast/audio/scenes/52_ending_timeout.mp3"
+    }
+  ]
+}

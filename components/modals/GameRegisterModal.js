@@ -18,6 +18,7 @@ const GameRegisterModal = ({
   setRegisterGameId,
   isRegisterModalFromCard,
   registerModalGameName,
+  participationMode,
   shouldHideRegisterGameIdField,
   registerFeedback,
   isRegisterTeamsLoading,
@@ -26,100 +27,114 @@ const GameRegisterModal = ({
   currentUserId,
 }) => (
   <Modal
-            isOpen={isRegisterModalOpen}
-            title={
-              isRegisterModalFromCard
-                ? 'Присоединение к игре'
-                : 'Регистрация команды по ID игры'
-            }
-            onClose={handleCloseRegisterModal}
-            footer={(
-              <>
-                <button
-                  type="button"
-                  onClick={handleCloseRegisterModal}
-                  disabled={isRegisterSubmitting}
-                  className="aq-modal-btn aq-modal-btn-secondary"
-                >
-                  Отмена
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitRegister}
-                  disabled={
-                    isRegisterSubmitting ||
-                    !registerTeamId ||
-                    registerGameId.trim().length === 0 ||
-                    !location ||
-                    !currentUserId
-                  }
-                  className="aq-modal-btn aq-modal-btn-primary"
-                >
-                  {isRegisterSubmitting ? 'Регистрация…' : 'Зарегистрироваться'}
-                </button>
-              </>
-            )}
-          >
-            <fieldset disabled={isRegisterSubmitting} className="m-0 space-y-5 border-0 p-0">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                {isRegisterModalFromCard
-                  ? 'Выберите команду капитана для участия в выбранной игре.'
-                  : 'Укажите игру и команду, чтобы зарегистрировать её на участие. Команда должна принадлежать вам как капитану.'}
-              </p>
-              {isRegisterModalFromCard && registerModalGameName && (
-                <div className="rounded-xl border border-cyan-300/60 bg-cyan-50/70 px-4 py-3 text-sm text-cyan-800 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]">
-                  Игра: <span className="font-semibold">{registerModalGameName}</span>
-                </div>
-              )}
-              {registerFeedback && (
-                <NoticeBanner
-                  tone={registerFeedback.type === 'success' ? 'success' : 'error'}
-                  variant="neon"
-                >
-                  {registerFeedback.message}
-                </NoticeBanner>
-              )}
-              {(!location || !currentUserId) && (
-                <NoticeBanner tone="warning" variant="neon">
-                  Не удалось определить пользователя или площадку для регистрации.
-                </NoticeBanner>
-              )}
-              <CabinetFormField id="register-team-select" label="Ваша команда">
-                {isRegisterTeamsLoading ? (
-                  <p className="text-sm text-slate-500">Загружаем список команд…</p>
-                ) : registerTeams.length > 0 ? (
-                  <CabinetSelectField
-                    id="register-team-select"
-                    label={null}
-                    value={registerTeamId}
-                    onChange={(event) => setRegisterTeamId(event.target.value)}
-                    containerClassName="space-y-0"
-                  >
-                    <option value="">Выберите команду</option>
-                    {registerTeams.map((team) => (
-                      <option key={team.id} value={team.id}>
-                        {team.name || 'Без названия'}
-                      </option>
-                    ))}
-                  </CabinetSelectField>
-                ) : (
-                  <p className="text-sm text-slate-500">
-                    У вас пока нет команд, где вы являетесь капитаном. Создайте команду или запросите права капитана.
-                  </p>
-                )}
-              </CabinetFormField>
-              {!shouldHideRegisterGameIdField && (
-                <CabinetInputField
-                  id="register-game-id"
-                  label="ID игры"
-                  value={registerGameId}
-                  onChange={(event) => setRegisterGameId(event.target.value)}
-                  placeholder="Например, 64ff0c2e12"
-                  inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
-                />
-              )}
-            </fieldset>
-          </Modal>
+    isOpen={isRegisterModalOpen}
+    title={
+      isRegisterModalFromCard
+        ? participationMode === 'player'
+          ? 'Регистрация на игру'
+          : 'Присоединение к игре'
+        : 'Регистрация команды по ID игры'
+    }
+    onClose={handleCloseRegisterModal}
+    footer={
+      <>
+        <button
+          type="button"
+          onClick={handleCloseRegisterModal}
+          disabled={isRegisterSubmitting}
+          className="aq-modal-btn aq-modal-btn-secondary"
+        >
+          Отмена
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmitRegister}
+          disabled={
+            isRegisterSubmitting ||
+            (participationMode !== 'player' && !registerTeamId) ||
+            registerGameId.trim().length === 0 ||
+            !location ||
+            !currentUserId
+          }
+          className="aq-modal-btn aq-modal-btn-primary"
+        >
+          {isRegisterSubmitting ? 'Регистрация…' : 'Зарегистрироваться'}
+        </button>
+      </>
+    }
+  >
+    <fieldset
+      disabled={isRegisterSubmitting}
+      className="m-0 space-y-5 border-0 p-0"
+    >
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        {isRegisterModalFromCard
+          ? participationMode === 'player'
+            ? 'Вы будете зарегистрированы как один игрок. Персональная команда создастся автоматически и не появится в списке ваших обычных команд.'
+            : 'Выберите команду капитана для участия в выбранной игре.'
+          : 'Укажите игру и команду, чтобы зарегистрировать её на участие. Команда должна принадлежать вам как капитану.'}
+      </p>
+      {isRegisterModalFromCard && registerModalGameName && (
+        <div className="rounded-xl border border-cyan-300/60 bg-cyan-50/70 px-4 py-3 text-sm text-cyan-800 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]">
+          Игра: <span className="font-semibold">{registerModalGameName}</span>
+        </div>
+      )}
+      {registerFeedback && (
+        <NoticeBanner
+          tone={registerFeedback.type === 'success' ? 'success' : 'error'}
+          variant="neon"
+        >
+          {registerFeedback.message}
+        </NoticeBanner>
+      )}
+      {(!location || !currentUserId) && (
+        <NoticeBanner tone="warning" variant="neon">
+          Не удалось определить пользователя или площадку для регистрации.
+        </NoticeBanner>
+      )}
+      {participationMode !== 'player' ? (
+        <CabinetFormField id="register-team-select" label="Ваша команда">
+          {isRegisterTeamsLoading ? (
+            <p className="text-sm text-slate-500">Загружаем список команд…</p>
+          ) : registerTeams.length > 0 ? (
+            <CabinetSelectField
+              id="register-team-select"
+              label={null}
+              value={registerTeamId}
+              onChange={(event) => setRegisterTeamId(event.target.value)}
+              containerClassName="space-y-0"
+            >
+              <option value="">Выберите команду</option>
+              {registerTeams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name || 'Без названия'}
+                </option>
+              ))}
+            </CabinetSelectField>
+          ) : (
+            <p className="text-sm text-slate-500">
+              У вас пока нет команд, где вы являетесь капитаном. Создайте
+              команду или запросите права капитана.
+            </p>
+          )}
+        </CabinetFormField>
+      ) : (
+        <NoticeBanner tone="info" variant="neon">
+          В игре будет отображаться имя из вашего профиля.
+        </NoticeBanner>
+      )}
+      {!shouldHideRegisterGameIdField && (
+        <CabinetInputField
+          id="register-game-id"
+          label="ID игры"
+          value={registerGameId}
+          onChange={(event) => setRegisterGameId(event.target.value)}
+          placeholder="Например, 64ff0c2e12"
+          inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+        />
+      )}
+    </fieldset>
+  </Modal>
 )
 
 const registerTeamShape = PropTypes.shape({
@@ -138,6 +153,7 @@ GameRegisterModal.propTypes = {
   setRegisterGameId: PropTypes.func.isRequired,
   isRegisterModalFromCard: PropTypes.bool,
   registerModalGameName: PropTypes.string,
+  participationMode: PropTypes.oneOf(['team', 'player']),
   shouldHideRegisterGameIdField: PropTypes.bool,
   registerFeedback: PropTypes.shape({
     type: PropTypes.string.isRequired,
@@ -153,6 +169,7 @@ GameRegisterModal.defaultProps = {
   registerFeedback: null,
   isRegisterModalFromCard: false,
   registerModalGameName: '',
+  participationMode: 'team',
   shouldHideRegisterGameIdField: false,
   location: null,
   currentUserId: null,

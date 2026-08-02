@@ -30,6 +30,7 @@ if (!globalConnections) {
 
 let phoneUniqueIndexPromise = null
 let gameReviewsIndexPromise = null
+let personalTeamsIndexPromise = null
 
 const ensureModel = (connection, name, schemaFactory) => {
   const hasModel = Boolean(connection.models?.[name])
@@ -191,6 +192,31 @@ async function dbConnectGlobal() {
 
   await phoneUniqueIndexPromise
 
+  if (!personalTeamsIndexPromise) {
+    personalTeamsIndexPromise = connection
+      .model('Teams')
+      .collection.createIndex(
+        { ownerUserId: 1, location: 1, kind: 1 },
+        {
+          unique: true,
+          name: 'uniq_personal_team_owner_location',
+          partialFilterExpression: {
+            kind: 'personal',
+            ownerUserId: { $type: 'string' },
+            location: { $type: 'string' },
+          },
+        },
+      )
+      .catch((error) => {
+        console.error(
+          'dbConnectGlobal: failed to create personal Teams unique index',
+          error,
+        )
+      })
+  }
+
+  await personalTeamsIndexPromise
+
   if (!gameReviewsIndexPromise) {
     const reviewsCollection = connection.model('GameReviews').collection
     gameReviewsIndexPromise = Promise.all([
@@ -207,7 +233,10 @@ async function dbConnectGlobal() {
         { name: 'game_reviews_admin_filters' },
       ),
     ]).catch((error) => {
-      console.error('dbConnectGlobal: failed to create GameReviews indexes', error)
+      console.error(
+        'dbConnectGlobal: failed to create GameReviews indexes',
+        error,
+      )
     })
   }
 

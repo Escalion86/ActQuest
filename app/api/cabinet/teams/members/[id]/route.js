@@ -25,6 +25,20 @@ const normalizeRole = (value) => {
 
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
 
+const isSystemManagedTeam = async (db, teamId) => {
+  if (!teamId) {
+    return false
+  }
+
+  const team = await db
+    .model('Teams')
+    .findById(teamId)
+    .select({ kind: 1 })
+    .lean()
+
+  return team?.kind === 'personal'
+}
+
 const resolveActorIdentity = (session) => {
   const actorUserId = toStringId(
     session?.user?.globalUserId ?? session?.user?.userId ?? session?.user?._id,
@@ -72,11 +86,13 @@ const ensureCanChangeRole = async ({ db, actorRole, actorUserId, teamId }) => {
     return false
   }
 
-  const captainMembership = await db.model('TeamsUsers').findOne({
-    teamId,
-    role: getCaptainRoleQuery(),
-    userId: actorUserId,
-  })
+  const captainMembership = await db
+    .model('TeamsUsers')
+    .findOne({
+      teamId,
+      role: getCaptainRoleQuery(),
+      userId: actorUserId,
+    })
     .select({ _id: 1 })
     .lean()
 
@@ -115,6 +131,13 @@ export async function DELETE(request, { params }) {
       return NextResponse.json(
         { success: false, error: 'Участник команды не найден' },
         { status: 404 },
+      )
+    }
+
+    if (await isSystemManagedTeam(db, membership.teamId)) {
+      return NextResponse.json(
+        { success: false, error: 'Персональная команда управляется системой' },
+        { status: 403 },
       )
     }
 
@@ -237,6 +260,13 @@ export async function PUT(request, { params }) {
       return NextResponse.json(
         { success: false, error: 'Участник команды не найден' },
         { status: 404 },
+      )
+    }
+
+    if (await isSystemManagedTeam(db, membership.teamId)) {
+      return NextResponse.json(
+        { success: false, error: 'Персональная команда управляется системой' },
+        { status: 403 },
       )
     }
 

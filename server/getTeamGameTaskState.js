@@ -329,6 +329,8 @@ const safeSerializeGameForClient = (game) => {
     dateStartFact: game.dateStartFact || null,
     dateEndFact: game.dateEndFact || null,
     status: game.status || 'active',
+    participationMode:
+      game.participationMode === 'player' ? 'player' : 'team',
     finishingPlace: getGameProcessFinishingPlace(game),
     showFinishingPlace: Boolean(game.showFinishingPlace),
     image: game.image || null,

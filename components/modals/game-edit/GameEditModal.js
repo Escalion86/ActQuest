@@ -218,9 +218,7 @@ const GameEditModal = ({
                 label="Открыть задания после завершения"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
-              {renderShowTasksAudienceToggle(
-                'game-show-tasks-audience-closed',
-              )}
+              {renderShowTasksAudienceToggle('game-show-tasks-audience-closed')}
               <NeonCheckbox
                 id="game-show-tasks-count-in-game-closed"
                 checked={Boolean(selectedGame.showTasksCountInGame)}
@@ -476,50 +474,116 @@ const GameEditModal = ({
               />
             )}
           </div>
-          <div className="p-3 mt-3 border rounded-2xl border-slate-200 dark:border-slate-700">
-            <NeonCheckbox
-              id="game-max-team-players-unlimited"
-              checked={selectedGame.maxTeamPlayers === null}
-              onChange={(eventOrChecked) => {
-                const payload = debugCheckboxUpdate(
-                  'maxTeamPlayers',
-                  getCheckboxChecked(eventOrChecked),
-                  (checked) => ({
-                    maxTeamPlayers: checked
-                      ? null
-                      : Number(selectedGame.maxTeamPlayers) > 0
-                        ? Number(selectedGame.maxTeamPlayers)
-                        : 4,
-                  }),
+          <div className="p-4 mt-3 border rounded-2xl border-slate-200 dark:border-slate-700">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+              Тип участия
+            </p>
+            <div
+              className="mt-3 grid gap-2 sm:grid-cols-2"
+              role="radiogroup"
+              aria-label="Тип участия в игре"
+            >
+              {[
+                {
+                  value: 'team',
+                  label: 'Командой',
+                  description: 'На игру регистрируется команда капитана.',
+                },
+                {
+                  value: 'player',
+                  label: 'Один игрок',
+                  description:
+                    'Игрок записывается сам, персональная команда создаётся автоматически.',
+                },
+              ].map((option) => {
+                const isSelected =
+                  (selectedGame.participationMode === 'player'
+                    ? 'player'
+                    : 'team') === option.value
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    disabled={Number(selectedGame.teamsCount) > 0}
+                    onClick={() =>
+                      updateSelectedGame({
+                        participationMode: option.value,
+                        ...(option.value === 'player'
+                          ? { paymentMode: 'participant', maxTeamPlayers: 1 }
+                          : {}),
+                      })
+                    }
+                    className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      isSelected
+                        ? 'border-cyan-400 bg-white shadow-sm ring-1 ring-cyan-200 dark:border-cyan-500 dark:bg-slate-800 dark:ring-cyan-500/20'
+                        : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold text-slate-800 dark:text-white">
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500 dark:text-slate-300">
+                      {option.description}
+                    </span>
+                  </button>
                 )
-                if (payload) updateSelectedGame(payload)
-              }}
-              label="Размер команды: без ограничений"
-              labelClassName="text-sm text-slate-600 dark:text-slate-200"
-            />
-            {selectedGame.maxTeamPlayers !== null ? (
-              <div className="mt-3">
-                <CabinetNumberField
-                  id="game-max-team-players"
-                  label="Максимум игроков в команде"
-                  min={1}
-                  step={1}
-                  value={Number(selectedGame.maxTeamPlayers) || ''}
-                  onChange={(event) =>
-                    updateSelectedGame({
-                      maxTeamPlayers:
-                        event.target.value === ''
-                          ? null
-                          : Math.max(1, Number(event.target.value) || 1),
-                    })
-                  }
-                  labelClassName={fieldLabelClassName}
-                  inputClassName={fieldInputClassName}
-                  placeholder="Например, 4"
-                />
-              </div>
+              })}
+            </div>
+            {Number(selectedGame.teamsCount) > 0 ? (
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                Тип участия нельзя изменить после первой регистрации.
+              </p>
             ) : null}
           </div>
+          {selectedGame.participationMode !== 'player' ? (
+            <div className="p-3 mt-3 border rounded-2xl border-slate-200 dark:border-slate-700">
+              <NeonCheckbox
+                id="game-max-team-players-unlimited"
+                checked={selectedGame.maxTeamPlayers === null}
+                onChange={(eventOrChecked) => {
+                  const payload = debugCheckboxUpdate(
+                    'maxTeamPlayers',
+                    getCheckboxChecked(eventOrChecked),
+                    (checked) => ({
+                      maxTeamPlayers: checked
+                        ? null
+                        : Number(selectedGame.maxTeamPlayers) > 0
+                          ? Number(selectedGame.maxTeamPlayers)
+                          : 4,
+                    }),
+                  )
+                  if (payload) updateSelectedGame(payload)
+                }}
+                label="Размер команды: без ограничений"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
+              {selectedGame.maxTeamPlayers !== null ? (
+                <div className="mt-3">
+                  <CabinetNumberField
+                    id="game-max-team-players"
+                    label="Максимум игроков в команде"
+                    min={1}
+                    step={1}
+                    value={Number(selectedGame.maxTeamPlayers) || ''}
+                    onChange={(event) =>
+                      updateSelectedGame({
+                        maxTeamPlayers:
+                          event.target.value === ''
+                            ? null
+                            : Math.max(1, Number(event.target.value) || 1),
+                      })
+                    }
+                    labelClassName={fieldLabelClassName}
+                    inputClassName={fieldInputClassName}
+                    placeholder="Например, 4"
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {Boolean(selectedGame.isRated ?? true) && (
             <div className="p-4 mt-3 border rounded-2xl border-slate-200 dark:border-slate-700">
               <label
@@ -608,8 +672,18 @@ const GameEditModal = ({
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
               Режим оплаты
             </p>
+            {selectedGame.participationMode === 'player' ? (
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                В индивидуальной игре оплата учитывается отдельно по каждому
+                игроку.
+              </p>
+            ) : null}
             <div
-              className="mt-3 grid gap-2 sm:grid-cols-2"
+              className={`mt-3 grid gap-2 ${
+                selectedGame.participationMode === 'player'
+                  ? 'sm:grid-cols-1'
+                  : 'sm:grid-cols-2'
+              }`}
               role="radiogroup"
               aria-label="Режим оплаты игры"
             >
@@ -622,38 +696,45 @@ const GameEditModal = ({
                 {
                   value: 'participant',
                   label: 'Оплата с участников',
-                  description: 'Оплата контролируется отдельно по каждому игроку.',
+                  description:
+                    'Оплата контролируется отдельно по каждому игроку.',
                 },
-              ].map((option) => {
-                const isSelected =
-                  (selectedGame.paymentMode === 'participant'
-                    ? 'participant'
-                    : 'team') === option.value
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    onClick={() =>
-                      updateSelectedGame({ paymentMode: option.value })
-                    }
-                    className={`rounded-xl border p-3 text-left transition ${
-                      isSelected
-                        ? 'border-cyan-400 bg-white shadow-sm ring-1 ring-cyan-200 dark:border-cyan-500 dark:bg-slate-800 dark:ring-cyan-500/20'
-                        : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    <span className="block text-sm font-semibold text-slate-800 dark:text-white">
-                      {option.label}
-                    </span>
-                    <span className="mt-1 block text-xs text-slate-500 dark:text-slate-300">
-                      {option.description}
-                    </span>
-                  </button>
+              ]
+                .filter(
+                  (option) =>
+                    selectedGame.participationMode !== 'player' ||
+                    option.value === 'participant',
                 )
-              })}
+                .map((option) => {
+                  const isSelected =
+                    (selectedGame.paymentMode === 'participant'
+                      ? 'participant'
+                      : 'team') === option.value
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() =>
+                        updateSelectedGame({ paymentMode: option.value })
+                      }
+                      className={`rounded-xl border p-3 text-left transition ${
+                        isSelected
+                          ? 'border-cyan-400 bg-white shadow-sm ring-1 ring-cyan-200 dark:border-cyan-500 dark:bg-slate-800 dark:ring-cyan-500/20'
+                          : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-slate-600'
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold text-slate-800 dark:text-white">
+                        {option.label}
+                      </span>
+                      <span className="mt-1 block text-xs text-slate-500 dark:text-slate-300">
+                        {option.description}
+                      </span>
+                    </button>
+                  )
+                })}
             </div>
           </div>
           {(selectedGame.prices ?? []).length > 0 ? (
@@ -714,6 +795,9 @@ GameEditModal.propTypes = {
     showTasks: PropTypes.bool,
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
+    participationMode: PropTypes.oneOf(['team', 'player']),
+    teamsCount: PropTypes.number,
+    maxTeamPlayers: PropTypes.number,
     paymentMode: PropTypes.oneOf(['team', 'participant']),
   }),
   isEditModalOpen: PropTypes.bool.isRequired,

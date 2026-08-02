@@ -30,9 +30,12 @@ const collectCurrentParticipantRefs = (game) => {
 
 const collectCurrentTeamRefs = (game) => {
   const teamIds = new Set()
-  const result = game?.result && typeof game.result === 'object'
-    ? game.result
-    : {}
+  if (game?.participationMode === 'player') {
+    return teamIds
+  }
+
+  const result =
+    game?.result && typeof game.result === 'object' ? game.result : {}
 
   ;(Array.isArray(result.teams) ? result.teams : []).forEach((team) => {
     const teamId = toStringId(team?._id ?? team?.id ?? team?.teamId)
@@ -76,6 +79,7 @@ const updateParticipantsClosedStats = async ({ db, game }) => {
       dateStart: 1,
       dateStartFact: 1,
       updatedAt: 1,
+      participationMode: 1,
       result: 1,
     })
     .lean()

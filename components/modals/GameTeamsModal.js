@@ -282,8 +282,10 @@ const GameTeamsModal = ({
   const gameStatus = String(selectedGame?.status || '')
     .trim()
     .toLowerCase()
+  const isPlayerMode = selectedGame?.participationMode === 'player'
   const canAddTeams =
     !isReadOnly &&
+    !isPlayerMode &&
     gameStatus === 'active' &&
     selectedGame?.registrationOpen !== false
   const canEditRegisteredTeams =
@@ -1074,7 +1076,7 @@ const GameTeamsModal = ({
     <>
       <Modal
         isOpen={isTeamsModalOpen}
-        title={`Команды игры «${selectedGame?.name || 'Без названия'}»`}
+        title={`${isPlayerMode ? 'Игроки' : 'Команды'} игры «${selectedGame?.name || 'Без названия'}»`}
         onClose={handleCloseTeamsModal}
       >
         {selectedGame ? (
@@ -1093,7 +1095,9 @@ const GameTeamsModal = ({
             <div className="space-y-4">
               {teamsModalState.isLoading ? (
                 <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Загружаем список команд…
+                  {isPlayerMode
+                    ? 'Загружаем список игроков…'
+                    : 'Загружаем список команд…'}
                 </p>
               ) : teamsModalState.gameTeams.length > 0 ? (
                 <ul className="space-y-3">
@@ -1155,12 +1159,13 @@ const GameTeamsModal = ({
                     )
                     const isRandomDistribution =
                       selectedGame?.taskDistributionMode === 'random'
-                    const teamTemplate = normalizeStoredTaskDistributionTemplate(
-                      team?.taskDistributionTemplate,
-                      Array.isArray(selectedGame?.tasks)
-                        ? selectedGame.tasks.length
-                        : 0,
-                    )
+                    const teamTemplate =
+                      normalizeStoredTaskDistributionTemplate(
+                        team?.taskDistributionTemplate,
+                        Array.isArray(selectedGame?.tasks)
+                          ? selectedGame.tasks.length
+                          : 0,
+                      )
                     const teamSequence = Array.isArray(team?.taskSequence)
                       ? team.taskSequence
                           .map((item) => Number(item))
@@ -1325,7 +1330,9 @@ const GameTeamsModal = ({
                                           type="button"
                                           className="rounded-lg border border-cyan-300 bg-white px-2.5 py-1 text-xs font-semibold text-cyan-800 transition hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-500/40 dark:bg-slate-900/70 dark:text-cyan-100 dark:hover:border-cyan-300"
                                           onClick={() =>
-                                            handleOpenTeamDistributionModal(team)
+                                            handleOpenTeamDistributionModal(
+                                              team,
+                                            )
                                           }
                                           disabled={isReadOnly}
                                         >
@@ -1337,7 +1344,9 @@ const GameTeamsModal = ({
                                           onClick={() =>
                                             handleDistributeTeamTasks(team)
                                           }
-                                          disabled={isReadOnly || isDistributingTeam}
+                                          disabled={
+                                            isReadOnly || isDistributingTeam
+                                          }
                                         >
                                           {isDistributingTeam
                                             ? 'Распределяем…'
@@ -1387,14 +1396,23 @@ const GameTeamsModal = ({
                                     event.stopPropagation()
                                     setTeamPrequelsTarget({
                                       gameTeamId: String(team.id || ''),
-                                      teamName: String(team.teamName || 'Команда'),
+                                      teamName: String(
+                                        team.teamName || 'Команда',
+                                      ),
                                     })
                                   }}
                                   aria-label={`Приквелы команды ${team.teamName || ''}`}
                                   title="Приквелы команды"
                                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-200 sm:h-8 sm:w-8"
                                 >
-                                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                                  <svg
+                                    className="h-4 w-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    aria-hidden="true"
+                                  >
                                     <path d="M4 6h16v12H4z" />
                                     <path d="m8 10 4-3 4 3v5H8z" />
                                     <path d="M10 18v-4h4v4" />
@@ -1415,7 +1433,8 @@ const GameTeamsModal = ({
                                   <TeamPaymentIcon />
                                 </button>
                               ) : null}
-                              {canEditRegisteredTeams ? (
+                              {canEditRegisteredTeams &&
+                              team?.teamKind !== 'personal' ? (
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -1586,7 +1605,9 @@ const GameTeamsModal = ({
                 </ul>
               ) : (
                 <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Пока ни одна команда не зарегистрирована на эту игру.
+                  {isPlayerMode
+                    ? 'Пока ни один игрок не зарегистрирован на эту игру.'
+                    : 'Пока ни одна команда не зарегистрирована на эту игру.'}
                 </p>
               )}
             </div>
@@ -2259,6 +2280,7 @@ const teamShape = PropTypes.shape({
   teamName: PropTypes.string,
   teamDescription: PropTypes.string,
   teamImage: PropTypes.string,
+  teamKind: PropTypes.oneOf(['regular', 'personal']),
   teamId: PropTypes.string,
   open: PropTypes.bool,
   outOfCompetition: PropTypes.bool,
@@ -2310,6 +2332,7 @@ GameTeamsModal.propTypes = {
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     name: PropTypes.string,
     status: PropTypes.string,
+    participationMode: PropTypes.oneOf(['team', 'player']),
     tasks: PropTypes.array,
   }),
   isTeamsModalOpen: PropTypes.bool.isRequired,

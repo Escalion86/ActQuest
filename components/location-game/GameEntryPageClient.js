@@ -766,9 +766,10 @@ function GameEntryPage({
                     Вы не участвуете в этой игре
                   </h2>
                   <p className="mt-2 text-sm text-red-800 dark:text-red-100">
-                    Судя по нашим данным, вас нет ни в одной команде,
-                    зарегистрированной на игру. Если это ошибка, свяжитесь с
-                    организатором.
+                    {game?.participationMode === 'player'
+                      ? 'Судя по нашим данным, вы не зарегистрированы на эту игру.'
+                      : 'Судя по нашим данным, вас нет ни в одной команде, зарегистрированной на игру.'}{' '}
+                    Если это ошибка, свяжитесь с организатором.
                   </p>
                 </div>
               ) : null}
@@ -777,10 +778,16 @@ function GameEntryPage({
                 <div className="flex flex-col gap-3 p-4 border border-gray-200 rounded-2xl bg-gray-50 dark:bg-slate-800/60 dark:border-slate-700">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-base font-medium text-gray-800 dark:text-slate-100">
-                      Вы участвуете в игре в команде{' '}
-                      <span className="font-semibold">
-                        {participantTeam.name || 'Команда без названия'}
-                      </span>
+                      {game?.participationMode === 'player' ? (
+                        'Вы зарегистрированы на игру как игрок'
+                      ) : (
+                        <>
+                          Вы участвуете в игре в команде{' '}
+                          <span className="font-semibold">
+                            {participantTeam.name || 'Команда без названия'}
+                          </span>
+                        </>
+                      )}
                     </div>
                     {canEnterGame ? (
                       <Link

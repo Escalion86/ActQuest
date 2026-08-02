@@ -57,7 +57,7 @@ import {
   areGameDraftsEqual,
 } from '@helpers/gameDraftDirtyState'
 import useMergedSession from '@helpers/useMergedSession'
-import { getNounTeams } from '@helpers/getNoun'
+import { getNounPlayers, getNounTeams } from '@helpers/getNoun'
 import {
   buildDefaultPrequel,
   normalizePrequelConfig,
@@ -1009,6 +1009,7 @@ const buildUpdatePayload = (game) => {
           )
         : [],
     individualStart: Boolean(game.individualStart),
+    participationMode: game.participationMode === 'player' ? 'player' : 'team',
     isRated: normalizedIsRated,
     seasonId:
       normalizedIsRated &&
@@ -1560,6 +1561,8 @@ const GamesPage = ({
     () => games.find((game) => game.id === registerGameId) ?? null,
     [games, registerGameId],
   )
+  const isRegisterModalPlayerMode =
+    registerModalGame?.participationMode === 'player'
   const statusModalGame = useMemo(
     () => games.find((game) => game.id === statusModalGameId) ?? null,
     [games, statusModalGameId],
@@ -1901,24 +1904,39 @@ const GamesPage = ({
 
   const registerTeamMutation = useMutation({
     mutationFn: async ({ gameId, teamId }) => {
-      await requestApiJson(
+      const { json } = await requestApiJson(
         `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/teams`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ teamId }),
+          body: JSON.stringify(teamId ? { teamId } : {}),
           fallbackMessage: 'Не удалось зарегистрироваться на игру',
         },
       )
 
-      return { gameId, teamId }
+      return {
+        gameId,
+        teamId: toStringId(json?.data?.teamId ?? teamId),
+        teamName:
+          typeof json?.data?.teamName === 'string' ? json.data.teamName : '',
+        participationMode:
+          json?.data?.participationMode === 'player' ? 'player' : 'team',
+      }
     },
     onMutate: () => {
       setRegisterFeedback(null)
     },
-    onSuccess: ({ gameId, teamId }) => {
+    onSuccess: ({
+      gameId,
+      teamId,
+      teamName: responseTeamName,
+      participationMode,
+    }) => {
       const selectedTeam = registerTeams.find((team) => team.id === teamId)
-      const teamName = selectedTeam?.name || 'без названия'
+      const teamName =
+        responseTeamName ||
+        selectedTeam?.name ||
+        (participationMode === 'player' ? 'Игрок' : 'без названия')
 
       applyPersistedGameUpdate(gameId, (game) => {
         const nextParticipationTeams = getUserParticipationTeams(game)
@@ -1944,7 +1962,10 @@ const GamesPage = ({
         }
       })
 
-      const message = `Команда «${teamName}» зарегистрирована на игру`
+      const message =
+        participationMode === 'player'
+          ? 'Вы зарегистрированы на игру'
+          : `Команда «${teamName}» зарегистрирована на игру`
       setRegisterFeedback({ type: 'success', message })
       setFeedback({ type: 'success', message })
       setIsRegisterModalOpen(false)
@@ -1989,6 +2010,8 @@ const GamesPage = ({
         gameId: game.id,
         captainTeamIds,
         deletedCount: teamIdsToDelete.length,
+        participationMode:
+          game?.participationMode === 'player' ? 'player' : 'team',
       }
     },
     onMutate: ({ game }) => {
@@ -1996,7 +2019,12 @@ const GamesPage = ({
         prev.includes(game.id) ? prev : [...prev, game.id],
       )
     },
-    onSuccess: ({ gameId, captainTeamIds, deletedCount }) => {
+    onSuccess: ({
+      gameId,
+      captainTeamIds,
+      deletedCount,
+      participationMode,
+    }) => {
       applyPersistedGameUpdate(gameId, (gameItem) => {
         const nextParticipationTeams = getUserParticipationTeams(
           gameItem,
@@ -2016,7 +2044,10 @@ const GamesPage = ({
 
       setFeedback({
         type: 'success',
-        message: 'Команда снята с игры',
+        message:
+          participationMode === 'player'
+            ? 'Вы сняты с игры'
+            : 'Команда снята с игры',
       })
     },
     onError: (error) => {
@@ -2300,6 +2331,13 @@ const GamesPage = ({
   }, [isRegisterSubmitting, resetRegisterForm])
 
   const loadRegisterTeams = useCallback(async () => {
+    if (isRegisterModalPlayerMode) {
+      setRegisterTeams([])
+      setRegisterTeamId('')
+      setIsRegisterTeamsLoading(false)
+      return
+    }
+
     if (!currentUserDbId && !currentUserTelegramIdNumber) {
       setRegisterTeams([])
       setRegisterTeamId('')
@@ -2402,6 +2440,7 @@ const GamesPage = ({
   }, [
     currentUserDbId,
     currentUserTelegramIdNumber,
+    isRegisterModalPlayerMode,
     registerModalGame?.location,
   ])
 
@@ -2424,7 +2463,7 @@ const GamesPage = ({
       return
     }
 
-    if (!registerTeamId) {
+    if (!isRegisterModalPlayerMode && !registerTeamId) {
       setRegisterFeedback({
         type: 'error',
         message: 'Выберите команду, которую хотите зарегистрировать',
@@ -2440,11 +2479,11 @@ const GamesPage = ({
       return
     }
 
-    const selectedTeam = registerTeams.find(
-      (team) => team.id === registerTeamId,
-    )
+    const selectedTeam = isRegisterModalPlayerMode
+      ? null
+      : registerTeams.find((team) => team.id === registerTeamId)
 
-    if (!selectedTeam) {
+    if (!isRegisterModalPlayerMode && !selectedTeam) {
       setRegisterFeedback({
         type: 'error',
         message: 'Выбранная команда недоступна для регистрации',
@@ -2454,10 +2493,11 @@ const GamesPage = ({
 
     registerTeamMutation.mutate({
       gameId: trimmedGameId,
-      teamId: registerTeamId,
+      teamId: isRegisterModalPlayerMode ? '' : registerTeamId,
     })
   }, [
     currentUserDbId,
+    isRegisterModalPlayerMode,
     registerGameId,
     registerTeamId,
     registerTeams,
@@ -2820,6 +2860,7 @@ const GamesPage = ({
         taskFailurePenalty: 0,
         manyCodesPenalty: [0, 0],
         individualStart: false,
+        participationMode: 'team',
         isRated: false,
         seasonId: '',
         seasonName: '',
@@ -2899,6 +2940,8 @@ const GamesPage = ({
             ? [...normalizedSource.manyCodesPenalty]
             : [0, 0]
           baseDraft.individualStart = Boolean(normalizedSource.individualStart)
+          baseDraft.participationMode =
+            normalizedSource.participationMode === 'player' ? 'player' : 'team'
           baseDraft.maxTeamPlayers = toNullableNumber(
             normalizedSource.maxTeamPlayers,
           )
@@ -2958,7 +3001,9 @@ const GamesPage = ({
           )
             ? JSON.parse(JSON.stringify(normalizedSource.storyInteractions))
             : []
-          baseDraft.storyEvidence = Array.isArray(normalizedSource.storyEvidence)
+          baseDraft.storyEvidence = Array.isArray(
+            normalizedSource.storyEvidence,
+          )
             ? JSON.parse(JSON.stringify(normalizedSource.storyEvidence))
             : []
           baseDraft.storyAccusation =
@@ -3963,7 +4008,10 @@ const GamesPage = ({
       return
     }
 
-    if (normalizeTaskDistributionMode(gameToSave.taskDistributionMode) === 'random') {
+    if (
+      normalizeTaskDistributionMode(gameToSave.taskDistributionMode) ===
+      'random'
+    ) {
       const tasksCount = Array.isArray(gameToSave.tasks)
         ? gameToSave.tasks.length
         : 0
@@ -4822,6 +4870,7 @@ const GamesPage = ({
             teamName: teamInfo?.name || 'Неизвестная команда',
             teamDescription: teamInfo?.description || '',
             teamImage: teamInfo?.image || '',
+            teamKind: teamInfo?.kind === 'personal' ? 'personal' : 'regular',
             open: Boolean(teamInfo?.open),
             updatedAt: teamInfo?.updatedAt || null,
             membersCount,
@@ -6392,9 +6441,11 @@ const GamesPage = ({
             isActiveGameStatus(visibleStatus))) &&
         Boolean(gameEnterHref)
       const participationSummary = hasParticipation
-        ? `Вы участвуете: ${participationTeams
-            .map((entry) => entry.teamName || entry.teamId)
-            .join(', ')}`
+        ? game?.participationMode === 'player'
+          ? 'Вы зарегистрированы как игрок'
+          : `Вы участвуете: ${participationTeams
+              .map((entry) => entry.teamName || entry.teamId)
+              .join(', ')}`
         : ''
       const isCancellingRegistration = isRegistrationCancellationInProgress(
         game.id,
@@ -6490,7 +6541,9 @@ const GamesPage = ({
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
-                      {getNounTeams(game.teamsCount)}
+                      {game?.participationMode === 'player'
+                        ? getNounPlayers(game.teamsCount)
+                        : getNounTeams(game.teamsCount)}
                     </p>
                     {hasParticipation && (
                       <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">
@@ -6529,7 +6582,9 @@ const GamesPage = ({
                           disabled={isCancellingRegistration}
                           className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
                         >
-                          Снять команду с игры
+                          {game?.participationMode === 'player'
+                            ? 'Отменить запись'
+                            : 'Снять команду с игры'}
                         </button>
                       )}
                     </div>
@@ -6560,7 +6615,9 @@ const GamesPage = ({
                             }}
                             className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
                           >
-                            Присоединиться
+                            {game?.participationMode === 'player'
+                              ? 'Записаться'
+                              : 'Присоединиться'}
                           </button>
                         )}
                         {canViewThisGameTasks && (
@@ -6918,9 +6975,11 @@ const GamesPage = ({
             isActiveGameStatus(visibleStatus))) &&
         Boolean(gameEnterHref)
       const participationSummary = hasParticipation
-        ? `Вы участвуете: ${participationTeams
-            .map((entry) => entry.teamName || entry.teamId)
-            .join(', ')}`
+        ? game?.participationMode === 'player'
+          ? 'Вы зарегистрированы как игрок'
+          : `Вы участвуете: ${participationTeams
+              .map((entry) => entry.teamName || entry.teamId)
+              .join(', ')}`
         : ''
       const isCancellingRegistration = isRegistrationCancellationInProgress(
         game.id,
@@ -6995,7 +7054,9 @@ const GamesPage = ({
                   : startDateLabel}
               </p>
               <p className="text-xs text-slate-400">
-                {getNounTeams(game.teamsCount)}
+                {game?.participationMode === 'player'
+                  ? getNounPlayers(game.teamsCount)
+                  : getNounTeams(game.teamsCount)}
               </p>
               {hasParticipation && (
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300">
@@ -7044,7 +7105,9 @@ const GamesPage = ({
                           }}
                           className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
                         >
-                          Присоединиться
+                          {game?.participationMode === 'player'
+                            ? 'Записаться'
+                            : 'Присоединиться'}
                         </button>
                       )}
                       {canViewThisGameTasks && (
@@ -7111,7 +7174,9 @@ const GamesPage = ({
                           disabled={isCancellingRegistration}
                           className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
                         >
-                          Снять команду с игры
+                          {game?.participationMode === 'player'
+                            ? 'Отменить запись'
+                            : 'Снять команду с игры'}
                         </button>
                       )}
                     </div>
@@ -7560,11 +7625,15 @@ const GamesPage = ({
       return ''
     }
 
+    if (selectedGame?.participationMode === 'player') {
+      return 'Вы зарегистрированы как игрок'
+    }
+
     const teamNames = selectedGameParticipationTeams.map(
       (entry) => entry.teamName || entry.teamId,
     )
     return `Вы участвуете в составе: ${teamNames.join(', ')}`
-  }, [selectedGameParticipationTeams])
+  }, [selectedGame?.participationMode, selectedGameParticipationTeams])
   const canJoinSelectedGame = useMemo(
     () =>
       Boolean(selectedGame?.id) &&
@@ -8165,6 +8234,9 @@ const GamesPage = ({
                 setRegisterGameId={setRegisterGameId}
                 isRegisterModalFromCard={isRegisterModalFromCard}
                 registerModalGameName={registerModalGameName}
+                registerParticipationMode={
+                  isRegisterModalPlayerMode ? 'player' : 'team'
+                }
                 shouldHideRegisterGameIdField={Boolean(isRegisterModalFromCard)}
                 registerFeedback={registerFeedback}
                 isRegisterTeamsLoading={isRegisterTeamsLoading}
@@ -8481,6 +8553,7 @@ GamesPage.propTypes = {
         PropTypes.arrayOf(PropTypes.number),
       ),
       individualStart: PropTypes.bool,
+      participationMode: PropTypes.oneOf(['team', 'player']),
       isRated: PropTypes.bool,
       hidden: PropTypes.bool,
       showCreator: PropTypes.bool,

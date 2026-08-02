@@ -34,7 +34,14 @@ const loadCaptainRepairReport = async ({ db, teamId, limit }) => {
 
   const membershipFilter = teamId ? { teamId } : {}
   const memberships = await TeamsUsersModel.find(membershipFilter)
-    .select({ _id: 1, teamId: 1, userId: 1, userTelegramId: 1, role: 1, createdAt: 1 })
+    .select({
+      _id: 1,
+      teamId: 1,
+      userId: 1,
+      userTelegramId: 1,
+      role: 1,
+      createdAt: 1,
+    })
     .lean()
 
   const teamIds = Array.from(
@@ -46,32 +53,36 @@ const loadCaptainRepairReport = async ({ db, teamId, limit }) => {
         .filter(Boolean),
     ),
   )
-  const userIds = Array.from(
+  const teams = teamIds.length
+    ? await TeamsModel.find({
+        _id: { $in: teamIds },
+        kind: { $ne: 'personal' },
+      })
+        .select({ _id: 1, name: 1, location: 1 })
+        .lean()
+    : []
+  const regularTeamIds = new Set(teams.map((team) => String(team._id)))
+  const regularMemberships = memberships.filter((membership) =>
+    regularTeamIds.has(String(membership?.teamId || '')),
+  )
+  const regularUserIds = Array.from(
     new Set(
-      memberships
+      regularMemberships
         .map((membership) =>
           membership?.userId ? String(membership.userId).trim() : '',
         )
         .filter(Boolean),
     ),
   )
-
-  const [teams, users] = await Promise.all([
-    teamIds.length
-      ? TeamsModel.find({ _id: { $in: teamIds } })
-          .select({ _id: 1, name: 1, location: 1 })
-          .lean()
-      : [],
-    userIds.length
-      ? UsersModel.find({ _id: { $in: userIds } })
-          .select({ _id: 1, name: 1, username: 1 })
-          .lean()
-      : [],
-  ])
+  const users = regularUserIds.length
+    ? await UsersModel.find({ _id: { $in: regularUserIds } })
+        .select({ _id: 1, name: 1, username: 1 })
+        .lean()
+    : []
 
   return buildTeamCaptainRepairReport({
     teams,
-    memberships,
+    memberships: regularMemberships,
     users,
     limit,
   })

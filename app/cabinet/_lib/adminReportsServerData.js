@@ -40,14 +40,24 @@ export const loadCabinetAppAdminReports = async ({ location }) => {
   const GamesModel = db.model('Games')
   const GamesTeamsModel = db.model('GamesTeams')
 
-  const [usersDocs, teamsDocs, gamesDocs, teamUsersDocs, gamesTeamsDocs] =
+  const [usersDocs, teamsDocs, gamesDocs, allTeamUsersDocs, allGamesTeamsDocs] =
     await Promise.all([
       UsersModel.find({}).lean(),
-      TeamsModel.find({}).lean(),
+      TeamsModel.find({ kind: { $ne: 'personal' } }).lean(),
       GamesModel.find({}).lean(),
       TeamsUsersModel.find({}).lean(),
       GamesTeamsModel.find({}).lean(),
     ])
+
+  const regularTeamIds = new Set(
+    teamsDocs.map((team) => toStringId(team?._id)).filter(Boolean),
+  )
+  const teamUsersDocs = allTeamUsersDocs.filter((membership) =>
+    regularTeamIds.has(toStringId(membership?.teamId)),
+  )
+  const gamesTeamsDocs = allGamesTeamsDocs.filter((registration) =>
+    regularTeamIds.has(toStringId(registration?.teamId)),
+  )
 
   const now = Date.now()
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000
@@ -80,15 +90,18 @@ export const loadCabinetAppAdminReports = async ({ location }) => {
     ).length,
     totalGames: gamesDocs.length,
     activeGames: gamesDocs.filter((game) => {
-      const status = typeof game?.status === 'string' ? game.status.toLowerCase() : ''
+      const status =
+        typeof game?.status === 'string' ? game.status.toLowerCase() : ''
       return status === 'active' || status === 'started'
     }).length,
     finishedGames: gamesDocs.filter((game) => {
-      const status = typeof game?.status === 'string' ? game.status.toLowerCase() : ''
+      const status =
+        typeof game?.status === 'string' ? game.status.toLowerCase() : ''
       return status === 'finished' || status === 'closed'
     }).length,
     canceledGames: gamesDocs.filter((game) => {
-      const status = typeof game?.status === 'string' ? game.status.toLowerCase() : ''
+      const status =
+        typeof game?.status === 'string' ? game.status.toLowerCase() : ''
       return status === 'canceled'
     }).length,
     gamesLast30: gamesDocs.filter((game) => {
@@ -178,12 +191,11 @@ export const loadCabinetAppAdminReports = async ({ location }) => {
     recentActivityCandidates.push({
       id: `user-${toStringId(user?._id) ?? user?.telegramId ?? Math.random()}`,
       type: 'user',
-      name:
-        user?.name?.trim()?.length
-          ? user.name
-          : user?.username
-            ? `@${user.username}`
-            : `ID ${user?.telegramId}`,
+      name: user?.name?.trim()?.length
+        ? user.name
+        : user?.username
+          ? `@${user.username}`
+          : `ID ${user?.telegramId}`,
       description: `Роль: ${CABINET_ROLE_LABELS[user?.role] ?? user?.role ?? 'Пользователь'}`,
       updatedAt,
     })
@@ -218,7 +230,8 @@ export const loadCabinetAppAdminReports = async ({ location }) => {
     }
 
     const id = toStringId(game?._id)
-    const status = typeof game?.status === 'string' ? game.status.toLowerCase() : ''
+    const status =
+      typeof game?.status === 'string' ? game.status.toLowerCase() : ''
     const statusLabel =
       status === 'active'
         ? 'Активна'
@@ -244,7 +257,10 @@ export const loadCabinetAppAdminReports = async ({ location }) => {
 
   const recentActivity = recentActivityCandidates
     .filter((item) => item.updatedAt)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
     .slice(0, 12)
 
   initialReports.summary = summary

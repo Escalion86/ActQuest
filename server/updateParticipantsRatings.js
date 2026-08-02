@@ -125,12 +125,12 @@ const buildTimeline = (games) =>
         ? result.teamsUsers
         : []
 
-      const teamsPlaces = new Map()
+      const allTeamsPlaces = new Map()
       Object.entries(teamsPlacesRaw).forEach(([teamId, place]) => {
         const key = resolveTeamRatingKey(teamId)
         const numericPlace = Number(place)
         if (key && Number.isFinite(numericPlace)) {
-          teamsPlaces.set(key, numericPlace)
+          allTeamsPlaces.set(key, numericPlace)
         }
       })
 
@@ -148,7 +148,7 @@ const buildTimeline = (games) =>
           return
         }
 
-        const place = teamsPlaces.get(teamKey)
+        const place = allTeamsPlaces.get(teamKey)
         if (!Number.isFinite(place)) {
           return
         }
@@ -158,6 +158,9 @@ const buildTimeline = (games) =>
           playersPlaces.set(participantKey, place)
         }
       })
+
+      const teamsPlaces =
+        game?.participationMode === 'player' ? new Map() : allTeamsPlaces
 
       if (!teamsPlaces.size && !playersPlaces.size) {
         return null
@@ -395,13 +398,15 @@ const updateParticipantsRatings = async ({
   })
 
   const currentTeamRefs = new Map()
-  Object.keys(teamsPlacesRaw).forEach((teamId) => {
-    const teamKey = resolveTeamRatingKey(teamId)
-    const normalizedTeamId = toStringId(teamId)
-    if (teamKey && normalizedTeamId) {
-      currentTeamRefs.set(teamKey, normalizedTeamId)
-    }
-  })
+  if (game?.participationMode !== 'player') {
+    Object.keys(teamsPlacesRaw).forEach((teamId) => {
+      const teamKey = resolveTeamRatingKey(teamId)
+      const normalizedTeamId = toStringId(teamId)
+      if (teamKey && normalizedTeamId) {
+        currentTeamRefs.set(teamKey, normalizedTeamId)
+      }
+    })
+  }
 
   if (!updateAllEntities && !currentUserRefs.size && !currentTeamRefs.size) {
     return { usersUpdated: 0, teamsUpdated: 0 }
@@ -419,6 +424,7 @@ const updateParticipantsRatings = async ({
       _id: 1,
       dateStart: 1,
       seasonId: 1,
+      participationMode: 1,
       result: 1,
     })
     .lean()

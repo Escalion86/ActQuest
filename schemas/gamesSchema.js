@@ -952,6 +952,11 @@ const gamesSchema = {
     type: Boolean,
     default: false,
   },
+  participationMode: {
+    type: String,
+    enum: ['team', 'player'],
+    default: 'team',
+  },
   startingPlace: {
     type: String,
     default: '',

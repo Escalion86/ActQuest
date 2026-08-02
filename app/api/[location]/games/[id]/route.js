@@ -405,6 +405,9 @@ const normalizeShowTasksAudience = (value) =>
 const normalizePaymentMode = (value) =>
   value === 'participant' ? 'participant' : 'team'
 
+const normalizeParticipationMode = (value) =>
+  value === 'player' ? 'player' : 'team'
+
 const buildHistoryActorFromSession = (session) => ({
   userId:
     session?.user?.globalUserId ??
@@ -607,6 +610,16 @@ const execute = (request, params) =>
       }
 
       if (req.method !== 'PUT') {
+        if (req.method === 'POST' && req.body?.data) {
+          const participationMode = normalizeParticipationMode(
+            req.body.data.participationMode,
+          )
+          req.body.data.participationMode = participationMode
+          if (participationMode === 'player') {
+            req.body.data.paymentMode = 'participant'
+            req.body.data.maxTeamPlayers = 1
+          }
+        }
         return CRUD('Games', req, res)
       }
 
@@ -729,6 +742,39 @@ const execute = (request, params) =>
             success: false,
             error: 'Недостаточно прав для изменения игры',
           })
+        }
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            updateData,
+            'participationMode',
+          )
+        ) {
+          const previousParticipationMode = normalizeParticipationMode(
+            existingGame?.participationMode,
+          )
+          const nextParticipationMode = normalizeParticipationMode(
+            updateData.participationMode,
+          )
+
+          if (previousParticipationMode !== nextParticipationMode) {
+            const hasRegistrations = await db
+              .model('GamesTeams')
+              .exists({ gameId: String(id) })
+            if (hasRegistrations) {
+              return res.status(409).json({
+                success: false,
+                error:
+                  'Нельзя изменить тип участия после регистрации первого участника.',
+              })
+            }
+          }
+
+          updateData.participationMode = nextParticipationMode
+          if (nextParticipationMode === 'player') {
+            updateData.paymentMode = 'participant'
+            updateData.maxTeamPlayers = 1
+          }
         }
 
         if (Object.prototype.hasOwnProperty.call(updateData, 'showTasksAudience')) {

@@ -119,7 +119,8 @@ export async function PUT(request, { params }) {
       : ''
   const image = typeof payload?.image === 'string' ? payload.image : null
   const open = typeof payload?.open === 'boolean' ? payload.open : true
-  const rawLocation = typeof payload?.location === 'string' ? payload.location : ''
+  const rawLocation =
+    typeof payload?.location === 'string' ? payload.location : ''
   const normalizedLocation = normalizeLocation(rawLocation)
   const allowedLocations = resolveAllowedLocations()
   const shouldUpdateLocation = normalizedLocation.length > 0
@@ -149,11 +150,19 @@ export async function PUT(request, { params }) {
     const TeamsModel = db.model('Teams')
     const TeamsUsersModel = db.model('TeamsUsers')
 
-    const team = await TeamsModel.findById(teamId).select({ _id: 1 }).lean()
+    const team = await TeamsModel.findById(teamId)
+      .select({ _id: 1, kind: 1 })
+      .lean()
     if (!team?._id) {
       return NextResponse.json(
         { success: false, error: 'Команда не найдена' },
         { status: 404 },
+      )
+    }
+    if (team?.kind === 'personal') {
+      return NextResponse.json(
+        { success: false, error: 'Персональная команда управляется системой' },
+        { status: 403 },
       )
     }
 
@@ -265,12 +274,18 @@ export async function DELETE(request, { params }) {
     const GamesModel = db.model('Games')
 
     const team = await TeamsModel.findById(teamId)
-      .select({ _id: 1, name: 1, location: 1 })
+      .select({ _id: 1, name: 1, location: 1, kind: 1 })
       .lean()
     if (!team?._id) {
       return NextResponse.json(
         { success: false, error: 'Команда не найдена' },
         { status: 404 },
+      )
+    }
+    if (team?.kind === 'personal') {
+      return NextResponse.json(
+        { success: false, error: 'Персональная команда управляется системой' },
+        { status: 403 },
       )
     }
 
@@ -331,11 +346,13 @@ export async function DELETE(request, { params }) {
       if (upcomingGames.length > 0) {
         const upcomingGamesNames = upcomingGames
           .slice(0, 3)
-          .map((game) =>
-            `«${typeof game?.name === 'string' && game.name.trim() ? game.name.trim() : 'Без названия'}»`,
+          .map(
+            (game) =>
+              `«${typeof game?.name === 'string' && game.name.trim() ? game.name.trim() : 'Без названия'}»`,
           )
           .join(', ')
-        const suffix = upcomingGames.length > 3 ? ` и еще ${upcomingGames.length - 3}` : ''
+        const suffix =
+          upcomingGames.length > 3 ? ` и еще ${upcomingGames.length - 3}` : ''
 
         return NextResponse.json(
           {
@@ -363,7 +380,6 @@ export async function DELETE(request, { params }) {
         { status: 400 },
       )
     }
-
     await logSiteEvent({
       db,
       type: 'team_deleted',
@@ -404,4 +420,3 @@ export async function DELETE(request, { params }) {
     )
   }
 }
-

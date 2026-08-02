@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import mongoose from 'mongoose'
 
-import storyLastBroadcastScenario from '../data/storyLastBroadcastScenario.js'
+import baseStoryLastBroadcastScenario from '../data/storyLastBroadcastScenario.js'
+import attachStoryLastBroadcastMedia from '../helpers/attachStoryLastBroadcastMedia.js'
 import { getStoryValidationErrors } from '../helpers/isGameHaveErrors.js'
 
 const loadEnv = (fileName) => {
@@ -22,6 +23,17 @@ const loadEnv = (fileName) => {
 
 loadEnv('.env.local')
 loadEnv('.env')
+
+const mediaManifestPath = path.resolve(
+  process.cwd(),
+  'data/storyLastBroadcastMediaManifest.json',
+)
+const storyLastBroadcastScenario = fs.existsSync(mediaManifestPath)
+  ? attachStoryLastBroadcastMedia(
+      baseStoryLastBroadcastScenario,
+      JSON.parse(fs.readFileSync(mediaManifestPath, 'utf8')),
+    )
+  : baseStoryLastBroadcastScenario
 
 const getArgument = (name) => {
   const prefix = `--${name}=`

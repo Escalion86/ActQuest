@@ -3,10 +3,7 @@ import ensureRole from '@helpers/ensureRole'
 import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
 import resolveEntityRating from '@helpers/resolveEntityRating'
 import fetchUserCompletedGamesCounts from '@server/fetchUserCompletedGamesCounts'
-import {
-  isCaptainRole,
-  normalizeTeamRoleForWrite,
-} from '@helpers/teamRoles'
+import { isCaptainRole, normalizeTeamRoleForWrite } from '@helpers/teamRoles'
 
 const DEFAULT_SORT = 'registration_desc'
 const ALLOWED_SORTS = new Set(['rating', 'games_desc', 'registration_desc'])
@@ -115,9 +112,7 @@ const normalizeUserForAdmin = ({
     })
 
   const userId = toStringId(userDoc?._id)
-  const playedGamesCount = userId
-    ? completedGamesCounts?.get(userId) ?? 0
-    : 0
+  const playedGamesCount = userId ? (completedGamesCounts?.get(userId) ?? 0) : 0
 
   const normalizedRoleRaw =
     typeof userDoc?.role === 'string' ? userDoc.role.trim().toLowerCase() : ''
@@ -431,7 +426,10 @@ const fetchAdminUsersForCabinet = async ({
     )
 
     const teamsDocsForAll = teamIdsForAll.length
-      ? await TeamsModel.find({ _id: { $in: teamIdsForAll } })
+      ? await TeamsModel.find({
+          _id: { $in: teamIdsForAll },
+          kind: { $ne: 'personal' },
+        })
           .select({ _id: 1, name: 1, updatedAt: 1, gameStats: 1 })
           .lean()
       : []
@@ -509,7 +507,10 @@ const fetchAdminUsersForCabinet = async ({
   )
 
   const teamsDocs = teamIds.length
-    ? await TeamsModel.find({ _id: { $in: teamIds } })
+    ? await TeamsModel.find({
+        _id: { $in: teamIds },
+        kind: { $ne: 'personal' },
+      })
         .select({ _id: 1, name: 1, updatedAt: 1, gameStats: 1 })
         .lean()
     : []

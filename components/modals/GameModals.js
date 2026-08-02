@@ -141,6 +141,7 @@ const GameModals = ({
   setRegisterGameId,
   isRegisterModalFromCard,
   registerModalGameName,
+  registerParticipationMode,
   shouldHideRegisterGameIdField,
   registerFeedback,
   isRegisterTeamsLoading,
@@ -347,6 +348,7 @@ const GameModals = ({
         setRegisterGameId={setRegisterGameId}
         isRegisterModalFromCard={isRegisterModalFromCard}
         registerModalGameName={registerModalGameName}
+        participationMode={registerParticipationMode}
         shouldHideRegisterGameIdField={shouldHideRegisterGameIdField}
         registerFeedback={registerFeedback}
         isRegisterTeamsLoading={isRegisterTeamsLoading}
@@ -652,6 +654,7 @@ GameModals.propTypes = {
   setRegisterGameId: PropTypes.func.isRequired,
   isRegisterModalFromCard: PropTypes.bool,
   registerModalGameName: PropTypes.string,
+  registerParticipationMode: PropTypes.oneOf(['team', 'player']),
   shouldHideRegisterGameIdField: PropTypes.bool,
   registerFeedback: registerFeedbackShape,
   isRegisterTeamsLoading: PropTypes.bool.isRequired,
@@ -773,6 +776,7 @@ GameModals.defaultProps = {
   location: null,
   isRegisterModalFromCard: false,
   registerModalGameName: '',
+  registerParticipationMode: 'team',
   shouldHideRegisterGameIdField: false,
   registerFeedback: null,
   currentUserId: null,

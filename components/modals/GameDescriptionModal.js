@@ -515,7 +515,9 @@ const GameDescriptionModal = ({
                   disabled={isRegistrationSubmitting}
                   className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/85 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
                 >
-                  Присоединиться к игре
+                  {selectedGame?.participationMode === 'player'
+                    ? 'Зарегистрироваться на игру'
+                    : 'Присоединиться к игре'}
                 </button>
               )}
               {canCancelRegistration && (
@@ -525,7 +527,9 @@ const GameDescriptionModal = ({
                   disabled={isRegistrationSubmitting}
                   className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
                 >
-                  Снять команду с игры
+                  {selectedGame?.participationMode === 'player'
+                    ? 'Отменить регистрацию'
+                    : 'Снять команду с игры'}
                 </button>
               )}
             </div>

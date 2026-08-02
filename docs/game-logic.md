@@ -24,6 +24,7 @@
 
 **Games** (`gamesSchema.js`)
 - Ключевые поля: `name`, `type` (classic/photo/story), `status`, `location`, `seasonId`
+- Участие: `participationMode` (`team` — командой, `player` — один игрок)
 - Временные: `dateStart`, `dateStartFact`, `dateEndFact`
 - Настройки игры: `taskDuration`, `cluesDuration`, `breakDuration`
 - Распределение заданий: `taskDistributionMode`, `taskDistributionTemplate`
@@ -34,6 +35,8 @@
 
 **Teams** (`teamsSchema.js`)
 - `name`, `name_lowered` (для поиска), `description`, `image`
+- `kind`: `regular` или системная `personal`; для `personal` заполнены
+  `ownerUserId` и `systemManaged`
 - `open` (открыта для вступления), `location`, `carSkin`
 - Рейтинг: `rating`, `ratingsByLocation`
 - Статистика: `gameStats`
@@ -60,6 +63,24 @@
 - Photo: `photos[taskIndex].photos`, `photos[taskIndex].checks`
 - Story: `storyProgress` (status, inventory, history)
 - Приквел: `prequelProgress` (найденные коды, неверные попытки, корректировки, story-эффекты)
+
+### Индивидуальное участие
+
+- При `Games.participationMode = player` пользователь регистрируется без выбора
+  команды.
+- Во время первой такой регистрации для пользователя лениво создаётся одна
+  персональная команда на город. Она называется по имени игрока и содержит
+  только владельца с ролью капитана.
+- Персональная команда повторно используется в следующих индивидуальных играх
+  этого города. Для командных игр она недоступна.
+- Игровой процесс продолжает работать через `GamesTeams`, поэтому classic,
+  photo и story не требуют отдельного движка.
+- Персональные команды скрыты из каталога команд и управляются системой.
+- Индивидуальная игра учитывается в рейтинге и статистике пользователя, но не
+  в рейтинге и статистике технической команды.
+- После появления первой регистрации изменить `participationMode` нельзя.
+- Для индивидуальной игры принудительно используются `paymentMode = participant`
+  и `maxTeamPlayers = 1`.
 
 **GameReviews** (`gameReviewsSchema.js`)
 - Один персональный отзыв участника на проведённую игру (`gameId + userId`).

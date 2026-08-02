@@ -1,6 +1,22 @@
 import { TEAM_CAR_SKIN_VALUES } from '@helpers/teamCarSkins'
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
 
 const teamsSchema = {
+  kind: {
+    type: String,
+    enum: ['regular', 'personal'],
+    default: 'regular',
+  },
+  ownerUserId: {
+    type: String,
+    default: null,
+    trim: true,
+    set: normalizeIdForStorage,
+  },
+  systemManaged: {
+    type: Boolean,
+    default: false,
+  },
   name: {
     type: String,
     required: true,

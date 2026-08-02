@@ -89,13 +89,19 @@ export async function POST(request) {
     const UsersModel = db.model('Users')
 
     const team = await TeamsModel.findById(teamId)
-      .select({ _id: 1, open: 1 })
+      .select({ _id: 1, open: 1, kind: 1 })
       .lean()
     if (!team?._id) {
       console.warn('[team-members][add][server] team_not_found', { teamId })
       return NextResponse.json(
         { success: false, error: 'Команда не найдена' },
         { status: 404 },
+      )
+    }
+    if (team?.kind === 'personal') {
+      return NextResponse.json(
+        { success: false, error: 'Состав персональной команды менять нельзя' },
+        { status: 403 },
       )
     }
 
@@ -137,7 +143,13 @@ export async function POST(request) {
       const targetUserDoc = await UsersModel.findOne({
         $or: [{ _id: targetUserIdRaw }, { globalUserId: targetUserIdRaw }],
       })
-        .select({ globalUserId: 1, telegramId: 1, name: 1, username: 1, role: 1 })
+        .select({
+          globalUserId: 1,
+          telegramId: 1,
+          name: 1,
+          username: 1,
+          role: 1,
+        })
         .lean()
 
       if (!targetUserDoc) {
@@ -169,9 +181,12 @@ export async function POST(request) {
         targetUserDoc.globalUserId || targetUserDoc._id,
       )
       if (!targetGlobalUserId) {
-        console.warn('[team-members][add][server] target_user_id_not_resolved', {
-          targetUserIdRaw,
-        })
+        console.warn(
+          '[team-members][add][server] target_user_id_not_resolved',
+          {
+            targetUserIdRaw,
+          },
+        )
         return NextResponse.json(
           { success: false, error: 'Не удалось идентифицировать пользователя' },
           { status: 400 },
@@ -238,15 +253,17 @@ export async function POST(request) {
       )
     }
 
-    if (!isElevatedRole(actorRole) && (isCaptainRole(role) || isLiaisonRole(role))) {
+    if (
+      !isElevatedRole(actorRole) &&
+      (isCaptainRole(role) || isLiaisonRole(role))
+    ) {
       console.warn('[team-members][add][server] forbidden_set_captain', {
         actorRole,
       })
       return NextResponse.json(
         {
           success: false,
-          error:
-            'Назначать капитана или связного может только капитан команды',
+          error: 'Назначать капитана или связного может только капитан команды',
         },
         { status: 403 },
       )

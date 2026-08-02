@@ -97,6 +97,7 @@ const fetchTeamsForCabinet = async ({
   offset = 0,
   limit = null,
   returnMeta = false,
+  includePersonal = false,
 }) => {
   if (!db) {
     return returnMeta ? { teams: [], hasMore: false } : []
@@ -138,6 +139,9 @@ const fetchTeamsForCabinet = async ({
   const baseFilter = Array.isArray(uniqueTeamIds)
     ? { _id: { $in: uniqueTeamIds } }
     : null
+  const personalTeamsFilter = includePersonal
+    ? null
+    : { kind: { $ne: 'personal' } }
   const searchFilter = normalizedSearchQuery
     ? {
         $or: [
@@ -166,6 +170,7 @@ const fetchTeamsForCabinet = async ({
     searchFilter,
     visibilityDbFilter,
     locationDbFilter,
+    personalTeamsFilter,
   ].filter(Boolean)
   const teamFilter =
     filterParts.length > 1 ? { $and: filterParts } : filterParts[0] || {}

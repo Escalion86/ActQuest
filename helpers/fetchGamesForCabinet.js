@@ -268,6 +268,7 @@ const fetchGamesForCabinet = async ({
       taskDistributionMode: 1,
       taskDistributionTemplate: 1,
       individualStart: 1,
+      participationMode: 1,
       isRated: 1,
       hidden: 1,
       showCreator: 1,

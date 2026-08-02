@@ -670,6 +670,8 @@ const normalizeGameForCabinet = (game) => {
       Array.isArray(game.tasks) ? game.tasks.length : 0,
     ),
     individualStart: ensureBoolean(game.individualStart, false),
+    participationMode:
+      game.participationMode === 'player' ? 'player' : 'team',
     isRated: ensureBoolean(game.isRated, true),
     hidden: ensureBoolean(game.hidden, true),
     showCreator: ensureBoolean(game.showCreator, true),
