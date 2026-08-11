@@ -4,11 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import PrequelStatusIcon from '@components/PrequelStatusIcon'
 import TiptapContentView from '@components/cabinet/TiptapContentView'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import requestApiJson from '@helpers/requestApiJson'
+import { canRegisterForGame } from '@helpers/gameRegistration'
+import StoryRecordsPanel from '@components/location-game/StoryRecordsPanel'
 import {
   buildDefaultPrequelProgress,
   isPrequelOpenForDate,
@@ -232,6 +235,48 @@ function GameEntryPage({
   )
   const canEnterGame = isGameStarted && !isGameFinished
   const showParticipantInfo = Boolean(participantTeamId && isParticipant)
+  const canSelfRegister =
+    !isParticipant &&
+    game?.participationMode === 'player' &&
+    canRegisterForGame(game)
+  const canViewStoryRecords =
+    game?.type === 'story' &&
+    (game?.recordsVisibility === 'public' ||
+      (game?.recordsVisibility === 'participants' && isParticipant))
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [registrationFeedback, setRegistrationFeedback] = useState('')
+
+  const handleSelfRegister = useCallback(async () => {
+    const gameId = game?._id ? String(game._id) : ''
+    if (!gameId || isRegistering) return
+
+    setIsRegistering(true)
+    setRegistrationFeedback('')
+    try {
+      const { json } = await requestApiJson(
+        `/api/cabinet/games/${encodeURIComponent(gameId)}/teams`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+          fallbackMessage: 'Не удалось начать игру',
+        },
+      )
+      const teamId = json?.data?.teamId ? String(json.data.teamId) : ''
+      if (isGameStarted && teamId) {
+        router.push(`/game/${encodeURIComponent(gameId)}/process/${encodeURIComponent(teamId)}`)
+        return
+      }
+      setRegistrationFeedback('Вы зарегистрированы на игру.')
+      router.refresh()
+    } catch (registrationError) {
+      setRegistrationFeedback(
+        registrationError?.message || 'Не удалось зарегистрироваться на игру.',
+      )
+    } finally {
+      setIsRegistering(false)
+    }
+  }, [game?._id, isGameStarted, isRegistering, router])
 
   const [prequelCode, setPrequelCode] = useState('')
   const [prequelFeedback, setPrequelFeedback] = useState(null)
@@ -761,17 +806,41 @@ function GameEntryPage({
               ) : null}
 
               {isGameStarted && !isParticipant ? (
-                <div className="px-4 py-4 border border-red-200 rounded-2xl bg-red-50 dark:bg-red-500/10 dark:border-red-500/40">
-                  <h2 className="text-lg font-semibold text-red-900 dark:text-red-200">
-                    Вы не участвуете в этой игре
-                  </h2>
-                  <p className="mt-2 text-sm text-red-800 dark:text-red-100">
-                    {game?.participationMode === 'player'
-                      ? 'Судя по нашим данным, вы не зарегистрированы на эту игру.'
-                      : 'Судя по нашим данным, вас нет ни в одной команде, зарегистрированной на игру.'}{' '}
-                    Если это ошибка, свяжитесь с организатором.
-                  </p>
-                </div>
+                canSelfRegister ? (
+                  <div className="px-4 py-4 border border-cyan-200 rounded-2xl bg-cyan-50 dark:bg-cyan-500/10 dark:border-cyan-500/40">
+                    <h2 className="text-lg font-semibold text-cyan-900 dark:text-cyan-100">
+                      Квест уже доступен
+                    </h2>
+                    <p className="mt-2 text-sm text-cyan-800 dark:text-cyan-100">
+                      Ваше личное время начнётся после перехода к прохождению.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSelfRegister}
+                      disabled={isRegistering}
+                      className="mt-4 inline-flex items-center justify-center rounded-xl bg-cyan-700 px-6 py-3 text-sm font-extrabold text-white transition hover:bg-cyan-800 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {isRegistering ? 'Начинаем…' : 'НАЧАТЬ ИГРУ'}
+                    </button>
+                    {registrationFeedback ? (
+                      <p className="mt-2 text-sm text-rose-700 dark:text-rose-200">
+                        {registrationFeedback}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="px-4 py-4 border border-red-200 rounded-2xl bg-red-50 dark:bg-red-500/10 dark:border-red-500/40">
+                    <h2 className="text-lg font-semibold text-red-900 dark:text-red-200">
+                      Вы не участвуете в этой игре
+                    </h2>
+                    <p className="mt-2 text-sm text-red-800 dark:text-red-100">
+                      {game?.participationMode === 'player'
+                        ? 'Запись на эту игру сейчас недоступна.'
+                        : 'Судя по нашим данным, вас нет ни в одной команде, зарегистрированной на игру.'}{' '}
+                      Если это ошибка, свяжитесь с организатором.
+                    </p>
+                  </div>
+                )
               ) : null}
 
               {showParticipantInfo ? (
@@ -805,6 +874,10 @@ function GameEntryPage({
                   ) : null}
                 </div>
               ) : null}
+              <StoryRecordsPanel
+                gameId={gameIdString}
+                enabled={Boolean(canViewStoryRecords && gameIdString)}
+              />
             </div>
           </div>
         </main>
@@ -833,6 +906,30 @@ function GameEntryPage({
       </Modal>
     </>
   )
+}
+
+GameEntryPage.propTypes = {
+  location: PropTypes.string.isRequired,
+  game: PropTypes.shape({
+    _id: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+    type: PropTypes.string,
+    participationMode: PropTypes.oneOf(['team', 'player']),
+    status: PropTypes.string,
+    registrationOpen: PropTypes.bool,
+    allowJoinAfterStart: PropTypes.bool,
+    individualStart: PropTypes.bool,
+    recordsVisibility: PropTypes.oneOf(['disabled', 'participants', 'public']),
+    storyConfig: PropTypes.shape({
+      startMode: PropTypes.oneOf(['common', 'individual']),
+    }),
+  }),
+  participantTeams: PropTypes.arrayOf(PropTypes.object).isRequired,
+  isParticipant: PropTypes.bool.isRequired,
+  isGameStarted: PropTypes.bool.isRequired,
+  isGameFinished: PropTypes.bool.isRequired,
+  status: PropTypes.string.isRequired,
+  session: PropTypes.object,
+  error: PropTypes.string,
 }
 
 export default GameEntryPage

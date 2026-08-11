@@ -13,6 +13,7 @@ import {
 import { useSession } from 'next-auth/react'
 
 import { LOCATIONS } from '@server/serverConstants'
+import pauseOtherAudioElements from '@helpers/audioPlayback'
 import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
 import { sendImage } from '@helpers/cloudinary'
 import { GameMessageHistory } from '@components/game/GameMessageThread'
@@ -369,7 +370,12 @@ const StoryMediaList = ({ media, directory }) => {
                   {title}
                 </p>
               ) : null}
-              <audio controls src={url} className="w-full" />
+              <audio
+                controls
+                src={url}
+                onPlay={(event) => pauseOtherAudioElements(event.currentTarget)}
+                className="w-full"
+              />
             </div>
           )
         }

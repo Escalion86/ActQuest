@@ -24,10 +24,12 @@ import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import {
+  buildTaskSequenceFromTemplate,
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionTemplate,
   validateTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
+import { getGameRegistrationError } from '@helpers/gameRegistration'
 
 const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
 
@@ -395,19 +397,6 @@ const hasGamePaymentAccess = ({ identity, game }) => {
 }
 
 const resolveMembershipFilter = ({ userId }) => (userId ? [{ userId }] : [])
-
-const ensureGameAllowsRegistration = (game) => {
-  const status = String(game?.status ?? '')
-    .trim()
-    .toLowerCase()
-  if (status !== 'active') {
-    return 'Запись на эту игру закрыта'
-  }
-  if (game?.registrationOpen === false) {
-    return 'Запись на эту игру закрыта'
-  }
-  return null
-}
 
 const buildTransactionResponse = (transaction) => ({
   _id: toStringId(transaction?._id),
@@ -981,10 +970,17 @@ export async function POST(request, { params }) {
       name: 1,
       status: 1,
       registrationOpen: 1,
+      allowJoinAfterStart: 1,
+      individualStart: 1,
+      storyConfig: 1,
+      type: 1,
       participationMode: 1,
       location: 1,
       dateStartFact: 1,
       dateEndFact: 1,
+      tasks: 1,
+      taskDistributionMode: 1,
+      taskDistributionTemplate: 1,
     })
     if (!game?._id) {
       return NextResponse.json(
@@ -994,7 +990,7 @@ export async function POST(request, { params }) {
     }
     const normalizedResolvedGameId = toStringId(game._id)
 
-    const registrationError = ensureGameAllowsRegistration(game)
+    const registrationError = getGameRegistrationError(game)
     if (registrationError) {
       return NextResponse.json(
         { success: false, error: registrationError },
@@ -1186,10 +1182,38 @@ export async function POST(request, { params }) {
       game,
     })
 
-    const created = await GamesTeamsModel.create({
+    const createData = {
       gameId: normalizedResolvedGameId,
       teamId,
-    })
+    }
+    if (
+      String(game?.status || '').toLowerCase() === 'started' &&
+      game?.type !== 'story' &&
+      game?.taskDistributionMode === 'random'
+    ) {
+      const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
+      const template = normalizeStoredTaskDistributionTemplate(
+        game?.taskDistributionTemplate,
+        tasksCount,
+      )
+      const validation = validateTaskDistributionTemplate(template, tasksCount)
+      if (!validation.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              validation.messages[0] ||
+              'Не удалось подготовить задания для новой команды',
+          },
+          { status: 409 },
+        )
+      }
+      createData.taskSequence = buildTaskSequenceFromTemplate(template)
+      createData.taskSequenceSource = 'game_template'
+      createData.taskSequenceGeneratedAt = new Date()
+    }
+
+    const created = await GamesTeamsModel.create(createData)
 
     if (isScheduledGameForTeamEvent(game)) {
       await logSiteEvent({

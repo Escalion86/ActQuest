@@ -16,6 +16,7 @@ import { NodeSelection } from '@tiptap/pm/state'
 
 import Modal from '@components/Modal'
 import SystemPromptMdEditor from '@components/cabinet/SystemPromptMdEditor'
+import pauseOtherAudioElements from '@helpers/audioPlayback'
 import { sendImage } from '@helpers/cloudinary'
 import { LOCATIONS } from '@server/serverConstants'
 
@@ -882,7 +883,10 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     }
     const onTime = () =>
       setCurrentTime(Number.isFinite(audio.currentTime) ? audio.currentTime : 0)
-    const onPlay = () => setIsPlaying(true)
+    const onPlay = () => {
+      pauseOtherAudioElements(audio)
+      setIsPlaying(true)
+    }
     const onPause = () => setIsPlaying(false)
     const onVolume = () =>
       setVolume(Number.isFinite(audio.volume) ? audio.volume : 1)
@@ -939,19 +943,7 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     if (!audio) return
 
     if (audio.paused) {
-      const editorRoot = getEditorViewDomSafe(editor)
-      if (editorRoot instanceof HTMLElement) {
-        editorRoot
-          .querySelectorAll('audio[data-aq-audio-native="true"]')
-          .forEach((nodeElement) => {
-            if (
-              nodeElement instanceof HTMLAudioElement &&
-              nodeElement !== audio
-            ) {
-              nodeElement.pause()
-            }
-          })
-      }
+      pauseOtherAudioElements(audio)
       void audio.play().catch(() => {})
       return
     }

@@ -554,9 +554,11 @@ const CabinetLayout = ({
         return
       }
 
-      // Перенаправить на страницу профиля
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      router.push('/cabinet/profile')
+      // Cookie уже удалена вместе с ответом API. Обновляем клиентский кэш
+      // NextAuth и серверные данные текущего кабинета без ручной перезагрузки.
+      await update()
+      router.replace('/cabinet/profile')
+      router.refresh()
     } catch (error) {
       console.error('Ошибка при выходе из режима impersonate:', error)
     }

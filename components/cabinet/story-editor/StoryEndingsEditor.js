@@ -6,6 +6,7 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import StoryAudioEditor from '@components/cabinet/story-editor/StoryAudioEditor'
 import {
   getStoryCoverImage,
   mergeStoryEditorMedia,
@@ -301,6 +302,19 @@ const StoryEndingsEditor = ({
                   descriptionRich: typeof html === 'string' ? html : '',
                   media: mergeStoryEditorMedia(ending.media, media),
                 }))}
+              />
+            </div>
+
+            <div className="mt-4">
+              <StoryAudioEditor
+                media={selectedEnding.media}
+                onChange={(media) => onUpdateEnding(selectedEnding.id, (ending) => ({
+                  ...ending,
+                  media,
+                }))}
+                directory={`games/${gameId || 'draft'}/story/endings/${selectedEnding.id}/audio`}
+                disabled={disabled}
+                label="Аудиодорожки концовки"
               />
             </div>
 

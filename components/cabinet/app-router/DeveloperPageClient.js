@@ -58,7 +58,8 @@ const broadcastLocationOptions = [
 
 const DeveloperPage = ({ session: initialSession }) => {
   const router = useRouter()
-  const { activeSession } = useMergedSession(initialSession)
+  const { activeSession, update: updateSession } =
+    useMergedSession(initialSession)
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [isExportingGameTasks, setIsExportingGameTasks] = useState(false)
   const [isClosingFinished, setIsClosingFinished] = useState(false)
@@ -777,11 +778,13 @@ const DeveloperPage = ({ session: initialSession }) => {
         )
       }
 
-      // Подождать, чтобы куки установилась на сервере
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      // Cookie уже установлена вместе с ответом API. Сразу обновляем клиентский
+      // кэш NextAuth, иначе до перезагрузки страницы в нём остаётся разработчик.
+      await updateSession()
 
       // Перенаправить на страницу профиля целевого пользователя
-      router.push('/cabinet/profile')
+      router.replace('/cabinet/profile')
+      router.refresh()
     } catch (requestError) {
       setImpersonateError(
         requestError?.message || 'Ошибка переключения пользователя',
@@ -813,11 +816,12 @@ const DeveloperPage = ({ session: initialSession }) => {
         throw new Error(json?.error || 'Не удалось выйти из режима просмотра')
       }
 
-      // Подождать, чтобы куки удалилась на сервере
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      // Синхронизировать SessionProvider после удаления cookie.
+      await updateSession()
 
       // Перенаправить на страницу профиля
-      router.push('/cabinet/profile')
+      router.replace('/cabinet/profile')
+      router.refresh()
     } catch (requestError) {
       setImpersonateError(
         requestError?.message || 'Ошибка выхода из режима просмотра',

@@ -26,6 +26,7 @@ import { canManageGame } from '@server/gameHistory/gameManageAccess'
 import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 import protectStoryScenarioUpdate from '@helpers/protectStoryScenarioUpdate'
 import { resolveParticipationMetricsTransition } from '@helpers/gameParticipation'
+import { isIndividualGameStart } from '@helpers/gameRegistration'
 
 const buildResetPayload = ({
   clearTimeAddings = true,
@@ -704,6 +705,61 @@ const execute = (request, params) =>
         const updateData = protectStoryScenarioUpdate({
           updateData: { ...updatePayload, status: resolvedStatus },
         })
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'individualStart')) {
+          updateData.individualStart = Boolean(updateData.individualStart)
+          if (existingGame?.type === 'story') {
+            const previousIndividualStart = isIndividualGameStart(existingGame)
+            if (
+              previousStatus !== 'active' &&
+              previousIndividualStart !== updateData.individualStart
+            ) {
+              return res.status(409).json({
+                success: false,
+                error:
+                  'Нельзя изменить режим старта story-квеста после его запуска.',
+              })
+            }
+            updateData.storyConfig = {
+              ...(existingGame?.storyConfig?.toObject
+                ? existingGame.storyConfig.toObject()
+                : existingGame?.storyConfig || {}),
+              startMode: updateData.individualStart ? 'individual' : 'common',
+            }
+          }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'recordsVisibility')) {
+          updateData.recordsVisibility = ['participants', 'public'].includes(
+            updateData.recordsVisibility,
+          )
+            ? updateData.recordsVisibility
+            : 'disabled'
+        }
+        if (Object.prototype.hasOwnProperty.call(updateData, 'recordsShowNames')) {
+          updateData.recordsShowNames = Boolean(updateData.recordsShowNames)
+        }
+        if (Object.prototype.hasOwnProperty.call(updateData, 'allowJoinAfterStart')) {
+          updateData.allowJoinAfterStart = Boolean(updateData.allowJoinAfterStart)
+        }
+
+        const effectiveGameForRegistration = {
+          ...(existingGame?.toObject ? existingGame.toObject() : existingGame),
+          ...updateData,
+        }
+        if (
+          updateData.allowJoinAfterStart &&
+          !isIndividualGameStart(effectiveGameForRegistration)
+        ) {
+          return res.status(400).json({
+            success: false,
+            error:
+              'Присоединение после запуска доступно только при индивидуальном старте.',
+          })
+        }
+        if (!isIndividualGameStart(effectiveGameForRegistration)) {
+          updateData.allowJoinAfterStart = false
+        }
 
         const hasAgentsUpdate = Object.prototype.hasOwnProperty.call(
           updateData,

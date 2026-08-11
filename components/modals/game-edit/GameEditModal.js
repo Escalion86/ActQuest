@@ -8,6 +8,7 @@ import AmountStepperInput, {
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetNumberField from '@components/cabinet/CabinetNumberField'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import ModalSection from '@components/modals/ModalSection'
 
@@ -88,6 +89,7 @@ const GameEditModal = ({
 }) => {
   const isClosedGame =
     String(selectedGame?.status || '').toLowerCase() === 'closed'
+  const isStoryGame = selectedGame?.type === 'story'
   const showTasksAudience =
     selectedGame?.showTasksAudience === 'participants' ? 'participants' : 'all'
   const renderShowTasksAudienceToggle = (idPrefix) => {
@@ -459,6 +461,60 @@ const GameEditModal = ({
             )}
             {!isClosedGame && (
               <NeonCheckbox
+                id="game-allow-join-after-start"
+                checked={Boolean(selectedGame.allowJoinAfterStart)}
+                onChange={(eventOrChecked) => {
+                  const checked = getCheckboxChecked(eventOrChecked)
+                  updateSelectedGame((currentGame) => ({
+                    allowJoinAfterStart: checked,
+                    ...(checked ? { individualStart: true } : {}),
+                    ...(checked && currentGame?.type === 'story'
+                      ? {
+                          storyConfig: {
+                            ...currentGame.storyConfig,
+                            startMode: 'individual',
+                          },
+                        }
+                      : {}),
+                  }))
+                }}
+                label="Разрешить присоединение после запуска"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
+            )}
+            {isStoryGame ? (
+              <div className="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <CabinetSelectField
+                  id="game-records-visibility"
+                  label="Статистика рекордов"
+                  value={selectedGame.recordsVisibility || 'disabled'}
+                  onChange={(event) =>
+                    updateSelectedGame({ recordsVisibility: event.target.value })
+                  }
+                  labelClassName={fieldLabelClassName}
+                  selectClassName={fieldInputClassName}
+                >
+                  <option value="disabled">Не показывать</option>
+                  <option value="participants">Только участникам</option>
+                  <option value="public">Всем</option>
+                </CabinetSelectField>
+                {selectedGame.recordsVisibility !== 'disabled' ? (
+                  <NeonCheckbox
+                    id="game-records-show-names"
+                    checked={Boolean(selectedGame.recordsShowNames ?? true)}
+                    onChange={(eventOrChecked) =>
+                      updateSelectedGame({
+                        recordsShowNames: getCheckboxChecked(eventOrChecked),
+                      })
+                    }
+                    label="Показывать названия команд и имена игроков"
+                    labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                  />
+                ) : null}
+              </div>
+            ) : null}
+            {!isClosedGame && (
+              <NeonCheckbox
                 id="game-show-enter-button"
                 checked={Boolean(selectedGame.showEnterButton)}
                 onChange={(eventOrChecked) => {
@@ -795,6 +851,12 @@ GameEditModal.propTypes = {
     showTasks: PropTypes.bool,
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
+    allowJoinAfterStart: PropTypes.bool,
+    recordsVisibility: PropTypes.oneOf(['disabled', 'participants', 'public']),
+    recordsShowNames: PropTypes.bool,
+    storyConfig: PropTypes.shape({
+      startMode: PropTypes.oneOf(['common', 'individual']),
+    }),
     participationMode: PropTypes.oneOf(['team', 'player']),
     teamsCount: PropTypes.number,
     maxTeamPlayers: PropTypes.number,

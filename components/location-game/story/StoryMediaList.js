@@ -2,6 +2,8 @@
 
 import PropTypes from 'prop-types'
 
+import pauseOtherAudioElements from '@helpers/audioPlayback'
+
 const StoryMediaList = ({ media, directory }) => {
   const items = Array.isArray(media) ? media : []
   if (items.length === 0) return null
@@ -17,7 +19,13 @@ const StoryMediaList = ({ media, directory }) => {
           return (
             <div key={key} className="rounded-2xl border border-cyan-300/40 p-3">
               {title ? <p className="mb-2 text-sm font-semibold">{title}</p> : null}
-              <audio controls preload="none" src={url} className="w-full" />
+              <audio
+                controls
+                preload="none"
+                src={url}
+                onPlay={(event) => pauseOtherAudioElements(event.currentTarget)}
+                className="w-full"
+              />
             </div>
           )
         }

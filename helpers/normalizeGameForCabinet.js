@@ -669,7 +669,10 @@ const normalizeGameForCabinet = (game) => {
       game.taskDistributionTemplate,
       Array.isArray(game.tasks) ? game.tasks.length : 0,
     ),
-    individualStart: ensureBoolean(game.individualStart, false),
+    individualStart:
+      game?.type === 'story'
+        ? game?.storyConfig?.startMode === 'individual'
+        : ensureBoolean(game.individualStart, false),
     participationMode:
       game.participationMode === 'player' ? 'player' : 'team',
     isRated: ensureBoolean(game.isRated, true),
@@ -682,6 +685,13 @@ const normalizeGameForCabinet = (game) => {
     showTasksCountInGame: ensureBoolean(game.showTasksCountInGame, false),
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),
+    allowJoinAfterStart: ensureBoolean(game.allowJoinAfterStart, false),
+    recordsVisibility: ['participants', 'public'].includes(
+      game.recordsVisibility,
+    )
+      ? game.recordsVisibility
+      : 'disabled',
+    recordsShowNames: ensureBoolean(game.recordsShowNames, true),
     maxTeamPlayers: ensureNullableNumber(game.maxTeamPlayers),
     paymentMode: game.paymentMode === 'participant' ? 'participant' : 'team',
     prices: normalizePrices(game.prices),

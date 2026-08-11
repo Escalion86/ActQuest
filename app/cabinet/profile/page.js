@@ -17,6 +17,13 @@ export default async function CabinetProfilePage() {
   }
 
   const initialProfile = await loadCabinetAppProfile(session)
+  const profileOwnerId =
+    session.user.globalUserId ?? session.user._id ?? session.user.id ?? 'profile'
 
-  return <ProfilePageClient initialProfile={initialProfile} />
+  return (
+    <ProfilePageClient
+      key={String(profileOwnerId)}
+      initialProfile={initialProfile}
+    />
+  )
 }

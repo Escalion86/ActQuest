@@ -561,9 +561,14 @@ const canBroadcastByGameStatus = (status) => {
   return normalized !== 'canceled' && normalized !== 'closed'
 }
 
-const canJoinGameByStatus = (status) =>
-  (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
-  'active'
+const canJoinGameByStatus = (status, game) => {
+  const normalized =
+    typeof status === 'string' ? status.trim().toLowerCase() : String(status)
+  return (
+    normalized === 'active' ||
+    (normalized === 'started' && Boolean(game?.allowJoinAfterStart))
+  )
+}
 
 const getUserParticipationTeams = (game) =>
   (Array.isArray(game?.userParticipationTeams)
@@ -1032,6 +1037,13 @@ const buildUpdatePayload = (game) => {
     showTasksCountInGame: Boolean(game.showTasksCountInGame),
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
+    allowJoinAfterStart: Boolean(game.allowJoinAfterStart),
+    recordsVisibility: ['participants', 'public'].includes(
+      game.recordsVisibility,
+    )
+      ? game.recordsVisibility
+      : 'disabled',
+    recordsShowNames: Boolean(game.recordsShowNames ?? true),
     maxTeamPlayers: toNullableNumber(game.maxTeamPlayers),
     paymentMode: game.paymentMode === 'participant' ? 'participant' : 'team',
     prices,
@@ -2871,6 +2883,9 @@ const GamesPage = ({
         showTasksCountInGame: false,
         hideResult: false,
         registrationOpen: true,
+        allowJoinAfterStart: false,
+        recordsVisibility: 'disabled',
+        recordsShowNames: true,
         maxTeamPlayers: null,
         paymentMode: 'team',
         prices: [],
@@ -3059,6 +3074,17 @@ const GamesPage = ({
           baseDraft.hideResult = Boolean(normalizedSource.hideResult)
           baseDraft.registrationOpen = Boolean(
             normalizedSource.registrationOpen ?? true,
+          )
+          baseDraft.allowJoinAfterStart = Boolean(
+            normalizedSource.allowJoinAfterStart,
+          )
+          baseDraft.recordsVisibility = ['participants', 'public'].includes(
+            normalizedSource.recordsVisibility,
+          )
+            ? normalizedSource.recordsVisibility
+            : 'disabled'
+          baseDraft.recordsShowNames = Boolean(
+            normalizedSource.recordsShowNames ?? true,
           )
         }
 
@@ -6424,7 +6450,7 @@ const GamesPage = ({
       )
       const canJoinGame =
         !hasParticipation &&
-        canJoinGameByStatus(visibleStatus) &&
+        canJoinGameByStatus(visibleStatus, game) &&
         Boolean(game?.registrationOpen ?? true) &&
         Boolean(currentUserDbId)
       const canCancelRegistration =
@@ -6958,7 +6984,7 @@ const GamesPage = ({
       )
       const canJoinGame =
         !hasParticipation &&
-        canJoinGameByStatus(visibleStatus) &&
+        canJoinGameByStatus(visibleStatus, game) &&
         Boolean(game?.registrationOpen ?? true) &&
         Boolean(currentUserDbId)
       const canCancelRegistration =
@@ -7638,7 +7664,7 @@ const GamesPage = ({
     () =>
       Boolean(selectedGame?.id) &&
       selectedGameParticipationTeams.length === 0 &&
-      canJoinGameByStatus(selectedGame?.status) &&
+      canJoinGameByStatus(selectedGame?.status, selectedGame) &&
       Boolean(selectedGame?.registrationOpen ?? true) &&
       Boolean(currentUserDbId),
     [currentUserDbId, selectedGame, selectedGameParticipationTeams.length],
@@ -8562,6 +8588,13 @@ GamesPage.propTypes = {
       showTasksCountInGame: PropTypes.bool,
       hideResult: PropTypes.bool,
       registrationOpen: PropTypes.bool,
+      allowJoinAfterStart: PropTypes.bool,
+      recordsVisibility: PropTypes.oneOf([
+        'disabled',
+        'participants',
+        'public',
+      ]),
+      recordsShowNames: PropTypes.bool,
       maxTeamPlayers: PropTypes.number,
       paymentMode: PropTypes.oneOf(['team', 'participant']),
       prices: PropTypes.arrayOf(priceShape),

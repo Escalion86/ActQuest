@@ -3,9 +3,12 @@ import test from 'node:test'
 
 import buildStoryClientConfig from '../helpers/buildStoryClientConfig.js'
 import { buildStoryInvestigationGraph } from '../helpers/buildStoryInvestigationGraph.js'
+import pauseOtherAudioElements from '../helpers/audioPlayback.js'
 import {
+  getStoryAudioMedia,
   getStoryCoverImage,
   mergeStoryEditorMedia,
+  setStoryAudioMedia,
   setStoryCoverImage,
 } from '../helpers/storyCoverMedia.js'
 import lastBroadcastScenario from '../data/storyLastBroadcastScenario.js'
@@ -45,10 +48,65 @@ test('обложка story-сущности сохраняется отдель�
         url: '/cover.jpg',
         title: '',
       },
+      { id: 'audio-1', type: 'audio', url: '/audio.mp3' },
       { id: 'image-1', type: 'image', url: '/inside.jpg' },
     ],
   )
+  assert.deepEqual(getStoryAudioMedia(withCover), [
+    { id: 'audio-1', type: 'audio', url: '/audio.mp3' },
+  ])
+  assert.deepEqual(
+    setStoryAudioMedia(withCover, [
+      { id: 'audio-2', type: 'audio', url: '/replacement.mp3' },
+    ]),
+    [
+      {
+        id: 'story-cover-image',
+        type: 'image',
+        url: '/cover.jpg',
+        title: '',
+      },
+      { id: 'audio-2', type: 'audio', url: '/replacement.mp3' },
+    ],
+  )
   assert.equal(getStoryCoverImage(setStoryCoverImage(withCover, '')), '')
+})
+
+test('запуск аудиодорожки останавливает остальные проигрыватели', () => {
+  const previousDocument = globalThis.document
+  const previousAudioElement = globalThis.HTMLAudioElement
+
+  class FakeAudioElement {
+    constructor(paused) {
+      this.paused = paused
+      this.pauseCalls = 0
+    }
+
+    pause() {
+      this.paused = true
+      this.pauseCalls += 1
+    }
+  }
+
+  const playingAudio = new FakeAudioElement(false)
+  const currentAudio = new FakeAudioElement(false)
+  const pausedAudio = new FakeAudioElement(true)
+  globalThis.HTMLAudioElement = FakeAudioElement
+  globalThis.document = {
+    querySelectorAll: () => [playingAudio, currentAudio, pausedAudio],
+  }
+
+  try {
+    pauseOtherAudioElements(currentAudio)
+    assert.equal(playingAudio.pauseCalls, 1)
+    assert.equal(currentAudio.pauseCalls, 0)
+    assert.equal(pausedAudio.pauseCalls, 0)
+  } finally {
+    if (previousDocument === undefined) delete globalThis.document
+    else globalThis.document = previousDocument
+    if (previousAudioElement === undefined) delete globalThis.HTMLAudioElement
+    else globalThis.HTMLAudioElement = previousAudioElement
+  }
 })
 
 test('карта расследования строит причинную цепочку Soundcheck 17:21', () => {

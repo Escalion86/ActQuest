@@ -9,6 +9,7 @@ import Modal from '@components/Modal'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import InvestigationFlowEditor from '@components/cabinet/story-editor/InvestigationFlowEditor'
+import StoryAudioEditor from '@components/cabinet/story-editor/StoryAudioEditor'
 import StoryEntityCatalogModal from '@components/cabinet/story-editor/StoryEntityCatalogModal'
 import StoryEndingsEditor from '@components/cabinet/story-editor/StoryEndingsEditor'
 import StorySettingsEditor from '@components/cabinet/story-editor/StorySettingsEditor'
@@ -1566,6 +1567,15 @@ const StoryEditorPageClient = ({ session: _session }) => {
                       media: mergeStoryEditorMedia(node.media, media),
                     }))
                   }
+                />
+                <StoryAudioEditor
+                  media={editingNode.media}
+                  onChange={(media) =>
+                    updateNode(editingNode.id, (node) => ({ ...node, media }))
+                  }
+                  directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/audio`}
+                  disabled={isScenarioLocked}
+                  label="Аудиодорожки локации"
                 />
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">

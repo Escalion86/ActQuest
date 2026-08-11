@@ -11,6 +11,7 @@ import {
   getGamePrequels,
   getGameTeamPrequelProgresses,
 } from '@helpers/normalizePrequel'
+import { isIndividualGameStart } from '@helpers/gameRegistration'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -78,10 +79,7 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
   const gameTasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
-  const isIndividualStart =
-    game.type === 'story'
-      ? game?.storyConfig?.startMode === 'individual'
-      : Boolean(game.individualStart)
+  const isIndividualStart = isIndividualGameStart(game)
 
   const resetResults = await Promise.all(
     gameTeams.map((team) => {

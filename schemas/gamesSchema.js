@@ -990,6 +990,19 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  allowJoinAfterStart: {
+    type: Boolean,
+    default: false,
+  },
+  recordsVisibility: {
+    type: String,
+    enum: ['disabled', 'participants', 'public'],
+    default: 'disabled',
+  },
+  recordsShowNames: {
+    type: Boolean,
+    default: true,
+  },
   maxTeamPlayers: {
     type: Number,
     default: null,

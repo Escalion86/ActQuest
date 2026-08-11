@@ -7,6 +7,8 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import InvestigationScenarioEditors from '@components/cabinet/story-editor/InvestigationScenarioEditors'
+import StoryAudioEditor from '@components/cabinet/story-editor/StoryAudioEditor'
+import { mergeStoryEditorMedia } from '@helpers/storyCoverMedia'
 
 const TaskRichEditor = dynamic(
   () => import('@components/cabinet/TaskRichEditor'),
@@ -922,10 +924,20 @@ const InvestigationFlowEditor = ({
                 placeholder="Реплика персонажа, результат осмотра или анализа."
                 onChange={({ html, media }) => patchInteraction(selectedInteraction.id, {
                   responseRich: typeof html === 'string' ? html : '',
-                  media: Array.isArray(media) ? media : [],
+                  media: mergeStoryEditorMedia(selectedInteraction.media, media),
                 })}
               />
             </div>
+          </div>
+
+          <div className="mt-4">
+            <StoryAudioEditor
+              media={selectedInteraction.media}
+              onChange={(media) => patchInteraction(selectedInteraction.id, { media })}
+              directory={`games/${gameId || 'draft'}/story/interactions/${selectedInteraction.id}/audio`}
+              disabled={disabled}
+              label="Аудиодорожки ответа"
+            />
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-2">

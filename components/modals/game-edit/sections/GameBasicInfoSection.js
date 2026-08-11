@@ -59,6 +59,10 @@ const GameBasicInfoSection = ({
       : []
     ).map((organizer) => [organizer.id, organizer]),
   )
+  const isStoryGame = selectedGame?.type === 'story'
+  const hasIndividualStart = isStoryGame
+    ? selectedGame?.storyConfig?.startMode === 'individual'
+    : Boolean(selectedGame.individualStart)
 
   return (
     <ModalSection>
@@ -148,14 +152,22 @@ const GameBasicInfoSection = ({
 
       <NeonCheckbox
         id="game-individual-start"
-        checked={Boolean(selectedGame.individualStart)}
-        onChange={(eventOrChecked) =>
-          debugCheckboxUpdate(
-            'individualStart',
-            getCheckboxChecked(eventOrChecked),
-            (checked) => ({ individualStart: checked }),
-          )
-        }
+        checked={hasIndividualStart}
+        onChange={(eventOrChecked) => {
+          const checked = getCheckboxChecked(eventOrChecked)
+          updateSelectedGame((currentGame) => ({
+            individualStart: checked,
+            ...(currentGame?.type === 'story'
+              ? {
+                  storyConfig: {
+                    ...currentGame.storyConfig,
+                    startMode: checked ? 'individual' : 'common',
+                  },
+                }
+              : {}),
+            ...(!checked ? { allowJoinAfterStart: false } : {}),
+          }))
+        }}
         label="Индивидуальный старт для команд"
         labelClassName="text-sm text-slate-600 dark:text-slate-200"
       />
@@ -332,6 +344,10 @@ GameBasicInfoSection.propTypes = {
     location: PropTypes.string,
     dateStart: PropTypes.string,
     individualStart: PropTypes.bool,
+    allowJoinAfterStart: PropTypes.bool,
+    storyConfig: PropTypes.shape({
+      startMode: PropTypes.oneOf(['common', 'individual']),
+    }),
     startingPlace: PropTypes.string,
     finishingPlace: PropTypes.string,
     showFinishingPlace: PropTypes.bool,
