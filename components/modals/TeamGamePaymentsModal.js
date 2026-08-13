@@ -106,6 +106,7 @@ const TeamGamePaymentsModal = ({
   const [isLoading, setIsLoading] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeletingId, setIsDeletingId] = useState(null)
   const [isTogglingPaidGame, setIsTogglingPaidGame] = useState(false)
   const [draft, setDraft] = useState({
     amount: '',
@@ -167,6 +168,7 @@ const TeamGamePaymentsModal = ({
       setIsLoading(false)
       setIsCreateOpen(false)
       setIsSaving(false)
+      setIsDeletingId(null)
       setIsTogglingPaidGame(false)
       setDraft({
         amount: '',
@@ -189,11 +191,11 @@ const TeamGamePaymentsModal = ({
   }, [isOpen, loadPayments, target])
 
   const handleClose = useCallback(() => {
-    if (isSaving || isTogglingPaidGame) {
+    if (isSaving || isDeletingId || isTogglingPaidGame) {
       return
     }
     onClose()
-  }, [isSaving, isTogglingPaidGame, onClose])
+  }, [isDeletingId, isSaving, isTogglingPaidGame, onClose])
 
   const handleOpenCreate = useCallback(() => {
     const members = Array.isArray(localTarget?.members) ? localTarget.members : []
@@ -280,6 +282,52 @@ const TeamGamePaymentsModal = ({
     selectedGame?.id,
   ])
 
+  const handleDeletePayment = useCallback(
+    async (transaction) => {
+      if (!selectedGame?.id || !localTarget?.gameTeamId || !transaction?._id) {
+        return
+      }
+
+      const confirmed = window.confirm(
+        `Удалить транзакцию на сумму ${formatMoney(transaction.amount)}? Это действие нельзя отменить.`,
+      )
+      if (!confirmed) return
+
+      setIsDeletingId(transaction._id)
+      setError('')
+
+      try {
+        const { json } = await requestApiJson(
+          `/api/cabinet/games/${encodeURIComponent(String(selectedGame.id))}/teams`,
+          {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'delete_team_payment',
+              gameTeamId: localTarget.gameTeamId,
+              transactionId: transaction._id,
+            }),
+            fallbackMessage: 'Не удалось удалить транзакцию',
+          },
+        )
+        const data = json?.data ?? {}
+        setTransactions(Array.isArray(data.transactions) ? data.transactions : [])
+        setTotalPaid(Number(data.totalPaid) || 0)
+        setTotalDiscount(Number(data.totalDiscount) || 0)
+        setTotalCredited(Number(data.totalCredited) || 0)
+        await onPaymentsChanged?.({
+          gameTeamId: localTarget.gameTeamId,
+          totalPaid: Number(data.totalPaid) || 0,
+        })
+      } catch (deleteError) {
+        setError(deleteError?.message || 'Не удалось удалить транзакцию')
+      } finally {
+        setIsDeletingId(null)
+      }
+    },
+    [localTarget?.gameTeamId, onPaymentsChanged, selectedGame?.id],
+  )
+
   const handleTogglePaidGame = useCallback(
     async (event) => {
       if (!selectedGame?.id || !localTarget?.gameTeamId) {
@@ -348,7 +396,7 @@ const TeamGamePaymentsModal = ({
             type="button"
             className="aq-modal-btn aq-modal-btn-secondary"
             onClick={handleClose}
-            disabled={isSaving || isTogglingPaidGame}
+            disabled={isSaving || Boolean(isDeletingId) || isTogglingPaidGame}
           >
             Закрыть
           </button>
@@ -431,17 +479,29 @@ const TeamGamePaymentsModal = ({
                           )}
                         </p>
                       </div>
-                      <div
-                        className={`text-sm font-semibold ${
-                          transaction.paymentMethod === 'discount'
-                            ? 'text-violet-700 dark:text-violet-200'
-                            : 'text-emerald-700 dark:text-emerald-200'
-                        }`}
-                      >
-                        {transaction.paymentMethod === 'discount'
-                          ? 'Скидка '
-                          : ''}
-                        {formatMoney(transaction.amount)}
+                      <div className="flex items-center gap-3 sm:justify-end">
+                        <div
+                          className={`text-sm font-semibold ${
+                            transaction.paymentMethod === 'discount'
+                              ? 'text-violet-700 dark:text-violet-200'
+                              : 'text-emerald-700 dark:text-emerald-200'
+                          }`}
+                        >
+                          {transaction.paymentMethod === 'discount'
+                            ? 'Скидка '
+                            : ''}
+                          {formatMoney(transaction.amount)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePayment(transaction)}
+                          disabled={Boolean(isDeletingId)}
+                          className="cursor-pointer rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/40 dark:text-rose-200 dark:hover:bg-rose-500/15"
+                        >
+                          {isDeletingId === transaction._id
+                            ? 'Удаляем…'
+                            : 'Удалить'}
+                        </button>
                       </div>
                     </div>
                   </li>

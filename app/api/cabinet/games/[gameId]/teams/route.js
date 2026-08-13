@@ -6,7 +6,10 @@ import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
 import buildGameResultComputed from '@server/buildGameResultComputed'
 import { buildGameTeamPaymentsSummary } from '@server/gameTeamPaymentsSummary'
-import { createTransaction } from '@server/transactionsService'
+import {
+  createTransaction,
+  deleteTransaction,
+} from '@server/transactionsService'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import { findOrCreatePersonalTeam, isPersonalTeam } from '@server/personalTeams'
@@ -775,6 +778,79 @@ const handleTeamPaymentCreate = async ({ payload, params, session }) => {
   }
 }
 
+const handleTeamPaymentDelete = async ({ payload, params, session }) => {
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: 'Требуется авторизация' },
+      { status: 401 },
+    )
+  }
+
+  const resolvedParams = await params
+  const gameId = toStringId(resolvedParams?.gameId)
+  const gameTeamId = toStringId(payload?.gameTeamId)
+  const transactionId = toStringId(payload?.transactionId)
+  if (!gameId || !gameTeamId || !transactionId) {
+    return NextResponse.json(
+      { success: false, error: 'Не переданы данные транзакции' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) throw new Error('Соединение с базой данных не установлено')
+
+    const context = await loadGamePaymentContext({ db, gameId, session })
+    if (context.error) return context.error
+
+    const gameTeam = await loadGameTeamPaymentEntry({
+      db,
+      gameId: context.gameId,
+      gameTeamId,
+    })
+    if (!gameTeam?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Регистрация команды на игру не найдена' },
+        { status: 404 },
+      )
+    }
+
+    const teamId = toStringId(gameTeam.teamId)
+    const TransactionsModel = db.model('Transactions')
+    const transaction = await TransactionsModel.findOne({
+      _id: transactionId,
+      gameId: context.gameId,
+      teamId,
+      gameTeamId,
+    })
+      .select({ _id: 1 })
+      .lean()
+    if (!transaction?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Транзакция оплаты не найдена' },
+        { status: 404 },
+      )
+    }
+
+    await deleteTransaction({ db, transactionId })
+    return buildTeamPaymentsDetailResponse({
+      db,
+      gameId: context.gameId,
+      gameTeamId,
+    })
+  } catch (error) {
+    console.error('Game team payment delete API error', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Не удалось удалить транзакцию',
+      },
+      { status: 400 },
+    )
+  }
+}
+
 export async function GET(request, { params }) {
   const requestUrl = new URL(request.url)
   if (requestUrl.searchParams.get('scope') === 'payments') {
@@ -1284,6 +1360,12 @@ export async function DELETE(request, { params }) {
   const resolvedParams = await params
   const gameId = toStringId(resolvedParams?.gameId)
   const payload = await request.json().catch(() => ({}))
+  const action =
+    typeof payload?.action === 'string' ? payload.action.trim() : ''
+  if (action === 'delete_team_payment') {
+    return handleTeamPaymentDelete({ payload, params, session })
+  }
+
   const teamIdsRaw = Array.isArray(payload?.teamIds) ? payload.teamIds : []
   const teamIds = Array.from(
     new Set(teamIdsRaw.map((value) => toStringId(value)).filter(Boolean)),

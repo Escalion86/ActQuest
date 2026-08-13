@@ -223,6 +223,10 @@ const AdminTransactionsPage = ({
 
   const removeTransaction = useCallback(
     async (id) => {
+      if (!window.confirm('Удалить транзакцию? Это действие нельзя отменить.')) {
+        return
+      }
+
       setIsDeletingId(id)
       setFeedback(null)
       try {
