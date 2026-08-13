@@ -81,33 +81,24 @@ export async function POST(request) {
       )
     }
 
-    if (
-      verification.expiresAt &&
-      new Date(verification.expiresAt).getTime() <= Date.now()
-    ) {
-      await PhoneVerifications.findOneAndUpdate(
-        { _id: verification._id },
-        { $set: { providerStatus: 'expired' } },
-      )
-      return NextResponse.json(
-        {
-          success: true,
-          data: { status: 'expired' },
-        },
-        { status: 200 },
-      )
-    }
-
     const provider = await checkTelefonipReverseCall(callId)
     const providerData = provider?.data || {}
     const providerStatusRaw = resolveStatusFromProvider(providerData)
+    const providerPhone = normalizeAuthPhone7(providerData?.data?.phone)
+    const verificationExpired =
+      (verification.callExpiresAt || verification.expiresAt) &&
+      new Date(verification.callExpiresAt || verification.expiresAt).getTime() <=
+        Date.now()
 
-    let confirmed = false
-    if (providerStatusRaw === 'ok') {
-      const providerPhone = normalizeAuthPhone7(providerData?.data?.phone)
-      confirmed = providerPhone !== null && providerPhone === phone
-    }
-    const providerStatus = confirmed ? 'ok' : providerStatusRaw
+    // По контракту Telefon-IP успешный ответ может содержать только data.phone
+    // и data.id, без status="ok". Возвращённый провайдером номер — основной
+    // признак успешного подтверждения.
+    const confirmed = providerPhone !== null && providerPhone === phone
+    const providerStatus = confirmed
+      ? 'ok'
+      : verificationExpired
+        ? 'expired'
+        : providerStatusRaw
 
     await PhoneVerifications.findOneAndUpdate(
       { _id: verification._id },

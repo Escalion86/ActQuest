@@ -81,6 +81,24 @@ const startTelefonipReverseCall = async (phone) => {
   )
 }
 
+const startTelefonipSmsCode = async (phone) => {
+  const phone8 = normalizeTelefonipPhone(phone)
+  if (!phone8) {
+    return {
+      success: false,
+      data: {
+        success: false,
+        error: 'Invalid phone format for TELEFONIP',
+        data: {},
+      },
+    }
+  }
+
+  return telefonipRequest(
+    `/get_sms_code/${encodeURIComponent(phone8)}/`,
+  )
+}
+
 const checkTelefonipReverseCall = async (callId) =>
   telefonipRequest(`/reverse_auth_phone_check/${encodeURIComponent(String(callId))}`)
 
@@ -88,5 +106,6 @@ export {
   normalizeTelefonipPhone,
   normalizeAuthPhone7,
   startTelefonipReverseCall,
+  startTelefonipSmsCode,
   checkTelefonipReverseCall,
 }

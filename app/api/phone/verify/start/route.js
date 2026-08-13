@@ -10,6 +10,8 @@ import { authOptions } from '@server/auth/authOptions'
 
 const START_RATE_LIMIT_MS = 60 * 1000
 const VERIFY_TTL_MS = 15 * 60 * 1000
+// Telefon-IP гарантирует сам номер для обратного звонка только 120 секунд.
+const CALL_TTL_MS = 120 * 1000
 
 const errorJson = (status, type, message) =>
   NextResponse.json(
@@ -145,6 +147,7 @@ export async function POST(request) {
     const authPhone = providerData.data.auth_phone || null
     const imageUrl = providerData.data.url_image || null
     const expiresAt = new Date(Date.now() + VERIFY_TTL_MS)
+    const callExpiresAt = new Date(Date.now() + CALL_TTL_MS)
 
     await PhoneVerifications.findOneAndUpdate(
       { phone, flow },
@@ -157,10 +160,17 @@ export async function POST(request) {
           imageUrl,
           confirmed: false,
           providerStatus: 'pending',
+          verificationMethod: 'call',
+          callExpiresAt,
           expiresAt,
           meta: {
             startResponse: providerData,
           },
+        },
+        $unset: {
+          smsCodeHash: 1,
+          smsCodeSalt: 1,
+          smsSentAt: 1,
         },
       },
       {
@@ -177,7 +187,7 @@ export async function POST(request) {
           id: callId,
           auth_phone: authPhone,
           url_image: imageUrl,
-          expiresAt: expiresAt.toISOString(),
+          expiresAt: callExpiresAt.toISOString(),
         },
       },
       { status: 200 },

@@ -20,6 +20,10 @@ import { LOCATIONS } from '@server/serverConstants'
 
 const PUBLIC_API_BASE = '/api/public'
 const PHONE_VERIFY_API_BASE = '/api/phone/verify'
+const VK_WIDGET_LOAD_GRACE_MS = 10000
+
+const isVkWidgetLoadTimeout = (code, text) =>
+  Number(code) === 0 && String(text || '').trim().toLowerCase() === 'timeout'
 
 const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
@@ -58,10 +62,13 @@ const CabinetRegisterPage = ({
   const [phoneVerifyAuthPhone, setPhoneVerifyAuthPhone] = useState(null)
   const [phoneVerifyImageUrl, setPhoneVerifyImageUrl] = useState(null)
   const [phoneVerifyStatus, setPhoneVerifyStatus] = useState('idle')
+  const [smsCode, setSmsCode] = useState('')
   const [showRegisterCtaForMissingPhone, setShowRegisterCtaForMissingPhone] =
     useState(false)
   const vkIdWidgetContainerRef = useRef(null)
+  const isSubmittingRef = useRef(false)
   const vkAuthInFlightRef = useRef(false)
+  const handleVkAuthRef = useRef(null)
   const vkWidgetInstanceRef = useRef(null)
   const vkWidgetConfigKeyRef = useRef('')
   const phoneCheckInFlightRef = useRef(false)
@@ -89,6 +96,10 @@ const CabinetRegisterPage = ({
   }, [])
 
   useEffect(() => {
+    isSubmittingRef.current = isSubmitting
+  }, [isSubmitting])
+
+  useEffect(() => {
     if (session?.user?.location) {
       setLocation(session.user.location)
     }
@@ -99,6 +110,7 @@ const CabinetRegisterPage = ({
     setPhoneVerifyAuthPhone(null)
     setPhoneVerifyImageUrl(null)
     setPhoneVerifyStatus('idle')
+    setSmsCode('')
     setConfirmedPhone('')
   }, [])
 
@@ -250,11 +262,12 @@ const CabinetRegisterPage = ({
           setAuthError(null)
         }
         if (nextStatus === 'expired') {
-          setPhoneVerifyCallId(null)
           setPhoneVerifyAuthPhone(null)
           setPhoneVerifyImageUrl(null)
           setConfirmedPhone('')
-          setAuthError('Время подтверждения истекло. Запросите звонок повторно.')
+          setAuthError(
+            'Время подтверждения звонком истекло. Запросите SMS-код или начните заново.',
+          )
         }
 
         return nextStatus
@@ -265,9 +278,49 @@ const CabinetRegisterPage = ({
     [flowType],
   )
 
+  const startSmsVerification = useCallback(async () => {
+    const digitsOnly = normalizePhoneForSubmit(phoneInput)
+    const response = await fetch(`${PHONE_VERIFY_API_BASE}/sms/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: digitsOnly, flow: flowType }),
+    })
+    const json = await response.json()
+    if (!response.ok || !json?.success) {
+      throw new Error(json?.error?.message || 'Не удалось отправить SMS-код.')
+    }
+
+    setPhoneVerifyStatus('sms_pending')
+    setSmsCode('')
+    setAuthError(null)
+  }, [flowType, phoneInput])
+
+  const checkSmsVerification = useCallback(async () => {
+    const digitsOnly = normalizePhoneForSubmit(phoneInput)
+    const response = await fetch(`${PHONE_VERIFY_API_BASE}/sms/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: digitsOnly, flow: flowType, code: smsCode }),
+    })
+    const json = await response.json()
+    if (!response.ok || !json?.success) {
+      throw new Error(json?.error?.message || 'Не удалось проверить SMS-код.')
+    }
+
+    setPhoneVerifyStatus('ok')
+    setConfirmedPhone(digitsOnly)
+    setRegisterStep('password')
+    setAuthError(null)
+  }, [flowType, phoneInput, smsCode])
+
   const handleVkAuth = useCallback(
     async ({ code, deviceId, codeVerifier, state, accessToken }) => {
-      if (!code || !deviceId || isSubmitting || vkAuthInFlightRef.current) {
+      if (
+        !code ||
+        !deviceId ||
+        isSubmittingRef.current ||
+        vkAuthInFlightRef.current
+      ) {
         return
       }
       if (!isVkSignInEnabled) {
@@ -340,7 +393,6 @@ const CabinetRegisterPage = ({
     [
       effectiveCallbackUrl,
       isClient,
-      isSubmitting,
       isVkSignInEnabled,
       location,
       currentPath,
@@ -350,7 +402,16 @@ const CabinetRegisterPage = ({
   )
 
   useEffect(() => {
-    if (!isPhoneStep || !phoneVerifyCallId || isPhoneConfirmed) {
+    handleVkAuthRef.current = handleVkAuth
+  }, [handleVkAuth])
+
+  useEffect(() => {
+    if (
+      !isPhoneStep ||
+      !phoneVerifyCallId ||
+      isPhoneConfirmed ||
+      ['expired', 'sms_pending'].includes(phoneVerifyStatus)
+    ) {
       return undefined
     }
 
@@ -374,6 +435,7 @@ const CabinetRegisterPage = ({
     isPhoneStep,
     phoneInput,
     phoneVerifyCallId,
+    phoneVerifyStatus,
   ])
 
   const handleRegister = useCallback(
@@ -426,6 +488,22 @@ const CabinetRegisterPage = ({
             await startPhoneVerification(digitsOnly)
           } catch (error) {
             setAuthError(error?.message || 'Не удалось запустить подтверждение номера.')
+          } finally {
+            setIsSubmitting(false)
+          }
+          return
+        }
+
+        if (phoneVerifyStatus === 'sms_pending') {
+          if (!/^\d{4}$/.test(smsCode)) {
+            setAuthError('Введите четырёхзначный код из SMS.')
+            return
+          }
+          setIsSubmitting(true)
+          try {
+            await checkSmsVerification()
+          } catch (error) {
+            setAuthError(error?.message || 'Не удалось проверить SMS-код.')
           } finally {
             setIsSubmitting(false)
           }
@@ -546,6 +624,7 @@ const CabinetRegisterPage = ({
       isSubmitting,
       location,
       confirmedPhone,
+      checkSmsVerification,
       checkPhoneVerification,
       isPhoneConfirmed,
       passwordInput,
@@ -553,10 +632,12 @@ const CabinetRegisterPage = ({
       phoneVerifyCallId,
       registerStep,
       phoneInput,
+      phoneVerifyStatus,
       precheckPhoneForFlow,
       currentPath,
       router,
       startPhoneVerification,
+      smsCode,
       updateSession,
     ],
   )
@@ -586,6 +667,7 @@ const CabinetRegisterPage = ({
     vkWidgetConfigKeyRef.current = configKey
 
     let isMounted = true
+    let loadGraceTimeoutId = null
 
     const init = async () => {
       const loaded = await loadVkSdk()
@@ -613,6 +695,8 @@ const CabinetRegisterPage = ({
       try {
         const oneTap = new VKID.OneTap()
         vkWidgetInstanceRef.current = oneTap
+        setIsVkIdReady(false)
+        setVkError(null)
         oneTap
           .render({
             container,
@@ -628,6 +712,25 @@ const CabinetRegisterPage = ({
               error?.details?.error ||
               null
 
+            if (
+              isVkWidgetLoadTimeout(vkWidgetErrorCode, vkWidgetErrorText)
+            ) {
+              // SDK считает загрузку дольше 5 секунд ошибкой, хотя iframe может
+              // успешно догрузиться позже. Даём ему дополнительное время и не
+              // показываем пользователю техническую ошибку как фатальную.
+              setIsVkIdReady(false)
+              if (loadGraceTimeoutId) {
+                window.clearTimeout(loadGraceTimeoutId)
+              }
+              loadGraceTimeoutId = window.setTimeout(() => {
+                if (!isMounted) return
+                setVkError(
+                  'VK ID не удалось загрузить. Продолжите регистрацию по номеру телефона или обновите страницу.',
+                )
+              }, VK_WIDGET_LOAD_GRACE_MS)
+              return
+            }
+
             setVkError(
               vkWidgetErrorText && vkWidgetErrorCode !== null
                 ? `Ошибка виджета VK ID (${vkWidgetErrorCode}): ${vkWidgetErrorText}.`
@@ -637,6 +740,15 @@ const CabinetRegisterPage = ({
                     ? `Ошибка виджета VK ID (${vkWidgetErrorCode}).`
                     : 'Ошибка виджета VK ID.',
             )
+          })
+          .on(VKID.WidgetEvents.LOAD, () => {
+            if (!isMounted) return
+            if (loadGraceTimeoutId) {
+              window.clearTimeout(loadGraceTimeoutId)
+              loadGraceTimeoutId = null
+            }
+            setVkError(null)
+            setIsVkIdReady(true)
           })
           .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
             if (!isMounted) return
@@ -659,7 +771,7 @@ const CabinetRegisterPage = ({
                 accessToken = exchangeResult?.access_token || null
               }
 
-              await handleVkAuth({
+              await handleVkAuthRef.current?.({
                 code,
                 deviceId,
                 accessToken,
@@ -681,19 +793,20 @@ const CabinetRegisterPage = ({
         return
       }
 
-      setIsVkIdReady(true)
     }
 
     init()
 
     return () => {
       isMounted = false
+      if (loadGraceTimeoutId) {
+        window.clearTimeout(loadGraceTimeoutId)
+      }
       setIsVkIdReady(false)
       vkWidgetInstanceRef.current = null
       if (container) container.innerHTML = ''
     }
   }, [
-    handleVkAuth,
     isClient,
     isVkSignInEnabled,
     location,
@@ -821,11 +934,28 @@ const CabinetRegisterPage = ({
 
               {isPhoneStep && phoneVerifyCallId ? (
                 <div className="p-3 text-xs border rounded-xl border-[#00D1FF]/25 bg-[#050012]/70 text-[#bfeeff] space-y-2">
-                  <div>
-                    Позвоните по номеру телефона ниже, для подтверждения Вашего
-                    номера телефона
-                  </div>
-                  {phoneVerifyAuthPhone ? (
+                  {phoneVerifyStatus === 'sms_pending' ? (
+                    <>
+                      <div>Введите четырёхзначный код, отправленный по SMS:</div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={4}
+                        value={smsCode}
+                        onChange={(event) =>
+                          setSmsCode(event.target.value.replace(/\D/g, '').slice(0, 4))
+                        }
+                        placeholder="0000"
+                        className="w-full px-4 py-3 text-center text-lg tracking-[0.35em] text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
+                      />
+                    </>
+                  ) : (
+                    <div>
+                      Позвоните по номеру телефона ниже для подтверждения номера.
+                    </div>
+                  )}
+                  {phoneVerifyStatus !== 'sms_pending' && phoneVerifyAuthPhone ? (
                     <div className="flex flex-col items-center">
                       {(() => {
                         const rawPhone = String(phoneVerifyAuthPhone || '')
@@ -855,7 +985,7 @@ const CabinetRegisterPage = ({
                       })()}
                     </div>
                   ) : null}
-                  {phoneVerifyImageUrl ? (
+                  {phoneVerifyStatus !== 'sms_pending' && phoneVerifyImageUrl ? (
                     <div className="hidden flex-col items-center justify-center gap-2 md:flex">
                       <img
                         src={phoneVerifyImageUrl}
@@ -867,6 +997,27 @@ const CabinetRegisterPage = ({
                         номера
                       </p>
                     </div>
+                  ) : null}
+                  {phoneVerifyStatus !== 'sms_pending' ? (
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={async () => {
+                        setIsSubmitting(true)
+                        try {
+                          await startSmsVerification()
+                        } catch (error) {
+                          setAuthError(
+                            error?.message || 'Не удалось отправить SMS-код.',
+                          )
+                        } finally {
+                          setIsSubmitting(false)
+                        }
+                      }}
+                      className="w-full cursor-pointer rounded-lg border border-[#7A00FF]/45 px-3 py-2 font-semibold text-[#d9c8ff] hover:bg-[#7A00FF]/12 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Не получилось позвонить — получить код по SMS
+                    </button>
                   ) : null}
                 </div>
               ) : null}
@@ -914,7 +1065,9 @@ const CabinetRegisterPage = ({
                     : 'Регистрация...'
                   : isPhoneStep
                     ? phoneVerifyCallId
-                      ? 'Проверить подтверждение'
+                      ? phoneVerifyStatus === 'sms_pending'
+                        ? 'Подтвердить SMS-код'
+                        : 'Проверить подтверждение'
                       : 'Подтвердить номер'
                     : isRecoveryFlow
                       ? 'Сохранить новый пароль'

@@ -57,6 +57,7 @@ const ProfilePage = ({ initialProfile }) => {
   const [phoneVerifyAuthPhone, setPhoneVerifyAuthPhone] = useState(null)
   const [phoneVerifyImageUrl, setPhoneVerifyImageUrl] = useState(null)
   const [phoneVerifyStatus, setPhoneVerifyStatus] = useState('pending')
+  const [phoneSmsCode, setPhoneSmsCode] = useState('')
   const [phoneModalError, setPhoneModalError] = useState(null)
   const [isPhoneModalSubmitting, setIsPhoneModalSubmitting] = useState(false)
   const [pushFeedback, setPushFeedback] = useState(null)
@@ -198,6 +199,7 @@ const ProfilePage = ({ initialProfile }) => {
     setPhoneVerifyAuthPhone(null)
     setPhoneVerifyImageUrl(null)
     setPhoneVerifyStatus('pending')
+    setPhoneSmsCode('')
     setPhoneModalError(null)
     setPhoneDraft(formatPhoneInput(nextPhoneValue))
   }, [])
@@ -311,11 +313,10 @@ const ProfilePage = ({ initialProfile }) => {
       const nextStatus = String(json?.data?.status || 'pending').toLowerCase()
       setPhoneVerifyStatus(nextStatus)
       if (nextStatus === 'expired') {
-        setPhoneVerifyCallId(null)
         setPhoneVerifyAuthPhone(null)
         setPhoneVerifyImageUrl(null)
         setPhoneModalError(
-          'Время подтверждения истекло. Запросите звонок повторно.',
+          'Время подтверждения звонком истекло. Запросите SMS-код или начните заново.',
         )
       }
 
@@ -324,6 +325,58 @@ const ProfilePage = ({ initialProfile }) => {
       phoneCheckInFlightRef.current = false
     }
   }, [])
+
+  const startSmsVerification = useCallback(async () => {
+    const digitsOnly = normalizePhoneForSubmit(phoneDraft)
+    const { response, json } = await requestApiJson(
+      `${PHONE_VERIFY_API_BASE}/sms/start`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: digitsOnly, flow: 'change_phone' }),
+        fallbackMessage: 'Не удалось отправить SMS-код',
+      },
+    )
+
+    if (!response.ok || json?.success === false) {
+      throw new Error(json?.error?.message || 'Не удалось отправить SMS-код.')
+    }
+
+    setPhoneVerifyStatus('sms_pending')
+    setPhoneSmsCode('')
+    setPhoneModalError(null)
+  }, [phoneDraft])
+
+  const checkSmsVerification = useCallback(async () => {
+    const digitsOnly = normalizePhoneForSubmit(phoneDraft)
+    const { response, json } = await requestApiJson(
+      `${PHONE_VERIFY_API_BASE}/sms/check`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: digitsOnly,
+          flow: 'change_phone',
+          code: phoneSmsCode,
+        }),
+        fallbackMessage: 'Не удалось проверить SMS-код',
+      },
+    )
+
+    if (!response.ok || json?.success === false) {
+      throw new Error(json?.error?.message || 'Не удалось проверить SMS-код.')
+    }
+
+    setPhoneVerifyStatus('ok')
+    setPhoneModalError(null)
+    return 'ok'
+  }, [phoneDraft, phoneSmsCode])
 
   const finalizePhoneChange = useCallback(
     async (digitsOnly, callId) => {
@@ -401,6 +454,15 @@ const ProfilePage = ({ initialProfile }) => {
           return
         }
 
+        if (phoneVerifyStatus === 'sms_pending') {
+          if (!/^\d{4}$/.test(phoneSmsCode)) {
+            setPhoneModalError('Введите четырёхзначный код из SMS.')
+            return
+          }
+          await checkSmsVerification()
+          return
+        }
+
         const verifyStatus =
           phoneVerifyStatus === 'ok'
             ? 'ok'
@@ -425,10 +487,12 @@ const ProfilePage = ({ initialProfile }) => {
     },
     [
       checkPhoneVerification,
+      checkSmsVerification,
       closePhoneModal,
       finalizePhoneChange,
       isPhoneModalSubmitting,
       phoneDraft,
+      phoneSmsCode,
       phoneVerifyCallId,
       phoneVerifyStatus,
       precheckPhoneForChange,
@@ -437,7 +501,11 @@ const ProfilePage = ({ initialProfile }) => {
   )
 
   useEffect(() => {
-    if (!isPhoneModalOpen || !phoneVerifyCallId || phoneVerifyStatus === 'ok') {
+    if (
+      !isPhoneModalOpen ||
+      !phoneVerifyCallId ||
+      ['ok', 'expired', 'sms_pending'].includes(phoneVerifyStatus)
+    ) {
       return undefined
     }
 
@@ -874,7 +942,9 @@ const ProfilePage = ({ initialProfile }) => {
               {isPhoneModalSubmitting
                 ? 'Проверяем…'
                 : phoneVerifyCallId
-                  ? phoneVerifyStatus === 'ok'
+                  ? phoneVerifyStatus === 'sms_pending'
+                    ? 'Подтвердить SMS-код'
+                    : phoneVerifyStatus === 'ok'
                     ? 'Сохранить номер'
                     : 'Проверить подтверждение'
                   : 'Подтвердить номер'}
@@ -901,10 +971,30 @@ const ProfilePage = ({ initialProfile }) => {
 
           {phoneVerifyCallId ? (
             <div className="rounded-xl border border-[#00D1FF]/25 bg-[#050012]/70 p-3 text-xs text-[#bfeeff] dark:text-[#bfeeff]">
-              <div>
-                Позвоните по номеру ниже для подтверждения нового телефона:
-              </div>
-              {phoneVerifyAuthPhone ? (
+              {phoneVerifyStatus === 'sms_pending' ? (
+                <div className="space-y-2">
+                  <div>Введите четырёхзначный код из SMS:</div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={4}
+                    value={phoneSmsCode}
+                    onChange={(event) =>
+                      setPhoneSmsCode(
+                        event.target.value.replace(/\D/g, '').slice(0, 4),
+                      )
+                    }
+                    placeholder="0000"
+                    className="w-full rounded-xl border border-[#00D1FF]/35 bg-[#080017]/80 px-4 py-3 text-center text-lg tracking-[0.35em] text-white focus:border-[#00D1FF] focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <div>
+                  Позвоните по номеру ниже для подтверждения нового телефона:
+                </div>
+              )}
+              {phoneVerifyStatus !== 'sms_pending' && phoneVerifyAuthPhone ? (
                 <div className="flex flex-col items-start gap-1 mt-2">
                   {(() => {
                     const rawPhone = String(phoneVerifyAuthPhone || '').replace(
@@ -930,7 +1020,7 @@ const ProfilePage = ({ initialProfile }) => {
                   </p>
                 </div>
               ) : null}
-              {phoneVerifyImageUrl ? (
+              {phoneVerifyStatus !== 'sms_pending' && phoneVerifyImageUrl ? (
                 <div className="flex-col items-center justify-center hidden gap-2 mt-3 md:flex">
                   <img
                     src={phoneVerifyImageUrl}
@@ -943,6 +1033,29 @@ const ProfilePage = ({ initialProfile }) => {
                 <NoticeBanner tone="success" variant="neon" className="mt-3">
                   Номер подтвержден. Нажмите «Сохранить номер».
                 </NoticeBanner>
+              ) : null}
+              {phoneVerifyStatus !== 'sms_pending' && phoneVerifyStatus !== 'ok' ? (
+                <CabinetButton
+                  type="button"
+                  variant="secondary"
+                  tone="brand"
+                  className="mt-3"
+                  disabled={isPhoneModalSubmitting}
+                  onClick={async () => {
+                    setIsPhoneModalSubmitting(true)
+                    try {
+                      await startSmsVerification()
+                    } catch (error) {
+                      setPhoneModalError(
+                        error?.message || 'Не удалось отправить SMS-код.',
+                      )
+                    } finally {
+                      setIsPhoneModalSubmitting(false)
+                    }
+                  }}
+                >
+                  Не получилось позвонить — получить код по SMS
+                </CabinetButton>
               ) : null}
             </div>
           ) : null}

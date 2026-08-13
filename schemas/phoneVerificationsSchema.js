@@ -33,6 +33,31 @@ const phoneVerificationsSchema = {
     type: String,
     default: 'pending',
   },
+  verificationMethod: {
+    type: String,
+    enum: ['call', 'sms'],
+    default: 'call',
+  },
+  smsCodeHash: {
+    type: String,
+    default: null,
+  },
+  smsCodeSalt: {
+    type: String,
+    default: null,
+  },
+  smsAttempts: {
+    type: Number,
+    default: 0,
+  },
+  smsSentAt: {
+    type: Date,
+    default: null,
+  },
+  callExpiresAt: {
+    type: Date,
+    default: null,
+  },
   expiresAt: {
     type: Date,
     required: true,
