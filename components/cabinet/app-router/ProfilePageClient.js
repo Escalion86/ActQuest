@@ -21,6 +21,7 @@ import {
   normalizePhoneForSubmit,
 } from '@helpers/phoneInputMask'
 import requestApiJson from '@helpers/requestApiJson'
+import { defaultSiteAccess } from '@helpers/cabinetSiteAccess'
 import usePwaNotifications from '@helpers/usePwaNotifications'
 import { LOCATIONS } from '@server/serverConstants'
 
@@ -62,6 +63,7 @@ const ProfilePage = ({ initialProfile }) => {
   const [isPhoneModalSubmitting, setIsPhoneModalSubmitting] = useState(false)
   const [pushFeedback, setPushFeedback] = useState(null)
   const [toastEvent, setToastEvent] = useState(null)
+  const [siteAccess, setSiteAccess] = useState(defaultSiteAccess)
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationSaveError, setLocationSaveError] = useState(null)
   const phoneCheckInFlightRef = useRef(false)
@@ -91,6 +93,33 @@ const ProfilePage = ({ initialProfile }) => {
       'Проверяем настройки уведомлений. Попробуйте ещё раз чуть позже.'
       ? null
       : pushError
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSiteAccess = async () => {
+      try {
+        const query = pushLocation
+          ? `?location=${encodeURIComponent(pushLocation)}`
+          : ''
+        const response = await fetch(`/api/public/site-access${query}`)
+        const json = await response.json()
+        if (!cancelled && response.ok && json?.success && json?.data) {
+          setSiteAccess({
+            ...defaultSiteAccess,
+            ...json.data,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load SMS access controls in profile', error)
+      }
+    }
+
+    loadSiteAccess()
+    return () => {
+      cancelled = true
+    }
+  }, [pushLocation])
 
   useEffect(() => {
     setFormState(normalizedInitialProfile)
@@ -336,7 +365,11 @@ const ProfilePage = ({ initialProfile }) => {
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone: digitsOnly, flow: 'change_phone' }),
+        body: JSON.stringify({
+          phone: digitsOnly,
+          flow: 'change_phone',
+          location: pushLocation,
+        }),
         fallbackMessage: 'Не удалось отправить SMS-код',
       },
     )
@@ -348,7 +381,7 @@ const ProfilePage = ({ initialProfile }) => {
     setPhoneVerifyStatus('sms_pending')
     setPhoneSmsCode('')
     setPhoneModalError(null)
-  }, [phoneDraft])
+  }, [phoneDraft, pushLocation])
 
   const checkSmsVerification = useCallback(async () => {
     const digitsOnly = normalizePhoneForSubmit(phoneDraft)
@@ -1034,7 +1067,9 @@ const ProfilePage = ({ initialProfile }) => {
                   Номер подтвержден. Нажмите «Сохранить номер».
                 </NoticeBanner>
               ) : null}
-              {phoneVerifyStatus !== 'sms_pending' && phoneVerifyStatus !== 'ok' ? (
+              {phoneVerifyStatus !== 'sms_pending' &&
+              phoneVerifyStatus !== 'ok' &&
+              siteAccess.allowSmsVerification ? (
                 <CabinetButton
                   type="button"
                   variant="secondary"

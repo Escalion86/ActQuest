@@ -67,6 +67,7 @@ const resolvePayload = (rawBody) => {
     chatUrlsByLocation,
     allowSiteAuth: Boolean(body?.allowSiteAuth),
     allowSiteRegistration: Boolean(body?.allowSiteRegistration),
+    allowSmsVerification: Boolean(body?.allowSmsVerification),
     enableVkOneTap: Boolean(body?.enableVkOneTap),
   }
 }

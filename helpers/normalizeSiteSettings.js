@@ -56,6 +56,7 @@ const normalizeSiteSettings = (doc = null) => {
     chatUrlsByLocation,
     allowSiteAuth: toBooleanOrDefault(settings.allowSiteAuth, true),
     allowSiteRegistration: toBooleanOrDefault(settings.allowSiteRegistration, true),
+    allowSmsVerification: toBooleanOrDefault(settings.allowSmsVerification, true),
     enableVkOneTap: toBooleanOrDefault(settings.enableVkOneTap, true),
   }
 }

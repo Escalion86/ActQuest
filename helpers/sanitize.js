@@ -37,7 +37,13 @@ const sanitizeConf = {
   ],
   // selfClosing: ['br'],
   allowedAttributes: {
-    a: ['href', 'rel', 'target', 'data-aq-link-variant'],
+    a: [
+      'href',
+      'rel',
+      'target',
+      'data-aq-link-variant',
+      'data-aq-button-style',
+    ],
     div: ['style', 'class'],
     font: ['size'],
     span: ['style', 'class'],

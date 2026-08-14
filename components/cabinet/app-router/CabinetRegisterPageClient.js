@@ -140,6 +140,7 @@ const CabinetRegisterPage = ({
           setSiteAccess({
             allowSiteAuth: Boolean(json.data.allowSiteAuth),
             allowSiteRegistration: Boolean(json.data.allowSiteRegistration),
+            allowSmsVerification: Boolean(json.data.allowSmsVerification),
             enableVkOneTap: Boolean(json.data.enableVkOneTap),
           })
           return
@@ -283,7 +284,7 @@ const CabinetRegisterPage = ({
     const response = await fetch(`${PHONE_VERIFY_API_BASE}/sms/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: digitsOnly, flow: flowType }),
+      body: JSON.stringify({ phone: digitsOnly, flow: flowType, location }),
     })
     const json = await response.json()
     if (!response.ok || !json?.success) {
@@ -293,7 +294,7 @@ const CabinetRegisterPage = ({
     setPhoneVerifyStatus('sms_pending')
     setSmsCode('')
     setAuthError(null)
-  }, [flowType, phoneInput])
+  }, [flowType, location, phoneInput])
 
   const checkSmsVerification = useCallback(async () => {
     const digitsOnly = normalizePhoneForSubmit(phoneInput)
@@ -998,7 +999,8 @@ const CabinetRegisterPage = ({
                       </p>
                     </div>
                   ) : null}
-                  {phoneVerifyStatus !== 'sms_pending' ? (
+                  {phoneVerifyStatus !== 'sms_pending' &&
+                  siteAccess.allowSmsVerification ? (
                     <button
                       type="button"
                       disabled={isSubmitting}

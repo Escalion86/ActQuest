@@ -168,6 +168,12 @@ async function dbConnectGlobal() {
   ensureModel(globalConnections.global, 'GameReviews', () =>
     mongoose.Schema(gameReviewsSchema, { timestamps: true }),
   )
+  ensureModel(globalConnections.global, 'SiteSettings', () =>
+    mongoose.Schema(siteSettingsSchema),
+  )
+  ensureModel(globalConnections.global, 'PhoneVerifications', () =>
+    mongoose.Schema(phoneVerificationsSchema, { timestamps: true }),
+  )
 
   const connection = await globalConnections.global.asPromise()
 

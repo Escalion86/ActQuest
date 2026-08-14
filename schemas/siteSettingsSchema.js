@@ -5,6 +5,7 @@ const siteSettingsSchema = {
   chatUrlsByLocation: { type: Object, default: {} },
   allowSiteAuth: { type: Boolean, default: true },
   allowSiteRegistration: { type: Boolean, default: true },
+  allowSmsVerification: { type: Boolean, default: true },
   enableVkOneTap: { type: Boolean, default: true },
 }
 

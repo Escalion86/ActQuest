@@ -19,6 +19,7 @@ import Modal from '@components/Modal'
 import SystemPromptMdEditor from '@components/cabinet/SystemPromptMdEditor'
 import pauseOtherAudioElements from '@helpers/audioPlayback'
 import { sendImage } from '@helpers/cloudinary'
+import normalizeEditorLinkHref from '@helpers/normalizeEditorLinkHref'
 import { LOCATIONS } from '@server/serverConstants'
 
 const FONT_OPTIONS = [
@@ -63,6 +64,39 @@ const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
 const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'
 const LINK_BUTTON_VARIANT = 'button'
+const DEFAULT_LINK_BUTTON_STYLE = 'primary'
+const LINK_BUTTON_MENU_WIDTH = 76
+const LINK_BUTTON_STYLE_MENU_WIDTH = 160
+const LINK_BUTTON_MENU_EDGE_GAP = 8
+const LINK_BUTTON_STYLES = new Set([
+  'primary',
+  'outline',
+  'accent',
+  'pirate',
+  'scary',
+  'stone',
+  'frozen',
+])
+const LINK_BUTTON_STYLE_OPTIONS = [
+  { value: 'primary', label: 'Основная' },
+  { value: 'outline', label: 'Контурная' },
+  { value: 'accent', label: 'Акцентная' },
+  { value: 'pirate', label: 'Пиратский' },
+  { value: 'scary', label: 'Страшный' },
+  { value: 'stone', label: 'Каменный' },
+  { value: 'frozen', label: 'Замороженный' },
+]
+const CLOSED_LINK_BUTTON_MENU = {
+  isOpen: false,
+  isStylePickerOpen: false,
+  top: 0,
+  left: 0,
+  from: 0,
+  to: 0,
+  href: '',
+  buttonStyle: DEFAULT_LINK_BUTTON_STYLE,
+  styleMenuAlign: 'left',
+}
 
 const STANDARD_COLORS = [
   { hex: '#000000', label: 'Чёрный' },
@@ -1405,9 +1439,56 @@ const TaskLink = Link.extend({
             ? { 'data-aq-link-variant': LINK_BUTTON_VARIANT }
             : {},
       },
+      buttonStyle: {
+        default: DEFAULT_LINK_BUTTON_STYLE,
+        parseHTML: (element) => {
+          const value = element.getAttribute('data-aq-button-style')
+          return LINK_BUTTON_STYLES.has(value)
+            ? value
+            : DEFAULT_LINK_BUTTON_STYLE
+        },
+        renderHTML: (attributes) =>
+          attributes.variant === LINK_BUTTON_VARIANT
+            ? {
+                'data-aq-button-style': LINK_BUTTON_STYLES.has(
+                  attributes.buttonStyle,
+                )
+                  ? attributes.buttonStyle
+                  : DEFAULT_LINK_BUTTON_STYLE,
+              }
+            : {},
+      },
     }
   },
 })
+
+const LinkIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <path
+      d="M10.2 13.8a4 4 0 0 0 5.66 0l2.12-2.12a4 4 0 1 0-5.66-5.66l-1.21 1.21m2.69 3a4 4 0 0 0-5.66 0l-2.12 2.12a4 4 0 1 0 5.66 5.66l1.2-1.2"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    />
+  </svg>
+)
+
+const PaletteIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <path
+      d="M12 3a9 9 0 0 0 0 18h1.4a1.6 1.6 0 0 0 1.13-2.73 1.6 1.6 0 0 1 1.13-2.73H18A3 3 0 0 0 21 12a9 9 0 0 0-9-9Z"
+      fill="none"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    />
+    <circle cx="7.5" cy="11" r="1" fill="currentColor" />
+    <circle cx="10" cy="7" r="1" fill="currentColor" />
+    <circle cx="15" cy="7.5" r="1" fill="currentColor" />
+  </svg>
+)
 
 const ToolbarButton = ({ label, title, isActive, onClick, disabled }) => (
   <button
@@ -1455,10 +1536,14 @@ const TaskRichEditor = ({
   const editorContentWrapperRef = useRef(null)
   const colorPickerRef = useRef(null)
   const uploadModeRef = useRef('image')
+  const linkButtonMenuCloseTimerRef = useRef(null)
   const [uploadMode, setUploadMode] = useState('image')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [selectedColor, setSelectedColor] = useState(DEFAULT_PICKER_COLOR)
+  const [linkButtonMenu, setLinkButtonMenu] = useState(
+    CLOSED_LINK_BUTTON_MENU,
+  )
   const [isColorActive, setIsColorActive] = useState(false)
   const [isMixedColorSelection, setIsMixedColorSelection] = useState(false)
   const [isColorPaletteOpen, setIsColorPaletteOpen] = useState(false)
@@ -1473,6 +1558,7 @@ const TaskRichEditor = ({
     bulletList: false,
     orderedList: false,
     link: false,
+    linkButton: false,
     fontFamily: '',
   })
   const [slashMenu, setSlashMenu] = useState({
@@ -1545,7 +1631,9 @@ const TaskRichEditor = ({
         heading: { levels: [2, 3, 4] },
         link: false,
       }),
-      TaskLink,
+      TaskLink.configure({
+        openOnClick: false,
+      }),
       ResizableImage.configure({
         inline: false,
         allowBase64: false,
@@ -1586,6 +1674,175 @@ const TaskRichEditor = ({
       },
     },
     [extensions, disabled, editorClassName],
+  )
+
+  const cancelLinkButtonMenuClose = useCallback(() => {
+    if (linkButtonMenuCloseTimerRef.current === null) return
+    window.clearTimeout(linkButtonMenuCloseTimerRef.current)
+    linkButtonMenuCloseTimerRef.current = null
+  }, [])
+
+  const scheduleLinkButtonMenuClose = useCallback(() => {
+    if (linkButtonMenuCloseTimerRef.current !== null) return
+
+    linkButtonMenuCloseTimerRef.current = window.setTimeout(() => {
+      setLinkButtonMenu(CLOSED_LINK_BUTTON_MENU)
+      linkButtonMenuCloseTimerRef.current = null
+    }, 220)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (linkButtonMenuCloseTimerRef.current !== null) {
+        window.clearTimeout(linkButtonMenuCloseTimerRef.current)
+      }
+    },
+    [],
+  )
+
+  const handleLinkButtonPointerMove = useCallback(
+    (event) => {
+      if (disabled || !editor) return
+
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (target.closest('[data-aq-link-button-menu="true"]')) {
+        cancelLinkButtonMenuClose()
+        return
+      }
+
+      const linkButton = target.closest(
+        'a[data-aq-link-variant="button"]',
+      )
+      const wrapper = editorContentWrapperRef.current
+      if (!(linkButton instanceof HTMLAnchorElement) || !wrapper) {
+        scheduleLinkButtonMenuClose()
+        return
+      }
+
+      cancelLinkButtonMenuClose()
+
+      const view = getEditorViewSafe(editor)
+      if (!view) return
+
+      let from = 0
+      try {
+        from = view.posAtDOM(linkButton, 0)
+      } catch {
+        return
+      }
+
+      const linkRect = linkButton.getBoundingClientRect()
+      const wrapperRect = wrapper.getBoundingClientRect()
+      const rawMenuLeft =
+        linkRect.left - wrapperRect.left + wrapper.scrollLeft
+      const maxMenuLeft = Math.max(
+        LINK_BUTTON_MENU_EDGE_GAP,
+        wrapper.clientWidth -
+          LINK_BUTTON_MENU_WIDTH -
+          LINK_BUTTON_MENU_EDGE_GAP,
+      )
+      const menuLeft = Math.max(
+        LINK_BUTTON_MENU_EDGE_GAP,
+        Math.min(rawMenuLeft, maxMenuLeft),
+      )
+      const styleMenuAlign =
+        menuLeft + LINK_BUTTON_STYLE_MENU_WIDTH <=
+        wrapper.clientWidth - LINK_BUTTON_MENU_EDGE_GAP
+          ? 'left'
+          : 'right'
+      const buttonStyle = LINK_BUTTON_STYLES.has(
+        linkButton.getAttribute('data-aq-button-style'),
+      )
+        ? linkButton.getAttribute('data-aq-button-style')
+        : DEFAULT_LINK_BUTTON_STYLE
+      const textLength = String(linkButton.textContent || '').length
+
+      setLinkButtonMenu((prev) => {
+        const next = {
+          isOpen: true,
+          isStylePickerOpen:
+            prev.from === from ? prev.isStylePickerOpen : false,
+          top: linkRect.bottom - wrapperRect.top + wrapper.scrollTop,
+          left: menuLeft,
+          from,
+          to: from + textLength,
+          href: linkButton.getAttribute('href') || '',
+          buttonStyle,
+          styleMenuAlign,
+        }
+
+        return prev.isOpen &&
+          prev.from === next.from &&
+          prev.to === next.to &&
+          prev.top === next.top &&
+          prev.left === next.left &&
+          prev.href === next.href &&
+          prev.buttonStyle === next.buttonStyle &&
+          prev.styleMenuAlign === next.styleMenuAlign &&
+          prev.isStylePickerOpen === next.isStylePickerOpen
+          ? prev
+          : next
+      })
+    },
+    [
+      cancelLinkButtonMenuClose,
+      disabled,
+      editor,
+      scheduleLinkButtonMenuClose,
+    ],
+  )
+
+  const updateLinkButtonAttributes = useCallback(
+    (attributes) => {
+      if (!editor || !linkButtonMenu.isOpen) return
+
+      editor
+        .chain()
+        .focus()
+        .setTextSelection({
+          from: linkButtonMenu.from,
+          to: linkButtonMenu.to,
+        })
+        .extendMarkRange('link')
+        .updateAttributes('link', attributes)
+        .run()
+    },
+    [editor, linkButtonMenu.from, linkButtonMenu.isOpen, linkButtonMenu.to],
+  )
+
+  const editLinkButtonHref = useCallback(() => {
+    const nextHref = window.prompt(
+      'Введите ссылку для кнопки',
+      linkButtonMenu.href,
+    )
+    if (nextHref === null) return
+
+    const normalizedHref = normalizeEditorLinkHref(nextHref)
+    if (!normalizedHref) {
+      window.alert('Введите корректную ссылку')
+      return
+    }
+
+    updateLinkButtonAttributes({ href: normalizedHref })
+    setLinkButtonMenu((prev) => ({
+      ...prev,
+      href: normalizedHref,
+      isStylePickerOpen: false,
+    }))
+  }, [linkButtonMenu.href, updateLinkButtonAttributes])
+
+  const selectLinkButtonStyle = useCallback(
+    (buttonStyle) => {
+      if (!LINK_BUTTON_STYLES.has(buttonStyle)) return
+      updateLinkButtonAttributes({ buttonStyle })
+      setLinkButtonMenu((prev) => ({
+        ...prev,
+        buttonStyle,
+        isStylePickerOpen: false,
+      }))
+    },
+    [updateLinkButtonAttributes],
   )
   const hasCurrentEditorText = getEditorPlainTextSafe(editor).trim().length > 0
   const selectedAiSystemPrompt = useMemo(
@@ -1733,23 +1990,31 @@ const TaskRichEditor = ({
   useEffect(() => {
     if (!editor) return undefined
 
-    const readToolbarState = () => ({
-      blockType: editor.isActive('heading', { level: 2 })
-        ? 'h2'
-        : editor.isActive('heading', { level: 3 })
-          ? 'h3'
-          : 'p',
-      bold: editor.isActive('bold'),
-      italic: editor.isActive('italic'),
-      strike: editor.isActive('strike'),
-      underline: editor.isActive('underline'),
-      blockquote: editor.isActive('blockquote'),
-      frameBox: editor.isActive('frameBox'),
-      bulletList: editor.isActive('bulletList'),
-      orderedList: editor.isActive('orderedList'),
-      link: editor.isActive('link'),
-      fontFamily: editor.getAttributes('textStyle').fontFamily || '',
-    })
+    const readToolbarState = () => {
+      const isLinkActive = editor.isActive('link')
+      const linkAttributes = editor.getAttributes('link')
+      const isLinkButton =
+        isLinkActive && linkAttributes.variant === LINK_BUTTON_VARIANT
+
+      return {
+        blockType: editor.isActive('heading', { level: 2 })
+          ? 'h2'
+          : editor.isActive('heading', { level: 3 })
+            ? 'h3'
+            : 'p',
+        bold: editor.isActive('bold'),
+        italic: editor.isActive('italic'),
+        strike: editor.isActive('strike'),
+        underline: editor.isActive('underline'),
+        blockquote: editor.isActive('blockquote'),
+        frameBox: editor.isActive('frameBox'),
+        bulletList: editor.isActive('bulletList'),
+        orderedList: editor.isActive('orderedList'),
+        link: isLinkActive && !isLinkButton,
+        linkButton: isLinkButton,
+        fontFamily: editor.getAttributes('textStyle').fontFamily || '',
+      }
+    }
 
     const readColorState = () => {
       const { selection, doc } = editor.state
@@ -1829,6 +2094,7 @@ const TaskRichEditor = ({
           prev.bulletList === nextState.bulletList &&
           prev.orderedList === nextState.orderedList &&
           prev.link === nextState.link &&
+          prev.linkButton === nextState.linkButton &&
           prev.fontFamily === nextState.fontFamily
 
         return isSame ? prev : nextState
@@ -2941,12 +3207,16 @@ const TaskRichEditor = ({
             />
             <ToolbarButton
               label="Кнопка"
+              isActive={toolbarState.linkButton}
               onClick={() => {
                 if (disabled) return
                 const nextHref = window.prompt('Введите ссылку для кнопки')
                 if (nextHref === null) return
-                const normalizedHref = nextHref.trim()
-                if (!normalizedHref) return
+                const normalizedHref = normalizeEditorLinkHref(nextHref)
+                if (!normalizedHref) {
+                  window.alert('Введите корректную ссылку')
+                  return
+                }
 
                 editor
                   .chain()
@@ -2963,6 +3233,7 @@ const TaskRichEditor = ({
                             target: '_blank',
                             rel: 'noopener noreferrer',
                             variant: LINK_BUTTON_VARIANT,
+                            buttonStyle: DEFAULT_LINK_BUTTON_STYLE,
                           },
                         },
                       ],
@@ -3039,6 +3310,8 @@ const TaskRichEditor = ({
             contentMaxHeight !== 'none' ? { maxHeight: contentMaxHeight } : {}
           }
           onKeyDown={handleEditorKeyDown}
+          onMouseMove={handleLinkButtonPointerMove}
+          onMouseLeave={scheduleLinkButtonMenuClose}
         >
           <EditorContent editor={editor} />
 
@@ -3083,6 +3356,74 @@ const TaskRichEditor = ({
                   Команд не найдено
                 </p>
               )}
+            </div>
+          ) : null}
+
+          {!disabled && linkButtonMenu.isOpen ? (
+            <div
+              data-aq-link-button-menu="true"
+              className="absolute z-30 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+              style={{ top: linkButtonMenu.top, left: linkButtonMenu.left }}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={cancelLinkButtonMenuClose}
+              onMouseLeave={scheduleLinkButtonMenuClose}
+            >
+              <button
+                type="button"
+                title="Изменить ссылку"
+                aria-label="Изменить ссылку кнопки"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:text-slate-200 dark:hover:bg-blue-500/20 dark:hover:text-blue-100"
+                onClick={editLinkButtonHref}
+              >
+                <LinkIcon />
+              </button>
+              <button
+                type="button"
+                title="Выбрать стиль"
+                aria-label="Выбрать стиль кнопки"
+                aria-expanded={linkButtonMenu.isStylePickerOpen}
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
+                  linkButtonMenu.isStylePickerOpen
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100'
+                    : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700 dark:text-slate-200 dark:hover:bg-blue-500/20 dark:hover:text-blue-100'
+                }`}
+                onClick={() =>
+                  setLinkButtonMenu((prev) => ({
+                    ...prev,
+                    isStylePickerOpen: !prev.isStylePickerOpen,
+                  }))
+                }
+              >
+                <PaletteIcon />
+              </button>
+
+              {linkButtonMenu.isStylePickerOpen ? (
+                <div
+                  className={`absolute top-full mt-1 w-40 rounded-lg border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-900 ${
+                    linkButtonMenu.styleMenuAlign === 'left'
+                      ? 'left-0'
+                      : 'right-0'
+                  }`}
+                >
+                  {LINK_BUTTON_STYLE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => selectLinkButtonStyle(option.value)}
+                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition ${
+                        linkButtonMenu.buttonStyle === option.value
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100'
+                          : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <span
+                        className={`aq-link-button-style-swatch aq-link-button-style-swatch--${option.value}`}
+                      />
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

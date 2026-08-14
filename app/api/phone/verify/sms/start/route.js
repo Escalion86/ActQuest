@@ -4,6 +4,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 import { startTelefonipSmsCode } from '@helpers/telefonipAuthCalls'
 import { createPhoneVerificationCodeHash } from '@helpers/phoneVerificationCode'
+import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 
 const SMS_TTL_MS = 10 * 60 * 1000
 const SMS_RATE_LIMIT_MS = 60 * 1000
@@ -27,6 +28,8 @@ export async function POST(request) {
   const body = await request.json().catch(() => ({}))
   const phone = normalizeAuthPhone(body?.phone)
   const flow = String(body?.flow || 'register').trim().toLowerCase()
+  const location =
+    typeof body?.location === 'string' ? body.location.trim().toLowerCase() : null
 
   if (!phone) {
     return errorJson(400, 'phone', 'Укажите корректный номер телефона.')
@@ -36,6 +39,15 @@ export async function POST(request) {
   }
 
   try {
+    const controls = await getSiteAccessControlsByLocation(location)
+    if (!controls.allowSmsVerification) {
+      return errorJson(
+        403,
+        'forbidden',
+        'Подтверждение номера по SMS временно отключено.',
+      )
+    }
+
     const globalDb = await dbConnectGlobal()
     if (!globalDb) {
       return errorJson(503, 'unknown', 'Не удалось подключиться к базе.')

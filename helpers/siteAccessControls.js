@@ -3,6 +3,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 export const SITE_ACCESS_DEFAULTS = {
   allowSiteAuth: true,
   allowSiteRegistration: true,
+  allowSmsVerification: true,
   enableVkOneTap: true,
 }
 
@@ -19,6 +20,10 @@ export const normalizeSiteAccessControls = (doc = null) => ({
   allowSiteRegistration: toBooleanOrDefault(
     doc?.allowSiteRegistration,
     SITE_ACCESS_DEFAULTS.allowSiteRegistration,
+  ),
+  allowSmsVerification: toBooleanOrDefault(
+    doc?.allowSmsVerification,
+    SITE_ACCESS_DEFAULTS.allowSmsVerification,
   ),
   enableVkOneTap: toBooleanOrDefault(
     doc?.enableVkOneTap,
@@ -39,6 +44,7 @@ export const getSiteAccessControlsByLocation = async (location) => {
       .select({
         allowSiteAuth: 1,
         allowSiteRegistration: 1,
+        allowSmsVerification: 1,
         enableVkOneTap: 1,
       })
       .lean()
