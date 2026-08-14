@@ -8,6 +8,7 @@ import {
 } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import FontFamily from '@tiptap/extension-font-family'
@@ -61,6 +62,7 @@ const ESCALIONCLOUD_PUBLIC_ORIGIN =
 const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
 const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'
+const LINK_BUTTON_VARIANT = 'button'
 
 const STANDARD_COLORS = [
   { hex: '#000000', label: 'Чёрный' },
@@ -1388,12 +1390,33 @@ const ResizableImage = Image.extend({
   },
 })
 
-const ToolbarButton = ({ label, isActive, onClick, disabled }) => (
+const TaskLink = Link.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      variant: {
+        default: null,
+        parseHTML: (element) =>
+          element.getAttribute('data-aq-link-variant') === LINK_BUTTON_VARIANT
+            ? LINK_BUTTON_VARIANT
+            : null,
+        renderHTML: (attributes) =>
+          attributes.variant === LINK_BUTTON_VARIANT
+            ? { 'data-aq-link-variant': LINK_BUTTON_VARIANT }
+            : {},
+      },
+    }
+  },
+})
+
+const ToolbarButton = ({ label, title, isActive, onClick, disabled }) => (
   <button
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+    title={title || undefined}
+    aria-label={title || undefined}
+    className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
       isActive
         ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-100'
         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800'
@@ -1404,13 +1427,15 @@ const ToolbarButton = ({ label, isActive, onClick, disabled }) => (
 )
 
 ToolbarButton.propTypes = {
-  label: PropTypes.string.isRequired,
+  label: PropTypes.node.isRequired,
+  title: PropTypes.string,
   isActive: PropTypes.bool,
   onClick: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
 }
 
 ToolbarButton.defaultProps = {
+  title: '',
   isActive: false,
   disabled: false,
 }
@@ -1518,7 +1543,9 @@ const TaskRichEditor = ({
     () => [
       StarterKit.configure({
         heading: { levels: [2, 3, 4] },
+        link: false,
       }),
+      TaskLink,
       ResizableImage.configure({
         inline: false,
         allowBase64: false,
@@ -2747,25 +2774,29 @@ const TaskRichEditor = ({
             </select>
 
             <ToolbarButton
-              label="B"
+              label={<span className="font-bold">B</span>}
+              title="Жирный"
               isActive={toolbarState.bold}
               onClick={() => editor.chain().focus().toggleBold().run()}
               disabled={disabled}
             />
             <ToolbarButton
-              label="I"
+              label={<span className="italic">I</span>}
+              title="Курсив"
               isActive={toolbarState.italic}
               onClick={() => editor.chain().focus().toggleItalic().run()}
               disabled={disabled}
             />
             <ToolbarButton
-              label="U"
+              label={<span className="underline underline-offset-2">U</span>}
+              title="Подчёркнутый"
               isActive={toolbarState.underline}
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               disabled={disabled}
             />
             <ToolbarButton
-              label="S"
+              label={<span className="line-through">S</span>}
+              title="Зачёркнутый"
               isActive={toolbarState.strike}
               onClick={() => editor.chain().focus().toggleStrike().run()}
               disabled={disabled}
@@ -2888,7 +2919,8 @@ const TaskRichEditor = ({
               isActive={toolbarState.link}
               onClick={() => {
                 if (disabled) return
-                const currentHref = editor.getAttributes('link').href || ''
+                const currentLinkAttributes = editor.getAttributes('link')
+                const currentHref = currentLinkAttributes.href || ''
                 const nextHref = window.prompt('Введите ссылку', currentHref)
                 if (nextHref === null) return
                 const normalizedHref = nextHref.trim()
@@ -2896,7 +2928,48 @@ const TaskRichEditor = ({
                   editor.chain().focus().unsetLink().run()
                   return
                 }
-                editor.chain().focus().setLink({ href: normalizedHref }).run()
+                editor
+                  .chain()
+                  .focus()
+                  .setLink({
+                    href: normalizedHref,
+                    variant: currentLinkAttributes.variant || null,
+                  })
+                  .run()
+              }}
+              disabled={disabled}
+            />
+            <ToolbarButton
+              label="Кнопка"
+              onClick={() => {
+                if (disabled) return
+                const nextHref = window.prompt('Введите ссылку для кнопки')
+                if (nextHref === null) return
+                const normalizedHref = nextHref.trim()
+                if (!normalizedHref) return
+
+                editor
+                  .chain()
+                  .focus()
+                  .insertContent([
+                    {
+                      type: 'text',
+                      text: 'Кнопка',
+                      marks: [
+                        {
+                          type: 'link',
+                          attrs: {
+                            href: normalizedHref,
+                            target: '_blank',
+                            rel: 'noopener noreferrer',
+                            variant: LINK_BUTTON_VARIANT,
+                          },
+                        },
+                      ],
+                    },
+                    { type: 'text', text: ' ' },
+                  ])
+                  .run()
               }}
               disabled={disabled}
             />
