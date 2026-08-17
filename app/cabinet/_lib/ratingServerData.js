@@ -125,7 +125,23 @@ const compareRatingRows = (first, second) => {
 const getObjectEntries = (value) =>
   value instanceof Map ? Array.from(value.entries()) : Object.entries(value || {})
 
-const loadTeamsRatingBreakdown = async ({
+const normalizeBreakdownDate = (value) => {
+  if (value instanceof Date) return value.toISOString()
+  return typeof value === 'string' ? value : null
+}
+
+const buildBreakdownItem = ({ game, place, participantsCount, teamName }) => ({
+  gameId: toStringId(game?._id) || '',
+  seasonId: toStringId(game?.seasonId) || null,
+  gameName: game?.name?.trim() || 'Игра ActQuest',
+  dateStart: normalizeBreakdownDate(game?.dateStart),
+  place,
+  participantsCount,
+  score: calculateRatingGameScore({ place, participantsCount }),
+  ...(teamName ? { teamName } : {}),
+})
+
+export const loadTeamsRatingBreakdown = async ({
   db,
   teamIds,
   location,
@@ -142,7 +158,13 @@ const loadTeamsRatingBreakdown = async ({
       ...(location ? { location } : {}),
       ...(seasonId ? { seasonId } : {}),
     })
-    .select({ _id: 1, name: 1, dateStart: 1, 'result.teamsPlaces': 1 })
+    .select({
+      _id: 1,
+      name: 1,
+      dateStart: 1,
+      seasonId: 1,
+      'result.teamsPlaces': 1,
+    })
     .sort({ dateStart: 1, _id: 1 })
     .lean()
 
@@ -160,29 +182,166 @@ const loadTeamsRatingBreakdown = async ({
 
     validPlaces.forEach(([teamId, place]) => {
       if (!requestedTeamIds.has(teamId)) return
-      const score = calculateRatingGameScore({ place, participantsCount })
-      if (!Number.isFinite(score)) return
-
-      breakdownByTeamId.get(teamId)?.push({
-        gameId: toStringId(game?._id) || '',
-        gameName: game?.name?.trim() || 'Игра ActQuest',
-        dateStart:
-          game?.dateStart instanceof Date
-            ? game.dateStart.toISOString()
-            : typeof game?.dateStart === 'string'
-              ? game.dateStart
-              : null,
-        place,
-        participantsCount,
-        score,
-      })
+      const item = buildBreakdownItem({ game, place, participantsCount })
+      if (Number.isFinite(item.score)) {
+        breakdownByTeamId.get(teamId)?.push(item)
+      }
     })
   })
 
   return breakdownByTeamId
 }
 
-const loadPlayersRating = async ({ db, currentUserId, location, seasonId }) => {
+export const loadPlayersRatingBreakdown = async ({
+  db,
+  players,
+  location,
+  seasonId = null,
+}) => {
+  const normalizedPlayers = (Array.isArray(players) ? players : [])
+    .map((player) => ({
+      id: toStringId(player?.id),
+      telegramId: Number(player?.telegramId),
+    }))
+    .filter((player) => player.id)
+  if (!db || !normalizedPlayers.length) return new Map()
+
+  const requestedPlayerIds = new Set(
+    normalizedPlayers.map((player) => player.id),
+  )
+  const playerIdByTelegramId = new Map(
+    normalizedPlayers
+      .filter((player) => Number.isFinite(player.telegramId))
+      .map((player) => [player.telegramId, player.id]),
+  )
+  const breakdownByPlayerId = new Map(
+    normalizedPlayers.map((player) => [player.id, []]),
+  )
+  const games = await db
+    .model('Games')
+    .find({
+      status: 'closed',
+      isRated: { $ne: false },
+      ...(location ? { location } : {}),
+      ...(seasonId ? { seasonId } : {}),
+    })
+    .select({
+      _id: 1,
+      name: 1,
+      dateStart: 1,
+      seasonId: 1,
+      'result.teams': 1,
+      'result.teamsPlaces': 1,
+      'result.teamsUsers': 1,
+    })
+    .sort({ dateStart: 1, _id: 1 })
+    .lean()
+
+  games.forEach((game) => {
+    const validPlaces = getObjectEntries(game?.result?.teamsPlaces)
+      .map(([teamId, place]) => [toStringId(teamId), Number(place)])
+      .filter(([teamId, place]) => teamId && Number.isFinite(place))
+    const participantsCount = validPlaces.length
+    if (participantsCount < 2) return
+
+    const placeByTeamId = new Map(validPlaces)
+    const teamNameById = new Map(
+      (Array.isArray(game?.result?.teams) ? game.result.teams : [])
+        .map((team) => [
+          toStringId(team?._id ?? team?.id),
+          typeof team?.name === 'string' ? team.name.trim() : '',
+        ])
+        .filter(([teamId]) => teamId),
+    )
+    const bestResultByPlayerId = new Map()
+    const teamMemberships = Array.isArray(game?.result?.teamsUsers)
+      ? game.result.teamsUsers
+      : []
+
+    teamMemberships.forEach((membership) => {
+      const membershipUserId = toStringId(membership?.userId)
+      const membershipTelegramId = Number(membership?.userTelegramId)
+      const playerId = membershipUserId
+        ? requestedPlayerIds.has(membershipUserId)
+          ? membershipUserId
+          : null
+        : playerIdByTelegramId.get(membershipTelegramId) || null
+      const teamId = toStringId(membership?.teamId)
+      const place = teamId ? placeByTeamId.get(teamId) : null
+      if (!playerId || !teamId || !Number.isFinite(place)) return
+
+      const previous = bestResultByPlayerId.get(playerId)
+      if (!previous || place < previous.place) {
+        bestResultByPlayerId.set(playerId, {
+          place,
+          teamName: teamNameById.get(teamId) || null,
+        })
+      }
+    })
+
+    bestResultByPlayerId.forEach(({ place, teamName }, playerId) => {
+      const item = buildBreakdownItem({
+        game,
+        place,
+        participantsCount,
+        teamName,
+      })
+      if (Number.isFinite(item.score)) {
+        breakdownByPlayerId.get(playerId)?.push(item)
+      }
+    })
+  })
+
+  return breakdownByPlayerId
+}
+
+export const buildRatingPeriods = ({
+  document,
+  location,
+  seasons,
+  breakdown,
+}) => {
+  const games = Array.isArray(breakdown) ? breakdown : []
+  const allTimeRating = normalizeRating(
+    resolveDocumentRating(document, { location, seasonId: null }),
+  )
+  const seasonPeriods = (Array.isArray(seasons) ? seasons : [])
+    .map((season) => {
+      const seasonGames = games.filter(
+        (game) => game.seasonId === season.id,
+      )
+      const rating = normalizeRating(
+        resolveDocumentRating(document, {
+          location,
+          seasonId: season.id,
+        }),
+      )
+
+      return {
+        id: season.id,
+        name: season.name,
+        rating: { ...rating, breakdown: seasonGames },
+      }
+    })
+    .filter((period) => period.rating.breakdown.length > 0)
+
+  return [
+    {
+      id: 'all',
+      name: 'За всё время',
+      rating: { ...allTimeRating, breakdown: games },
+    },
+    ...seasonPeriods,
+  ]
+}
+
+const loadPlayersRating = async ({
+  db,
+  currentUserId,
+  location,
+  seasonId,
+  seasons,
+}) => {
   const Users = db.model('Users')
   const ratingScope = { location, seasonId }
   const ratingField = resolveRatingField(ratingScope)
@@ -194,6 +353,7 @@ const loadPlayersRating = async ({ db, currentUserId, location, seasonId }) => {
   const projection = {
     name: 1,
     username: 1,
+    telegramId: 1,
     photoUrl: 1,
     rating: 1,
     ratingsByLocation: 1,
@@ -213,18 +373,69 @@ const loadPlayersRating = async ({ db, currentUserId, location, seasonId }) => {
   const top = (topDocs || []).map((user) =>
     normalizePlayer(user, currentUserId, ratingScope),
   )
-  const topIds = new Set(top.map((item) => item.id))
   const current = currentUserDoc
     ? normalizePlayer(currentUserDoc, currentUserId, ratingScope)
     : null
+  const displayedDocsById = new Map(
+    [...(topDocs || []), ...(currentUserDoc ? [currentUserDoc] : [])].map(
+      (user) => [toStringId(user?._id), user],
+    ),
+  )
+  const displayedPlayerIds = Array.from(
+    new Set([...top, ...(current ? [current] : [])].map((item) => item.id)),
+  )
+  const breakdownByPlayerId = await loadPlayersRatingBreakdown({
+    db,
+    players: displayedPlayerIds.map((id) => ({
+      id,
+      telegramId: displayedDocsById.get(id)?.telegramId,
+    })),
+    location,
+    seasonId: null,
+  })
+  const withBreakdown = (player) => {
+    const breakdown = breakdownByPlayerId.get(player.id) || []
+    const periods = buildRatingPeriods({
+      document: displayedDocsById.get(player.id),
+      location,
+      seasons,
+      breakdown,
+    })
+    const selectedPeriod = periods.find(
+      (period) => period.id === (seasonId || 'all'),
+    )
+
+    return {
+      ...player,
+      rating: selectedPeriod?.rating || {
+        ...player.rating,
+        breakdown: seasonId
+          ? breakdown.filter((game) => game.seasonId === seasonId)
+          : breakdown,
+      },
+      ratingPeriods: periods,
+    }
+  }
+  const topWithBreakdown = top.map(withBreakdown)
+  const topIdsWithBreakdown = new Set(topWithBreakdown.map((item) => item.id))
+  const currentWithBreakdown = current ? withBreakdown(current) : null
 
   return {
-    top,
-    personal: current && !topIds.has(current.id) ? [current] : [],
+    top: topWithBreakdown,
+    personal:
+      currentWithBreakdown && !topIdsWithBreakdown.has(currentWithBreakdown.id)
+        ? [currentWithBreakdown]
+        : [],
   }
 }
 
-const loadTeamsRating = async ({ db, currentUserId, location, seasonId }) => {
+const loadTeamsRating = async ({
+  db,
+  currentUserId,
+  location,
+  seasonId,
+  seasons,
+}) => {
   const Teams = db.model('Teams')
   const TeamsUsers = db.model('TeamsUsers')
   const ratingScope = { location, seasonId }
@@ -281,19 +492,41 @@ const loadTeamsRating = async ({ db, currentUserId, location, seasonId }) => {
   const displayedTeamIds = Array.from(
     new Set([...top, ...personal].map((team) => team.id).filter(Boolean)),
   )
+  const displayedDocsById = new Map(
+    [...(topDocs || []), ...(personalDocs || [])].map((team) => [
+      toStringId(team?._id),
+      team,
+    ]),
+  )
   const breakdownByTeamId = await loadTeamsRatingBreakdown({
     db,
     teamIds: displayedTeamIds,
     location,
-    seasonId,
+    seasonId: null,
   })
-  const withBreakdown = (team) => ({
-    ...team,
-    rating: {
-      ...team.rating,
-      breakdown: breakdownByTeamId.get(team.id) || [],
-    },
-  })
+  const withBreakdown = (team) => {
+    const breakdown = breakdownByTeamId.get(team.id) || []
+    const periods = buildRatingPeriods({
+      document: displayedDocsById.get(team.id),
+      location,
+      seasons,
+      breakdown,
+    })
+    const selectedPeriod = periods.find(
+      (period) => period.id === (seasonId || 'all'),
+    )
+
+    return {
+      ...team,
+      rating: selectedPeriod?.rating || {
+        ...team.rating,
+        breakdown: seasonId
+          ? breakdown.filter((game) => game.seasonId === seasonId)
+          : breakdown,
+      },
+      ratingPeriods: periods,
+    }
+  }
 
   return {
     top: top.map(withBreakdown),
@@ -301,7 +534,7 @@ const loadTeamsRating = async ({ db, currentUserId, location, seasonId }) => {
   }
 }
 
-const loadLocationSeasons = async ({ db, location }) => {
+export const loadLocationSeasons = async ({ db, location }) => {
   if (!location) return []
   const games = await db
     .model('Games')
@@ -363,6 +596,7 @@ export const loadCabinetRating = async ({ session, type, seasonId = null }) => {
         currentUserId,
         location,
         seasonId: selectedSeasonId,
+        seasons,
       })),
       location: location || null,
       cityName,
@@ -377,6 +611,7 @@ export const loadCabinetRating = async ({ session, type, seasonId = null }) => {
       currentUserId,
       location,
       seasonId: selectedSeasonId,
+      seasons,
     })),
     location: location || null,
     cityName,

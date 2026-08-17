@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import GamePlaceBadge from '@components/cabinet/GamePlaceBadge'
 import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
+import RatingBreakdownModal from '@components/cabinet/rating/RatingBreakdownModal'
 import GameReviewModal from '@components/location-game/GameReviewModal'
 import Modal from '@components/Modal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
@@ -172,6 +173,7 @@ const CabinetDashboard = ({
       playersAbove: null,
       playedGames: 0,
       missedGames: 0,
+      breakdown: [],
     }
 
     return {
@@ -224,6 +226,9 @@ const CabinetDashboard = ({
         source.rating && typeof source.rating === 'object'
           ? { ...fallbackRating, ...source.rating }
           : fallbackRating,
+      ratingPeriods: Array.isArray(source.ratingPeriods)
+        ? source.ratingPeriods
+        : [],
       recentActivity: Array.isArray(source.recentActivity)
         ? source.recentActivity
         : [],
@@ -241,6 +246,7 @@ const CabinetDashboard = ({
   const [isPlayedGamePreviewOpen, setIsPlayedGamePreviewOpen] = useState(false)
   const [reviewModalGame, setReviewModalGame] = useState(null)
   const [isRatingInfoOpen, setIsRatingInfoOpen] = useState(false)
+  const [isRatingBreakdownOpen, setIsRatingBreakdownOpen] = useState(false)
   const [isChatLinksModalOpen, setIsChatLinksModalOpen] = useState(false)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const [leaveTeamError, setLeaveTeamError] = useState('')
@@ -292,6 +298,20 @@ const CabinetDashboard = ({
     }
   }, [currentPath, isLeavingTeam, router, selectedTeam])
   const latestPlayedGame = dashboardData.personalProgressGames[0] ?? null
+  const ratingPlayerItem = {
+    id: toStringId(
+      activeSession?.user?.globalUserId ??
+        activeSession?.user?.userId ??
+        activeSession?.user?._id ??
+        activeSession?.user?.id,
+    ) || 'current-user',
+    name:
+      activeSession?.user?.name?.trim() ||
+      activeSession?.user?.username?.trim() ||
+      'Игрок ActQuest',
+    rating: dashboardData.rating,
+    ratingPeriods: dashboardData.ratingPeriods,
+  }
   const hasAnyCityChatUrl = useMemo(
     () =>
       CHAT_CITY_OPTIONS.some(
@@ -370,15 +390,24 @@ const CabinetDashboard = ({
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Рейтинг игрока
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsRatingInfoOpen(true)}
-                    className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 text-xs font-bold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
-                    aria-label="Как считается рейтинг"
-                    title="Как считается рейтинг"
-                  >
-                    i
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsRatingBreakdownOpen(true)}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
+                    >
+                      Подробнее
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsRatingInfoOpen(true)}
+                      className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 text-xs font-bold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
+                      aria-label="Как считается рейтинг"
+                      title="Как считается рейтинг"
+                    >
+                      i
+                    </button>
+                  </div>
                 </div>
                 {dashboardData.rating?.isEligible ? (
                   <>
@@ -388,12 +417,11 @@ const CabinetDashboard = ({
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
                       Рейтинговые очки:{' '}
-                      {dashboardData.rating.finalScore.toFixed(2)} · Выше вас:{' '}
-                      {dashboardData.rating.playersAbove}
+                      {dashboardData.rating.finalScore.toFixed(2)}
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                      Сыграно: {dashboardData.rating.playedGames} · Побед:{' '}
-                      {dashboardData.rating.wins ?? 0}
+                      Рейтинговых игр: {dashboardData.rating.playedGames} ·
+                      Побед: {dashboardData.rating.wins ?? 0}
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-300">
                       Учтены закрытые рейтинговые игры города{' '}
@@ -981,6 +1009,12 @@ const CabinetDashboard = ({
           </p>
         </div>
       </Modal>
+      <RatingBreakdownModal
+        key={isRatingBreakdownOpen ? ratingPlayerItem.id : 'closed'}
+        item={isRatingBreakdownOpen ? ratingPlayerItem : null}
+        type="players"
+        onClose={() => setIsRatingBreakdownOpen(false)}
+      />
     </>
   )
 }
@@ -1011,6 +1045,13 @@ CabinetDashboard.propTypes = {
           missedGames: PropTypes.number,
           updatedAt: PropTypes.string,
         }),
+        ratingPeriods: PropTypes.arrayOf(
+          PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            name: PropTypes.string.isRequired,
+            rating: PropTypes.object.isRequired,
+          }),
+        ),
         membersCount: PropTypes.number,
         gamesCount: PropTypes.number,
         captain: PropTypes.shape({
@@ -1101,7 +1142,26 @@ CabinetDashboard.propTypes = {
       playersAbove: PropTypes.number,
       playedGames: PropTypes.number.isRequired,
       missedGames: PropTypes.number.isRequired,
+      breakdown: PropTypes.arrayOf(
+        PropTypes.shape({
+          gameId: PropTypes.string.isRequired,
+          seasonId: PropTypes.string,
+          gameName: PropTypes.string.isRequired,
+          dateStart: PropTypes.string,
+          place: PropTypes.number.isRequired,
+          participantsCount: PropTypes.number.isRequired,
+          score: PropTypes.number.isRequired,
+          teamName: PropTypes.string,
+        }),
+      ),
     }),
+    ratingPeriods: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        rating: PropTypes.object.isRequired,
+      }),
+    ),
     recentActivity: PropTypes.arrayOf(
       PropTypes.shape({
         id: PropTypes.string.isRequired,
@@ -1146,7 +1206,9 @@ CabinetDashboard.defaultProps = {
       playersAbove: null,
       playedGames: 0,
       missedGames: 0,
+      breakdown: [],
     },
+    ratingPeriods: [],
     recentActivity: [],
     chatUrl: '',
     chatUrlsByLocation: {

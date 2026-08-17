@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import {
+  buildRatingPeriods,
+  loadLocationSeasons,
+  loadTeamsRatingBreakdown,
+} from '@app/cabinet/_lib/ratingServerData'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -88,7 +93,40 @@ export async function GET(request) {
       )
     }
 
-    return NextResponse.json({ success: true, data: team }, { status: 200 })
+    const ratingLocation =
+      typeof team.location === 'string'
+        ? team.location.trim().toLowerCase()
+        : ''
+    const [ratingTeamDoc, seasons, breakdownByTeamId] = await Promise.all([
+      db
+        .model('Teams')
+        .findById(teamId)
+        .select({ rating: 1, ratingsByLocation: 1, ratingsBySeason: 1 })
+        .lean(),
+      loadLocationSeasons({ db, location: ratingLocation }),
+      loadTeamsRatingBreakdown({
+        db,
+        teamIds: [teamId],
+        location: ratingLocation,
+        seasonId: null,
+      }),
+    ])
+    const ratingPeriods = buildRatingPeriods({
+      document: ratingTeamDoc,
+      location: ratingLocation,
+      seasons,
+      breakdown: breakdownByTeamId.get(teamId) || [],
+    })
+    const teamWithRatingDetails = {
+      ...team,
+      rating: ratingPeriods[0]?.rating || team.rating,
+      ratingPeriods,
+    }
+
+    return NextResponse.json(
+      { success: true, data: teamWithRatingDetails },
+      { status: 200 },
+    )
   } catch (error) {
     console.error('Failed to load cabinet team details (app)', error)
     return NextResponse.json(

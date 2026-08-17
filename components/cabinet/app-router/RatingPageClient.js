@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
-import Modal from '@components/Modal'
+import RatingBreakdownModal from '@components/cabinet/rating/RatingBreakdownModal'
 
 const MIN_RATING_GAMES = 3
 
@@ -16,122 +16,9 @@ const formatScore = (value) =>
 const formatAttendance = (value) =>
   Number.isFinite(value) ? `${Math.round(value * 100)}%` : '—'
 
-const ratingDateFormatter = new Intl.DateTimeFormat('ru-RU', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-})
-
-const formatRatingDate = (value) => {
-  if (!value) return 'Дата не указана'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? 'Дата не указана'
-    : ratingDateFormatter.format(date)
-}
-
-const RatingBreakdownModal = ({ item, onClose }) => {
-  const rating = item?.rating
-  const breakdown = rating?.breakdown || []
-
-  return (
-    <Modal
-      isOpen={Boolean(item)}
-      title={item ? `Рейтинг команды «${item.name}»` : 'Рейтинг команды'}
-      onClose={onClose}
-      dialogClassName="md:max-w-3xl"
-    >
-      {item ? (
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl bg-slate-100 p-3 dark:bg-white/5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Место
-              </p>
-              <p className="mt-1 font-bold text-slate-900 dark:text-white">
-                {Number.isFinite(rating.rank) ? `#${rating.rank}` : '—'}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-100 p-3 dark:bg-white/5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Средний балл
-              </p>
-              <p className="mt-1 font-bold text-slate-900 dark:text-white">
-                {formatScore(rating.finalScore)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-100 p-3 dark:bg-white/5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Игры
-              </p>
-              <p className="mt-1 font-bold text-slate-900 dark:text-white">
-                {rating.playedGames}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-100 p-3 dark:bg-white/5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Победы
-              </p>
-              <p className="mt-1 font-bold text-slate-900 dark:text-white">
-                {rating.wins}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">
-              Результаты игр
-            </h3>
-            {breakdown.length ? (
-              <ol className="mt-3 space-y-2">
-                {breakdown.map((game) => (
-                  <li
-                    key={game.gameId}
-                    className="grid gap-3 rounded-xl border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center dark:border-white/10"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                        {game.gameName}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {formatRatingDate(game.dateStart)} · {game.place}-е место
-                        из {game.participantsCount}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-cyan-50 px-3 py-2 text-right dark:bg-cyan-500/10">
-                      <p className="text-[10px] uppercase tracking-wide text-cyan-700 dark:text-cyan-300">
-                        Очки
-                      </p>
-                      <p className="font-bold text-cyan-900 dark:text-cyan-100">
-                        {formatScore(game.score)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-3 rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-white/15 dark:text-slate-400">
-                В выбранном периоде нет рейтинговых игр этой команды.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-xl bg-cyan-50 p-4 text-xs leading-5 text-cyan-900 dark:bg-cyan-500/10 dark:text-cyan-100">
-            За первое место начисляется 100 очков, за последнее — 0. Балл за
-            остальные места зависит от количества команд. Итоговый рейтинг —
-            среднее арифметическое очков за показанные игры. Победа означает
-            первое место.
-          </div>
-        </div>
-      ) : null}
-    </Modal>
-  )
-}
-
 const RatingRow = ({ item, type, onSelect }) => {
   const rating = item.rating
   const isTeam = type === 'teams'
-  const RowContainer = isTeam ? 'button' : 'div'
   const imageFallback =
     isTeam ? '/img/avatars/team.png' : '/img/avatars/user.png'
 
@@ -143,15 +30,11 @@ const RatingRow = ({ item, type, onSelect }) => {
           : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/80'
       }`}
     >
-      <RowContainer
-        type={isTeam ? 'button' : undefined}
-        onClick={isTeam ? () => onSelect(item) : undefined}
-        aria-haspopup={isTeam ? 'dialog' : undefined}
-        className={`grid w-full gap-3 rounded-2xl p-4 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${
-          isTeam
-            ? 'cursor-pointer transition hover:bg-cyan-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 dark:hover:bg-cyan-500/5 dark:focus-visible:ring-offset-slate-950'
-            : ''
-        }`}
+      <button
+        type="button"
+        onClick={() => onSelect(item)}
+        aria-haspopup="dialog"
+        className="grid w-full cursor-pointer gap-3 rounded-2xl p-4 text-left transition hover:bg-cyan-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center dark:hover:bg-cyan-500/5 dark:focus-visible:ring-offset-slate-950"
       >
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
@@ -181,11 +64,9 @@ const RatingRow = ({ item, type, onSelect }) => {
                 ? `${rating.wins} побед · среднее место ${formatScore(rating.averagePlace)}`
                 : `До рейтинга: ${rating.playedGames} из ${MIN_RATING_GAMES} игр`}
             </p>
-            {isTeam ? (
-              <p className="mt-1 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">
-                Нажмите, чтобы увидеть расчёт
-              </p>
-            ) : null}
+            <p className="mt-1 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">
+              Нажмите, чтобы увидеть расчёт
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center sm:min-w-64">
@@ -214,7 +95,7 @@ const RatingRow = ({ item, type, onSelect }) => {
             </p>
           </div>
         </div>
-      </RowContainer>
+      </button>
     </li>
   )
 }
@@ -229,7 +110,7 @@ const RatingPageClient = ({
 }) => {
   const router = useRouter()
   const pathname = usePathname()
-  const [selectedTeam, setSelectedTeam] = useState(null)
+  const [selectedItem, setSelectedItem] = useState(null)
   const isTeams = type === 'teams'
   const entityLabel = isTeams ? 'команд' : 'игроков'
   const selectedSeason = seasons.find(
@@ -333,7 +214,7 @@ const RatingPageClient = ({
                   key={item.id}
                   item={item}
                   type={type}
-                  onSelect={setSelectedTeam}
+                  onSelect={setSelectedItem}
                 />
               ))}
             </ol>
@@ -356,7 +237,7 @@ const RatingPageClient = ({
                   key={item.id}
                   item={item}
                   type={type}
-                  onSelect={setSelectedTeam}
+                  onSelect={setSelectedItem}
                 />
               ))}
             </ol>
@@ -386,8 +267,11 @@ const RatingPageClient = ({
         </details>
       </div>
       <RatingBreakdownModal
-        item={selectedTeam}
-        onClose={() => setSelectedTeam(null)}
+        key={`${selectedItem?.id || 'closed'}:${selectedSeasonId || 'all'}`}
+        item={selectedItem}
+        type={type}
+        initialPeriodId={selectedSeasonId || 'all'}
+        onClose={() => setSelectedItem(null)}
       />
     </CabinetLayout>
   )
@@ -412,11 +296,13 @@ const ratingShape = PropTypes.shape({
   breakdown: PropTypes.arrayOf(
     PropTypes.shape({
       gameId: PropTypes.string.isRequired,
+      seasonId: PropTypes.string,
       gameName: PropTypes.string.isRequired,
       dateStart: PropTypes.string,
       place: PropTypes.number.isRequired,
       participantsCount: PropTypes.number.isRequired,
       score: PropTypes.number.isRequired,
+      teamName: PropTypes.string,
     }),
   ),
 })
@@ -428,21 +314,19 @@ const itemShape = PropTypes.shape({
   image: PropTypes.string,
   isCurrent: PropTypes.bool.isRequired,
   rating: ratingShape.isRequired,
+  ratingPeriods: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      rating: PropTypes.object.isRequired,
+    }),
+  ),
 })
 
 RatingRow.propTypes = {
   item: itemShape.isRequired,
   type: PropTypes.oneOf(['teams', 'players']).isRequired,
   onSelect: PropTypes.func.isRequired,
-}
-
-RatingBreakdownModal.propTypes = {
-  item: itemShape,
-  onClose: PropTypes.func.isRequired,
-}
-
-RatingBreakdownModal.defaultProps = {
-  item: null,
 }
 
 RatingPageClient.propTypes = {

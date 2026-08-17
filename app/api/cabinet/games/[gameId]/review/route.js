@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import {
+  buildGameReviewSiteEventMessage,
+  shouldNotifyAdminsAboutGameReview,
+} from '@helpers/adminEventNotifications'
+import logSiteEvent from '@helpers/logSiteEvent'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import {
   findGameReviewMembership,
@@ -172,8 +177,14 @@ export async function PUT(request, { params }) {
     }
 
     const input = normalizedInput.data
+    const reviewFilter = { gameId, userId: context.identity.userId }
+    const existingReview = await db
+      .model('GameReviews')
+      .findOne(reviewFilter)
+      .select({ _id: 1, moderationStatus: 1 })
+      .lean()
     const review = await db.model('GameReviews').findOneAndUpdate(
-      { gameId, userId: context.identity.userId },
+      reviewFilter,
       {
         $set: {
           ...input,
@@ -197,6 +208,40 @@ export async function PUT(request, { params }) {
       },
       { upsert: true, returnDocument: 'after', runValidators: true },
     )
+
+    const shouldNotifyAdmins = shouldNotifyAdminsAboutGameReview(existingReview)
+    if (shouldNotifyAdmins) {
+      const isResubmission = Boolean(existingReview)
+      const gameName =
+        typeof context.game?.name === 'string' && context.game.name.trim()
+          ? context.game.name.trim()
+          : 'Без названия'
+      await logSiteEvent({
+        db,
+        type: 'game_review_submitted',
+        location: context.game?.location,
+        message: buildGameReviewSiteEventMessage({
+          gameName,
+          overallRating: input.overallRating,
+          difficultyRating: input.difficultyRating,
+          isResubmission,
+        }),
+        actorUserId: context.identity.userId,
+        teamId: context.membership?.teamId,
+        gameId,
+        gameName,
+        metadata: {
+          reviewId: String(review?._id || ''),
+          overallRating: input.overallRating,
+          difficultyRating: input.difficultyRating,
+          isResubmission,
+        },
+        notificationTitle: isResubmission
+          ? 'Отзыв повторно отправлен на проверку'
+          : 'Новый отзыв об игре',
+        notificationUrl: '/cabinet/admin/reviews',
+      })
+    }
 
     return NextResponse.json(
       { success: true, data: { review: serializeGameReview(review) } },

@@ -8,15 +8,22 @@ import CopyableId from '@components/cabinet/CopyableId'
 import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
 import TeamMemberCard from '@components/cabinet/cards/TeamMemberCard'
 import UserViewModal from '@components/cabinet/modals/UserViewModal'
+import RatingBreakdownModal from '@components/cabinet/rating/RatingBreakdownModal'
 import Modal from '@components/Modal'
 import formatDate from '@helpers/formatDate'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
+import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import { canOpenRestrictedTeamGamePreview } from '@helpers/cabinetGameVisibility'
 import isUserAdmin from '@helpers/isUserAdmin'
 import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
 import UnifiedGameDescriptionModal from './UnifiedGameDescriptionModal'
+
+const formatRatingScore = (value) => {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric.toFixed(2) : '—'
+}
 
 const resolveLocationLabel = (locationKey) => {
   const key =
@@ -57,6 +64,11 @@ const TeamDescriptionModal = ({
     useState(false)
   const [selectedMemberUserId, setSelectedMemberUserId] = useState(null)
   const [memberPreviewError, setMemberPreviewError] = useState('')
+  const [isRatingInfoOpen, setIsRatingInfoOpen] = useState(false)
+  const [isRatingBreakdownOpen, setIsRatingBreakdownOpen] = useState(false)
+  const [ratingDetailsError, setRatingDetailsError] = useState('')
+  const selectedTeamId =
+    typeof selectedTeam?.id === 'string' ? selectedTeam.id : ''
   const selectedGamePreviewId =
     typeof selectedGamePreviewSource?.id === 'string'
       ? selectedGamePreviewSource.id
@@ -81,6 +93,16 @@ const TeamDescriptionModal = ({
   })
   const selectedGamePreview =
     gamePreviewQuery.data || selectedGamePreviewSource
+  const teamRatingDetailsQuery = useQuery({
+    queryKey: ['team', selectedTeamId],
+    queryFn: () => fetchCabinetTeamDetails({ teamId: selectedTeamId }),
+    enabled: false,
+    staleTime: 1000 * 60 * 5,
+  })
+  const teamWithRatingDetails =
+    selectedTeam?.ratingPeriods?.length > 0
+      ? selectedTeam
+      : teamRatingDetailsQuery.data || selectedTeam
 
   useEffect(() => {
     if (!isOpen) {
@@ -91,8 +113,31 @@ const TeamDescriptionModal = ({
       setIsMemberPreviewModalOpen(false)
       setSelectedMemberUserId(null)
       setMemberPreviewError('')
+      setIsRatingInfoOpen(false)
+      setIsRatingBreakdownOpen(false)
+      setRatingDetailsError('')
     }
   }, [isOpen])
+
+  const handleOpenRatingBreakdown = useCallback(async () => {
+    setRatingDetailsError('')
+    if (teamWithRatingDetails?.ratingPeriods?.length > 0) {
+      setIsRatingBreakdownOpen(true)
+      return
+    }
+
+    try {
+      const result = await teamRatingDetailsQuery.refetch()
+      if (!result.data) {
+        throw new Error('Не удалось загрузить подробный расчёт рейтинга')
+      }
+      setIsRatingBreakdownOpen(true)
+    } catch (error) {
+      setRatingDetailsError(
+        error?.message || 'Не удалось загрузить подробный расчёт рейтинга',
+      )
+    }
+  }, [teamRatingDetailsQuery, teamWithRatingDetails])
 
   const handleOpenMemberCard = useCallback(
     async (member) => {
@@ -220,6 +265,70 @@ const TeamDescriptionModal = ({
             ) : null}
 
             <ModalSection className="p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <ModalSectionTitle>Рейтинг команды</ModalSectionTitle>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleOpenRatingBreakdown}
+                    disabled={teamRatingDetailsQuery.isFetching}
+                    className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 disabled:cursor-wait disabled:opacity-60 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
+                  >
+                    {teamRatingDetailsQuery.isFetching
+                      ? 'Загрузка…'
+                      : 'Подробнее'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsRatingInfoOpen(true)}
+                    className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 text-xs font-bold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
+                    aria-label="Как считается рейтинг команды"
+                    title="Как считается рейтинг команды"
+                  >
+                    i
+                  </button>
+                </div>
+              </div>
+              {ratingDetailsError ? (
+                <p className="text-xs text-rose-600 dark:text-rose-300">
+                  {ratingDetailsError}
+                </p>
+              ) : null}
+              <div className="space-y-1">
+                {selectedTeam.rating?.isEligible ? (
+                  <>
+                  <p className="text-lg font-semibold text-primary dark:text-slate-100">
+                    #{selectedTeam.rating.rank} из{' '}
+                    {selectedTeam.rating.totalRanked}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Рейтинговые очки:{' '}
+                    {formatRatingScore(selectedTeam.rating.finalScore)}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Рейтинговых игр: {selectedTeam.rating.playedGames ?? 0} ·
+                    Побед: {selectedTeam.rating.wins ?? 0}
+                  </p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-300">
+                    Учтены закрытые рейтинговые игры города{' '}
+                    {resolveLocationLabel(selectedTeam.location)}.
+                  </p>
+                  </>
+                ) : (
+                  <>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                    Недостаточно данных для рейтинга
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Нужно минимум три закрытые рейтинговые игры. Сейчас сыграно:{' '}
+                    {selectedTeam.rating?.playedGames ?? 0}
+                  </p>
+                  </>
+                )}
+              </div>
+            </ModalSection>
+
+            <ModalSection className="p-4 sm:p-5">
               <ModalSectionTitle>Информация</ModalSectionTitle>
               <dl className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
@@ -262,17 +371,6 @@ const TeamDescriptionModal = ({
                   </dt>
                   <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                     {selectedTeam.gamesCount ?? 0}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Рейтинг
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                    {selectedTeam.rating?.isEligible &&
-                    Number.isFinite(selectedTeam.rating?.rank)
-                      ? `#${selectedTeam.rating.rank} · ${Number(selectedTeam.rating?.finalScore || 0).toFixed(2)} очков`
-                      : 'Недостаточно данных для рейтинга'}
                   </dd>
                 </div>
                 <div>
@@ -409,6 +507,49 @@ const TeamDescriptionModal = ({
         }}
         canViewContacts={canViewIds}
       />
+      <Modal
+        isOpen={isOpen && isRatingInfoOpen}
+        onClose={() => setIsRatingInfoOpen(false)}
+        title="Как считается рейтинг команды"
+      >
+        <div className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-200">
+          <p>
+            За каждую игру команда получает от 0 до 100 очков относительно
+            числа соперников: первое место даёт 100, последнее — 0.
+          </p>
+          <p>
+            Рейтинг — среднее число очков. Пропуски не уменьшают его и
+            показываются только как статистика участия.
+          </p>
+          <p>
+            При равных очках выше команда с большим числом игр, затем побед и
+            лучшим последним результатом.
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-300">
+            Для попадания в рейтинг нужно минимум три закрытые рейтинговые
+            игры.
+          </p>
+        </div>
+      </Modal>
+      <RatingBreakdownModal
+        key={
+          isRatingBreakdownOpen
+            ? `team-rating-${selectedTeam?.id || 'unknown'}`
+            : 'team-rating-closed'
+        }
+        item={
+          isOpen && isRatingBreakdownOpen && teamWithRatingDetails
+            ? {
+                id: teamWithRatingDetails.id || 'team',
+                name: teamWithRatingDetails.name || 'Команда ActQuest',
+                rating: teamWithRatingDetails.rating,
+                ratingPeriods: teamWithRatingDetails.ratingPeriods,
+              }
+            : null
+        }
+        type="teams"
+        onClose={() => setIsRatingBreakdownOpen(false)}
+      />
     </>
   )
 }
@@ -434,11 +575,20 @@ TeamDescriptionModal.propTypes = {
     rating: PropTypes.shape({
       isEligible: PropTypes.bool,
       rank: PropTypes.number,
+      totalRanked: PropTypes.number,
       finalScore: PropTypes.number,
       playedGames: PropTypes.number,
       missedGames: PropTypes.number,
+      wins: PropTypes.number,
       updatedAt: PropTypes.string,
     }),
+    ratingPeriods: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        rating: PropTypes.object.isRequired,
+      }),
+    ),
     captain: PropTypes.shape({
       name: PropTypes.string,
       username: PropTypes.string,

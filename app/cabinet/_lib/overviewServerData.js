@@ -1,4 +1,10 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import {
+  buildRatingPeriods,
+  loadLocationSeasons,
+  loadPlayersRatingBreakdown,
+  loadTeamsRatingBreakdown,
+} from '@app/cabinet/_lib/ratingServerData'
 import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
@@ -101,7 +107,9 @@ const buildBaseData = (location) => ({
     playersAbove: null,
     playedGames: 0,
     missedGames: 0,
+    breakdown: [],
   },
+  ratingPeriods: [],
   recentActivity: [],
   chatUrl: '',
   chatUrlsByLocation: {
@@ -125,6 +133,7 @@ export const loadCabinetAppOverview = async (session) => {
   if (!db || !location) {
     return baseData
   }
+  const locationSeasonsPromise = loadLocationSeasons({ db, location })
 
   const userLookupFilter = resolveSessionUserFilter(session?.user)
   const userDoc = userLookupFilter
@@ -135,7 +144,11 @@ export const loadCabinetAppOverview = async (session) => {
           _id: 1,
           name: 1,
           username: 1,
+          telegramId: 1,
+          photoUrl: 1,
           rating: 1,
+          ratingsByLocation: 1,
+          ratingsBySeason: 1,
         })
         .lean()
     : null
@@ -197,14 +210,46 @@ export const loadCabinetAppOverview = async (session) => {
     return acc
   }, {})
 
+  const [locationSeasons, ratingTeamDocs, teamRatingBreakdownById] =
+    await Promise.all([
+      locationSeasonsPromise,
+      teamIds.length
+        ? db
+            .model('Teams')
+            .find({ _id: { $in: teamIds } })
+            .select({ rating: 1, ratingsByLocation: 1, ratingsBySeason: 1 })
+            .lean()
+        : Promise.resolve([]),
+      loadTeamsRatingBreakdown({
+        db,
+        teamIds,
+        location,
+        seasonId: null,
+      }),
+    ])
+  const ratingTeamDocById = new Map(
+    (Array.isArray(ratingTeamDocs) ? ratingTeamDocs : []).map((team) => [
+      String(team._id),
+      team,
+    ]),
+  )
+
   const participantTeams = (Array.isArray(teams) ? teams : []).map((team) => {
     const teamId = team?.id ? String(team.id) : null
     const membership = teamId ? membershipByTeamId[teamId] : null
+    const ratingPeriods = buildRatingPeriods({
+      document: teamId ? ratingTeamDocById.get(teamId) : null,
+      location,
+      seasons: locationSeasons,
+      breakdown: teamId ? teamRatingBreakdownById.get(teamId) || [] : [],
+    })
 
     return {
       ...team,
       membershipId: membership?.membershipId ?? null,
       isCaptain: Boolean(membership?.isCaptain),
+      rating: ratingPeriods[0]?.rating || team.rating,
+      ratingPeriods,
     }
   })
 
@@ -401,10 +446,33 @@ export const loadCabinetAppOverview = async (session) => {
     playersAbove: null,
     playedGames: 0,
     missedGames: 0,
+    breakdown: [],
   }
+  const playerId = userDoc?._id ? String(userDoc._id) : normalizedUserId
+  const ratingBreakdownByPlayerId = playerId
+    ? await loadPlayersRatingBreakdown({
+        db,
+        players: [{ id: playerId, telegramId: userDoc?.telegramId }],
+        location,
+      })
+    : new Map()
+  const ratingWithBreakdown = {
+    ...rating,
+    breakdown: playerId
+      ? ratingBreakdownByPlayerId.get(playerId) || []
+      : [],
+  }
+  const ratingPeriods = buildRatingPeriods({
+    document: userDoc ?? session?.user ?? null,
+    location,
+    seasons: locationSeasons,
+    breakdown: ratingWithBreakdown.breakdown,
+  })
 
-  const playedGamesFromRating = Number.isFinite(Number(rating?.playedGames))
-    ? Number(rating.playedGames)
+  const playedGamesFromRating = Number.isFinite(
+    Number(ratingWithBreakdown?.playedGames),
+  )
+    ? Number(ratingWithBreakdown.playedGames)
     : 0
   const completedGamesCount = Math.max(
     completedGamesCountFromProgress,
@@ -457,7 +525,8 @@ export const loadCabinetAppOverview = async (session) => {
       : null,
     personalProgressGames,
     latestPlayedGameDetails,
-    rating,
+    rating: ratingWithBreakdown,
+    ratingPeriods,
     recentActivity,
     chatUrl: siteSettings.chatUrl || '',
     chatUrlsByLocation: {

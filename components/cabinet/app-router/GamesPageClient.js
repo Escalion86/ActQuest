@@ -6479,9 +6479,7 @@ const GamesPage = ({
       const hasDifficultySummary =
         Number.isFinite(reviewAverageDifficultyRating) &&
         reviewAverageDifficultyRating >= 1
-      const userReviewRating = normalizeUserReviewRating(
-        game?.userReviewRating,
-      )
+      const userReviewRating = normalizeUserReviewRating(game?.userReviewRating)
       const userReviewDifficultyRating = normalizeUserReviewRating(
         game?.userReviewDifficultyRating,
       )
@@ -6567,12 +6565,12 @@ const GamesPage = ({
                   placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-6 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                 />
                 {hasUserTeamPlace ? (
-                  <div className="absolute left-2 top-2 z-10">
+                  <div className="absolute z-10 left-2 top-2">
                     <GamePlaceBadge place={userTeamPlace} />
                   </div>
                 ) : null}
               </div>
-              <div className="min-w-0 flex-1 p-0 sm:p-4">
+              <div className="flex-1 min-w-0 p-0 sm:p-4">
                 <div className="flex items-start flex-1 w-full min-w-0 gap-3">
                   <div
                     className={`relative min-h-[96px] w-24 shrink-0 overflow-hidden rounded-xl border shadow-inner sm:hidden ${
@@ -6590,7 +6588,7 @@ const GamesPage = ({
                       placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-4 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                     />
                     {hasUserTeamPlace ? (
-                      <div className="absolute left-2 top-2 z-10">
+                      <div className="absolute z-10 left-2 top-2">
                         <GamePlaceBadge place={userTeamPlace} />
                       </div>
                     ) : null}
@@ -6620,8 +6618,7 @@ const GamesPage = ({
                           {hasDifficultySummary ? (
                             <> · {reviewAverageDifficultyRating} ◈</>
                           ) : null}{' '}
-                          -{' '}
-                          {getReviewCountLabel(reviewsCount)}
+                          - {getReviewCountLabel(reviewsCount)}
                         </span>
                       ) : null}
                       {isHiddenGame && (
@@ -6667,7 +6664,7 @@ const GamesPage = ({
                   canViewThisGameTasks) && (
                   <div className="flex flex-col gap-2 mt-3">
                     {canCancelRegistration ? (
-                      <div className="order-3 flex items-center gap-2">
+                      <div className="flex items-center order-3 gap-2">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -6689,7 +6686,7 @@ const GamesPage = ({
                       canViewThisGameTasks ||
                       canViewThisGameResults ||
                       canGenerateThisGameResults) && (
-                      <div className="order-2 flex flex-wrap items-center gap-2 phoneH:justify-end">
+                      <div className="flex flex-wrap items-center order-2 gap-2 phoneH:justify-end">
                         {canEnterGame && (
                           <button
                             type="button"
@@ -6792,7 +6789,7 @@ const GamesPage = ({
                       canBroadcastThisGame ||
                       canOpenAgentPanel ||
                       canViewGameTeams) && (
-                      <div className="order-1 flex flex-wrap items-center gap-2 phoneH:justify-end">
+                      <div className="flex flex-wrap items-center order-1 gap-2 phoneH:justify-end">
                         {canOpenAgentPanel && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -7090,9 +7087,7 @@ const GamesPage = ({
       const hasDifficultySummary =
         Number.isFinite(reviewAverageDifficultyRating) &&
         reviewAverageDifficultyRating >= 1
-      const userReviewRating = normalizeUserReviewRating(
-        game?.userReviewRating,
-      )
+      const userReviewRating = normalizeUserReviewRating(game?.userReviewRating)
       const userReviewDifficultyRating = normalizeUserReviewRating(
         game?.userReviewDifficultyRating,
       )
@@ -7177,7 +7172,7 @@ const GamesPage = ({
                 placeholderClassName="flex min-h-[180px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
               />
               {hasUserTeamPlace ? (
-                <div className="absolute left-3 top-3 z-10">
+                <div className="absolute z-10 left-3 top-3">
                   <GamePlaceBadge place={userTeamPlace} />
                 </div>
               ) : null}
@@ -7207,8 +7202,7 @@ const GamesPage = ({
                     {hasDifficultySummary ? (
                       <> · {reviewAverageDifficultyRating} ◈</>
                     ) : null}{' '}
-                    -{' '}
-                    {getReviewCountLabel(reviewsCount)}
+                    - {getReviewCountLabel(reviewsCount)}
                   </span>
                 ) : null}
                 {isHiddenGame && (
@@ -7256,7 +7250,7 @@ const GamesPage = ({
                     canViewThisGameTasks ||
                     canViewThisGameResults ||
                     canGenerateThisGameResults) && (
-                    <div className="order-2 flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center order-2 gap-2">
                       {canEnterGame && (
                         <button
                           type="button"
@@ -7352,7 +7346,7 @@ const GamesPage = ({
                     </div>
                   )}
                   {canCancelRegistration ? (
-                    <div className="order-3 flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center order-3 gap-2">
                       <button
                         type="button"
                         onClick={(event) => {
@@ -7376,7 +7370,7 @@ const GamesPage = ({
                     canBroadcastThisGame ||
                     canOpenAgentPanel ||
                     canViewGameTeams) && (
-                    <div className="order-1 flex flex-wrap items-center gap-2 pointer-events-auto phoneH:justify-end">
+                    <div className="flex flex-wrap items-center order-1 gap-2 pointer-events-auto phoneH:justify-end">
                       {canOpenAgentPanel && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -8232,7 +8226,7 @@ const GamesPage = ({
                     <ul
                       className={
                         isCardsDisplay
-                          ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3'
+                          ? 'mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
                           : 'mt-2 space-y-3'
                       }
                     >
@@ -8254,7 +8248,7 @@ const GamesPage = ({
                     <ul
                       className={
                         isCardsDisplay
-                          ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3'
+                          ? 'mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
                           : 'mt-2 space-y-3'
                       }
                     >

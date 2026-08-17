@@ -30,6 +30,7 @@ const EVENT_TYPE_LABELS = {
   team_registered_to_game: 'Команда зарегистрирована на игру',
   team_unregistered_from_game: 'Команда снята с игры',
   game_order_created: 'Новая заявка на игру',
+  game_review_submitted: 'Новый отзыв об игре',
   client_diagnostic: 'Клиентская диагностика',
 }
 
@@ -55,6 +56,8 @@ const logSiteEvent = async ({
   gameId = null,
   gameName = '',
   metadata = {},
+  notificationTitle = '',
+  notificationUrl = '/cabinet/admin/events',
 } = {}) => {
   if (!type || typeof type !== 'string') {
     return null
@@ -82,6 +85,10 @@ const logSiteEvent = async ({
     })
 
     const normalizedLocation = normalizeLocation(location)
+    const resolvedNotificationUrl =
+      typeof notificationUrl === 'string' && notificationUrl.startsWith('/')
+        ? notificationUrl
+        : '/cabinet/admin/events'
     if (isLocationAllowed(normalizedLocation)) {
       try {
         const UsersModel = connection.model('Users')
@@ -110,7 +117,9 @@ const logSiteEvent = async ({
             db: connection,
             users: targetUsers,
             notification: {
-              title: `Событие: ${EVENT_TYPE_LABELS[type] || type}`,
+              title:
+                normalizeText(notificationTitle) ||
+                `Событие: ${EVENT_TYPE_LABELS[type] || type}`,
               body:
                 normalizeText(message) || 'На сайте произошло новое событие.',
               tag: `admin-site-event-${String(type).trim()}-${Date.now()}`,
@@ -120,9 +129,9 @@ const logSiteEvent = async ({
                 eventType: String(type).trim(),
                 eventId: toStringId(created?._id),
                 location: normalizedLocation,
-                url: '/cabinet/admin/events',
+                url: resolvedNotificationUrl,
               },
-              url: '/cabinet/admin/events',
+              url: resolvedNotificationUrl,
             },
           })
         }

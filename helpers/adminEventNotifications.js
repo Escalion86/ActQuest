@@ -34,3 +34,30 @@ export const buildGameOrderSiteEventMessage = (order) => {
     ? `Новая заявка на проведение игры: ${parts.join(', ')}.`
     : 'Новая заявка на проведение игры.'
 }
+
+export const buildGameReviewSiteEventMessage = ({
+  gameName,
+  overallRating,
+  difficultyRating,
+  isResubmission = false,
+}) => {
+  const normalizedGameName = normalizeText(gameName) || 'Без названия'
+  const normalizedOverallRating = normalizePositiveInteger(overallRating)
+  const normalizedDifficultyRating = normalizePositiveInteger(difficultyRating)
+  const ratingDetails = [
+    normalizedOverallRating ? `${normalizedOverallRating.toFixed(1)} ★` : '',
+    normalizedDifficultyRating
+      ? `${normalizedDifficultyRating.toFixed(1)} ◈`
+      : '',
+  ].filter(Boolean)
+
+  return `${
+    isResubmission ? 'Повторно отправлен отзыв' : 'Поступил новый отзыв'
+  } об игре «${normalizedGameName}»${
+    ratingDetails.length > 0 ? `: ${ratingDetails.join(' · ')}` : ''
+  }.`
+}
+
+export const shouldNotifyAdminsAboutGameReview = (existingReview) =>
+  !existingReview ||
+  normalizeText(existingReview.moderationStatus).toLowerCase() !== 'pending'
