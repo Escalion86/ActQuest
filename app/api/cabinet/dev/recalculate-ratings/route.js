@@ -336,6 +336,7 @@ export async function POST() {
           $unset: {
             rating: '',
             ratingsByLocation: '',
+            ratingsBySeason: '',
             gameStats: '',
           },
         },
@@ -346,6 +347,7 @@ export async function POST() {
           $unset: {
             rating: '',
             ratingsByLocation: '',
+            ratingsBySeason: '',
             gameStats: '',
           },
         },

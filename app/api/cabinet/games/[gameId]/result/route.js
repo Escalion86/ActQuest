@@ -481,6 +481,7 @@ const handleRequest = async ({ request, params, method }) => {
         ratingsUpdateInfo = await updateParticipantsRatings({
           db,
           game: updatedGame || { ...game, result: nextResult },
+          updateAllEntities: true,
         })
       } catch (ratingError) {
         console.error('Failed to update players/teams ratings', ratingError)

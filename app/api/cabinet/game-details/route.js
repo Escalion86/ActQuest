@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
 import {
+  canExposeCabinetGamePlace,
   canViewCabinetGameRestrictedInfo,
   sanitizeCabinetGameForViewer,
 } from '@helpers/cabinetGameVisibility'
@@ -209,8 +210,24 @@ export async function GET(request) {
 
     const teamsCount = Array.isArray(gameTeams) ? gameTeams.length : 0
 
+    const canViewRestrictedGameInfo = canViewCabinetGameRestrictedInfo({
+      userRole,
+      currentUserId: currentUserIdString,
+      gameCreatorUserId: toStringId(gameDoc?.creatorUserId),
+      isGameModerator: canAccessGameAsModerator({
+        userRole,
+        currentUserId: currentUserIdString,
+        game: gameDoc,
+      }),
+      allowCreatorFallback:
+        canLoadOwnGames && !currentUserIdString && creatorTelegramId !== null,
+    })
     let userTeamPlace = null
-    if (gameDoc?.result?.teamsPlaces && gameTeams.length > 0) {
+    if (
+      canExposeCabinetGamePlace(gameDoc, { canViewRestrictedGameInfo }) &&
+      gameDoc?.result?.teamsPlaces &&
+      gameTeams.length > 0
+    ) {
       const currentUserIdString = toStringId(currentUserId)
       const hasUserId = Boolean(currentUserIdString)
 
@@ -305,18 +322,7 @@ export async function GET(request) {
 
     const normalizedGame = normalizeGameForCabinet({
       ...sanitizeCabinetGameForViewer(gameDoc, {
-        canViewRestrictedGameInfo: canViewCabinetGameRestrictedInfo({
-          userRole,
-          currentUserId: currentUserIdString,
-          gameCreatorUserId: creatorUserId,
-          isGameModerator: canAccessGameAsModerator({
-            userRole,
-            currentUserId: currentUserIdString,
-            game: gameDoc,
-          }),
-          allowCreatorFallback:
-            canLoadOwnGames && !currentUserIdString && creatorTelegramId !== null,
-        }),
+        canViewRestrictedGameInfo,
       }),
       tasksStats: buildGameTasksStats(gameDoc?.tasks),
       status: normalizedStatus,

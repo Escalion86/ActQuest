@@ -48,6 +48,8 @@ const normalizeLocationName = (locationKey) => {
 }
 
 const toFiniteNumberOrNull = (value) => {
+  if (value === null || value === undefined || value === '') return null
+
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : null
 }
@@ -88,11 +90,14 @@ const buildBaseData = (location) => ({
   inProgressGame: null,
   nearestGame: null,
   personalProgressGames: [],
+  latestPlayedGameDetails: null,
   rating: {
     isEligible: false,
     rank: null,
     totalRanked: 0,
     finalScore: null,
+    wins: 0,
+    seasonName: null,
     playersAbove: null,
     playedGames: 0,
     missedGames: 0,
@@ -252,8 +257,20 @@ export const loadCabinetAppOverview = async (session) => {
 
   const personalProgressGamesBase = (Array.isArray(pastGames) ? pastGames : [])
     .map((game) => {
-      const place = toFiniteNumberOrNull(game?.userTeamPlace)
-      if (place === null || place <= 0) {
+      const normalizedStatus = String(game?.status || '').toLowerCase()
+      const isCompleted =
+        normalizedStatus === 'finished' || normalizedStatus === 'closed'
+      const hasParticipation =
+        Array.isArray(game?.userParticipationTeams) &&
+        game.userParticipationTeams.length > 0
+      const isResultPublished = !Boolean(game?.hideResult)
+      const resolvedPlace = toFiniteNumberOrNull(game?.userTeamPlace)
+      const place =
+        isResultPublished && resolvedPlace !== null && resolvedPlace > 0
+          ? resolvedPlace
+          : null
+
+      if (!isCompleted || !hasParticipation || (isResultPublished && !place)) {
         return null
       }
 
@@ -273,6 +290,20 @@ export const loadCabinetAppOverview = async (session) => {
             ? firstTeam.teamName.trim()
             : null,
         place,
+        isResultPublished,
+        reviewRating: toFiniteNumberOrNull(game?.userReviewRating),
+        reviewDifficultyRating: toFiniteNumberOrNull(
+          game?.userReviewDifficultyRating,
+        ),
+        reviewAverageRating: toFiniteNumberOrNull(
+          game?.reviewAverageRating,
+        ),
+        reviewAverageDifficultyRating: toFiniteNumberOrNull(
+          game?.reviewAverageDifficultyRating,
+        ),
+        reviewsCount: Number.isFinite(Number(game?.reviewsCount))
+          ? Number(game.reviewsCount)
+          : 0,
         timestamp:
           toISOStringOrNull(game?.dateStart) ??
           toISOStringOrNull(game?.updatedAt) ??
@@ -287,38 +318,23 @@ export const loadCabinetAppOverview = async (session) => {
     })
     .slice(0, 30)
 
-  const progressGameIds = personalProgressGamesBase
-    .map((game) => game?.id)
-    .filter(Boolean)
-  const reviewDocs =
-    progressGameIds.length > 0
-      ? await db
-          .model('GameReviews')
-          .find({
-            userId: normalizedUserId,
-            gameId: { $in: progressGameIds },
-          })
-          .select({ gameId: 1, overallRating: 1 })
-          .lean()
-      : []
-  const reviewRatingByGameId = new Map(
-    reviewDocs.map((review) => [
-      String(review.gameId),
-      Number(review.overallRating),
-    ]),
-  )
-  const personalProgressGames = personalProgressGamesBase.map((game) => ({
-    ...game,
-    reviewRating: reviewRatingByGameId.get(game.id) || null,
-  }))
+  const personalProgressGames = personalProgressGamesBase
+  const latestPlayedGameDetails = personalProgressGames[0]?.id
+    ? pastGames.find(
+        (game) => String(game?.id || '') === personalProgressGames[0].id,
+      ) || null
+    : null
 
   const completedGamesCountFromProgress = personalProgressGames.length
+  const gamesWithPublishedPlace = personalProgressGames.filter(
+    (game) => Number.isFinite(Number(game?.place)) && Number(game.place) > 0,
+  )
   const averageFinishedPlace =
-    completedGamesCountFromProgress > 0
-      ? personalProgressGames.reduce(
-          (acc, game) => acc + Number(game.place || 0),
+    gamesWithPublishedPlace.length > 0
+      ? gamesWithPublishedPlace.reduce(
+          (acc, game) => acc + Number(game.place),
           0,
-        ) / completedGamesCountFromProgress
+        ) / gamesWithPublishedPlace.length
       : null
 
   const hasUpcomingRegistration = (
@@ -380,6 +396,8 @@ export const loadCabinetAppOverview = async (session) => {
     rank: null,
     totalRanked: 0,
     finalScore: null,
+    wins: 0,
+    seasonName: null,
     playersAbove: null,
     playedGames: 0,
     missedGames: 0,
@@ -438,6 +456,7 @@ export const loadCabinetAppOverview = async (session) => {
         }
       : null,
     personalProgressGames,
+    latestPlayedGameDetails,
     rating,
     recentActivity,
     chatUrl: siteSettings.chatUrl || '',

@@ -118,7 +118,7 @@ export async function PUT(request, { params }) {
       ? payload.description.trim().slice(0, 2000)
       : ''
   const image = typeof payload?.image === 'string' ? payload.image : null
-  const open = typeof payload?.open === 'boolean' ? payload.open : true
+  const open = typeof payload?.open === 'boolean' ? payload.open : false
   const rawLocation =
     typeof payload?.location === 'string' ? payload.location : ''
   const normalizedLocation = normalizeLocation(rawLocation)
@@ -272,6 +272,7 @@ export async function DELETE(request, { params }) {
     const TeamsUsersModel = db.model('TeamsUsers')
     const GamesTeamsModel = db.model('GamesTeams')
     const GamesModel = db.model('Games')
+    const TeamJoinRequestsModel = db.model('TeamJoinRequests')
 
     const team = await TeamsModel.findById(teamId)
       .select({ _id: 1, name: 1, location: 1, kind: 1 })
@@ -364,11 +365,17 @@ export async function DELETE(request, { params }) {
       }
     }
 
-    const [teamDeleteResult, teamUsersDeleteResult, gamesTeamsDeleteResult] =
+    const [
+      teamDeleteResult,
+      teamUsersDeleteResult,
+      gamesTeamsDeleteResult,
+      teamJoinRequestsDeleteResult,
+    ] =
       await Promise.all([
         TeamsModel.deleteOne({ _id: teamId }),
         TeamsUsersModel.deleteMany({ teamId }),
         GamesTeamsModel.deleteMany({ teamId }),
+        TeamJoinRequestsModel.deleteMany({ teamId }),
       ])
 
     if (!teamDeleteResult?.deletedCount) {
@@ -393,6 +400,8 @@ export async function DELETE(request, { params }) {
         removedMembersCount: Number(teamUsersDeleteResult?.deletedCount) || 0,
         removedGameRegistrationsCount:
           Number(gamesTeamsDeleteResult?.deletedCount) || 0,
+        removedJoinRequestsCount:
+          Number(teamJoinRequestsDeleteResult?.deletedCount) || 0,
       },
     })
 
@@ -405,6 +414,8 @@ export async function DELETE(request, { params }) {
           removedMembersCount: Number(teamUsersDeleteResult?.deletedCount) || 0,
           removedGameRegistrationsCount:
             Number(gamesTeamsDeleteResult?.deletedCount) || 0,
+          removedJoinRequestsCount:
+            Number(teamJoinRequestsDeleteResult?.deletedCount) || 0,
         },
       },
       { status: 200 },

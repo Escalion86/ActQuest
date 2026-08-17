@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types'
 
+import GamePlaceBadge from '@components/cabinet/GamePlaceBadge'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
@@ -84,9 +85,9 @@ const ParticipationGameCard = ({
       </div>
     </div>
     {showPlace && Number.isFinite(Number(game.place)) && Number(game.place) > 0 && (
-      <span className="pointer-events-none mt-2 inline-flex items-center self-start rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-        Место: {Number(game.place)}
-      </span>
+      <div className="mt-2 self-start">
+        <GamePlaceBadge place={game.place} />
+      </div>
     )}
   </SelectableCard>
 )

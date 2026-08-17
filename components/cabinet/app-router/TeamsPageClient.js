@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
@@ -18,32 +18,17 @@ import { getNounUsers } from '@helpers/getNoun'
 import useSnackbar from '@helpers/useSnackbar'
 import useMergedSession from '@helpers/useMergedSession'
 import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+import { MAX_REGULAR_TEAMS_PER_USER } from '@helpers/teamMembershipLimit'
 import { LOCATIONS } from '@server/serverConstants'
 
-const MAX_TEAMS_PER_USER = 3
+const MAX_TEAMS_PER_USER = MAX_REGULAR_TEAMS_PER_USER
 const CABINET_TEAMS_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAMS_ENTITY_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAM_MEMBERS_API_BASE = '/api/cabinet/teams/members'
+const CABINET_TEAM_REQUESTS_API_BASE = '/api/cabinet/teams/requests'
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
-
-const OpenDoorIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    className="h-3.5 w-3.5"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M4 3h11v18H4z" />
-    <path d="M15 6h4l1 3v9l-1 3h-4" />
-    <circle cx="10.5" cy="12" r="0.8" fill="currentColor" stroke="none" />
-  </svg>
-)
 
 const serializeTeamForComparison = (team) => {
   if (!team) {
@@ -105,7 +90,7 @@ const TeamsPage = ({
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamDescription, setNewTeamDescription] = useState('')
   const [newTeamImage, setNewTeamImage] = useState('')
-  const [newTeamOpen, setNewTeamOpen] = useState(true)
+  const [newTeamOpen, setNewTeamOpen] = useState(false)
   const [joinTeamId, setJoinTeamId] = useState('')
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
@@ -113,6 +98,7 @@ const TeamsPage = ({
     useState(false)
   const [isMemberViewModalOpen, setIsMemberViewModalOpen] = useState(false)
   const [selectedMemberUserId, setSelectedMemberUserId] = useState(null)
+  const [joinRequestActionId, setJoinRequestActionId] = useState(null)
   const snackbar = useSnackbar()
   const locationOptions = useMemo(
     () =>
@@ -276,6 +262,23 @@ const TeamsPage = ({
   const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
   const canUseSelfServiceTeamsActions =
     canUseSelfServiceTeams && !isTeamsLimitReached
+  const joinRequestsQuery = useQuery({
+    queryKey: ['team-join-requests', selectedTeamId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ teamId: selectedTeamId })
+      const { json } = await requestApiJson(
+        `${CABINET_TEAM_REQUESTS_API_BASE}?${params.toString()}`,
+        { fallbackMessage: 'Не удалось загрузить заявки' },
+      )
+      return Array.isArray(json?.data) ? json.data : []
+    },
+    enabled: Boolean(
+      isEditModalOpen && selectedTeamId && canManageSelectedTeam,
+    ),
+  })
+  const pendingJoinRequests = Array.isArray(joinRequestsQuery.data)
+    ? joinRequestsQuery.data
+    : []
 
   const sortTeamsByUpdatedAt = useCallback((items) => {
     if (!Array.isArray(items)) {
@@ -414,7 +417,7 @@ const TeamsPage = ({
       setNewTeamName('')
       setNewTeamDescription('')
       setNewTeamImage('')
-      setNewTeamOpen(true)
+      setNewTeamOpen(false)
       snackbar.success(
         `Команда «${team.name || fallbackName}» создана. Вы назначены капитаном.`,
       )
@@ -427,53 +430,64 @@ const TeamsPage = ({
 
   const joinTeamMutation = useMutation({
     mutationFn: async (teamId) => {
-      const { json: teamJson } = await requestApiJson(
-        `${CABINET_TEAMS_ENTITY_API_BASE}/${teamId}`,
-        {
-          fallbackMessage: 'Команда не найдена',
-        },
-      )
-
-      const rawOpen = teamJson?.data?.open
-      const isTeamOpen =
-        rawOpen === true ||
-        rawOpen === 'true' ||
-        rawOpen === 1 ||
-        rawOpen === '1'
-
-      if (!isTeamOpen) {
-        throw new Error(
-          'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
-        )
-      }
-
-      await requestApiJson(CABINET_TEAM_MEMBERS_API_BASE, {
+      const { json } = await requestApiJson(CABINET_TEAM_REQUESTS_API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId, role: 'participant' }),
-        fallbackMessage: 'Не удалось присоединиться к команде',
+        body: JSON.stringify({ teamId }),
+        fallbackMessage: 'Не удалось отправить заявку',
       })
-
-      const [freshTeam] = await fetchTeamsSnapshot([teamId])
-      if (!freshTeam) {
-        throw new Error(
-          'Вы вступили в команду, но не удалось обновить список. Обновите страницу.',
-        )
-      }
-
-      return freshTeam
+      return json?.data ?? { teamId, teamName: 'Без названия' }
     },
-    onSuccess: (team) => {
-      upsertPersistedTeam(team)
+    onSuccess: (joinRequest) => {
       setIsJoinModalOpen(false)
       setJoinTeamId('')
       snackbar.success(
-        `Вы присоединились к команде «${team.name || 'без названия'}».`,
+        `Заявка в команду «${joinRequest.teamName || 'без названия'}» отправлена капитану.`,
       )
     },
     onError: (error) => {
       console.error('Failed to join team', error)
       snackbar.error(error?.message || 'Не удалось присоединиться к команде')
+    },
+  })
+
+  const processJoinRequestMutation = useMutation({
+    mutationFn: async ({ requestId, action, teamId }) => {
+      await requestApiJson(
+        `${CABINET_TEAM_REQUESTS_API_BASE}/${requestId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action }),
+          fallbackMessage: 'Не удалось обработать заявку',
+        },
+      )
+
+      if (action !== 'accept') {
+        return { action, team: null }
+      }
+
+      const [freshTeam] = await fetchTeamsSnapshot([teamId])
+      return { action, team: freshTeam ?? null }
+    },
+    onMutate: ({ requestId }) => {
+      setJoinRequestActionId(requestId)
+    },
+    onSuccess: ({ action, team }) => {
+      if (team) {
+        upsertPersistedTeam(team)
+      }
+      snackbar.success(
+        action === 'accept' ? 'Заявка принята' : 'Заявка отклонена',
+      )
+    },
+    onError: (error) => {
+      console.error('Failed to process team join request', error)
+      snackbar.error(error?.message || 'Не удалось обработать заявку')
+    },
+    onSettled: () => {
+      setJoinRequestActionId(null)
+      joinRequestsQuery.refetch()
     },
   })
 
@@ -839,16 +853,16 @@ const TeamsPage = ({
     setNewTeamName('')
     setNewTeamDescription('')
     setNewTeamImage('')
-    setNewTeamOpen(true)
+    setNewTeamOpen(false)
   }, [isCreatingTeam])
 
   const handleOpenJoinModal = useCallback(() => {
-    if (!canUseSelfServiceTeamsActions) {
+    if (!canUseSelfServiceTeams) {
       return
     }
 
     setIsJoinModalOpen(true)
-  }, [canUseSelfServiceTeamsActions])
+  }, [canUseSelfServiceTeams])
 
   const handleCloseJoinModal = useCallback(() => {
     if (isJoiningTeam) {
@@ -980,7 +994,7 @@ const TeamsPage = ({
     if (!canUseSelfServiceTeamsActions) {
       snackbar.error(
         isTeamsLimitReached
-          ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
+          ? `Вы уже состоите в ${MAX_TEAMS_PER_USER} командах. Больше вступать нельзя.`
           : 'Вступление в команду сейчас недоступно',
       )
       return
@@ -1015,6 +1029,21 @@ const TeamsPage = ({
     snackbar,
     teams,
   ])
+
+  const handleProcessJoinRequest = useCallback(
+    (requestId, action) => {
+      if (!selectedTeam?.id || !canManageSelectedTeam) {
+        return
+      }
+
+      processJoinRequestMutation.mutate({
+        requestId,
+        action,
+        teamId: selectedTeam.id,
+      })
+    },
+    [canManageSelectedTeam, processJoinRequestMutation, selectedTeam?.id],
+  )
 
   const handleSaveTeam = useCallback(async () => {
     if (!selectedTeam || !canManageSelectedTeam) {
@@ -1139,7 +1168,7 @@ const TeamsPage = ({
 
   const isJoinActionDisabled =
     isJoiningTeam ||
-    !canUseSelfServiceTeamsActions ||
+    !canUseSelfServiceTeams ||
     joinTeamId.trim().length === 0
 
   const teamsForList = useMemo(() => {
@@ -1338,21 +1367,19 @@ const TeamsPage = ({
               <button
                 type="button"
                 onClick={handleOpenJoinModal}
-                disabled={!canUseSelfServiceTeamsActions}
+                disabled={!canUseSelfServiceTeams}
                 title={
-                  canUseSelfServiceTeamsActions
+                  canUseSelfServiceTeams
                     ? undefined
-                    : isTeamsLimitReached
-                      ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
-                      : 'Функция доступна после авторизации'
+                    : 'Функция доступна после авторизации'
                 }
                 className={`inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
-                  canUseSelfServiceTeamsActions
+                  canUseSelfServiceTeams
                     ? 'cursor-pointer border-primary bg-white text-primary shadow-sm hover:border-blue-500 hover:bg-blue-50 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-blue-400 dark:hover:bg-blue-500/10'
                     : 'border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
                 }`}
               >
-                Присоединиться по id
+                Подать заявку по ID
               </button>
             </div>
             {isTeamsLimitReached && (
@@ -1405,14 +1432,14 @@ const TeamsPage = ({
                               </span>
                             )}
                             <span
-                              className={`inline-flex items-center justify-center text-xs font-medium rounded-full ${
+                              className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-xs font-medium ${
                                 team.open
-                                  ? 'h-7 w-7 border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
-                                  : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
+                                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                                  : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                               }`}
                               title={team.open ? 'Открыта' : 'Закрыта'}
                             >
-                              {team.open ? <OpenDoorIcon /> : 'Закрыта'}
+                              {team.open ? 'Открыта' : 'Закрыта'}
                             </span>
                             {team.canManage && (
                               <button
@@ -1489,6 +1516,16 @@ const TeamsPage = ({
           onRemoveMember={handleRemoveMember}
           onAddMember={handleAddMember}
           isAddingMember={isAddingMember}
+          joinRequests={pendingJoinRequests}
+          isLoadingJoinRequests={joinRequestsQuery.isLoading}
+          joinRequestsError={joinRequestsQuery.error?.message || ''}
+          joinRequestActionId={joinRequestActionId}
+          onAcceptJoinRequest={(requestId) =>
+            handleProcessJoinRequest(requestId, 'accept')
+          }
+          onRejectJoinRequest={(requestId) =>
+            handleProcessJoinRequest(requestId, 'reject')
+          }
           canDeleteTeam={canDeleteSelectedTeam}
           isDeletingTeam={isDeletingTeam}
           onDeleteTeam={handleDeleteSelectedTeam}
@@ -1517,7 +1554,7 @@ const TeamsPage = ({
           joinTeamId={joinTeamId}
           onChangeJoinTeamId={setJoinTeamId}
           onJoinTeam={handleJoinTeam}
-          canUseSelfServiceTeams={canUseSelfServiceTeamsActions}
+          canUseSelfServiceTeams={canUseSelfServiceTeams}
         />
         <TeamDescriptionModal
           isOpen={isTeamDescriptionModalOpen}

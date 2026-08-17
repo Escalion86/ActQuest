@@ -1,4 +1,5 @@
 import {
+  canExposeCabinetGamePlace,
   canViewCabinetGameRestrictedInfo,
   sanitizeCabinetGameForViewer,
 } from '@helpers/cabinetGameVisibility'
@@ -328,30 +329,90 @@ const fetchGamesForCabinet = async ({
 
   const teamsCountByGameId = {}
   const adminUnreadMessagesCountByGameId = {}
+  const reviewSummaryByGameId = {}
+  const userReviewRatingByGameId = {}
+  const userReviewDifficultyRatingByGameId = {}
 
   if (loadedGameIds.length > 0) {
-    const unreadMessageRows = await db
-      .model('GameTeamMessages')
-      .aggregate([
-        {
-          $match: {
-            gameId: { $in: loadedGameIds },
-            direction: 'team_to_admin',
-            readByAdminAt: null,
+    const GameReviewsModel = db.model('GameReviews')
+    const [unreadMessageRows, reviewSummaryRows, userReviewDocs] =
+      await Promise.all([
+        db.model('GameTeamMessages').aggregate([
+          {
+            $match: {
+              gameId: { $in: loadedGameIds },
+              direction: 'team_to_admin',
+              readByAdminAt: null,
+            },
           },
-        },
-        {
-          $group: {
-            _id: '$gameId',
-            count: { $sum: 1 },
+          {
+            $group: {
+              _id: '$gameId',
+              count: { $sum: 1 },
+            },
           },
-        },
+        ]),
+        GameReviewsModel.aggregate([
+          {
+            $match: {
+              gameId: { $in: loadedGameIds },
+              isRatingIncluded: { $ne: false },
+            },
+          },
+          {
+            $group: {
+              _id: '$gameId',
+              averageRating: { $avg: '$overallRating' },
+              averageDifficultyRating: { $avg: '$difficultyRating' },
+              reviewsCount: { $sum: 1 },
+            },
+          },
+        ]),
+        currentUserIdString
+          ? GameReviewsModel.find({
+              gameId: { $in: loadedGameIds },
+              userId: currentUserIdString,
+            })
+              .select({ gameId: 1, overallRating: 1, difficultyRating: 1 })
+              .lean()
+          : Promise.resolve([]),
       ])
 
     for (const row of unreadMessageRows) {
       const gameId = toStringId(row?._id)
       if (gameId) {
         adminUnreadMessagesCountByGameId[gameId] = Number(row?.count || 0)
+      }
+    }
+
+    for (const row of reviewSummaryRows) {
+      const gameId = toStringId(row?._id)
+      const averageRating = Number(row?.averageRating)
+      const averageDifficultyRating = Number(row?.averageDifficultyRating)
+      const reviewsCount = Number(row?.reviewsCount)
+      if (gameId && Number.isFinite(averageRating) && reviewsCount > 0) {
+        reviewSummaryByGameId[gameId] = {
+          averageRating: Number(averageRating.toFixed(1)),
+          averageDifficultyRating:
+            row?.averageDifficultyRating !== null &&
+            row?.averageDifficultyRating !== undefined &&
+            Number.isFinite(averageDifficultyRating)
+              ? Number(averageDifficultyRating.toFixed(1))
+              : null,
+          reviewsCount,
+        }
+      }
+    }
+
+    for (const review of userReviewDocs) {
+      const gameId = toStringId(review?.gameId)
+      const rating = Number(review?.overallRating)
+      if (gameId && Number.isFinite(rating)) {
+        userReviewRatingByGameId[gameId] = rating
+      }
+      const difficultyRating = Number(review?.difficultyRating)
+      if (gameId && Number.isFinite(difficultyRating)) {
+        userReviewDifficultyRatingByGameId[gameId] = difficultyRating
       }
     }
   }
@@ -564,15 +625,28 @@ const fetchGamesForCabinet = async ({
       userId: currentUserIdString,
       currentParticipation,
     })
+    const creatorUserId = toStringId(game?.creatorUserId)
 
-    const userTeamPlace = isCompletedParticipationStatus(gameStatus)
+    const canViewRestrictedGameInfo = canViewCabinetGameRestrictedInfo({
+      userRole,
+      currentUserId: currentUserIdString,
+      gameCreatorUserId: creatorUserId,
+      isGameModerator: (Array.isArray(game?.moderators) ? game.moderators : [])
+        .some(
+          (moderator) =>
+            toStringId(moderator?._id ?? moderator?.id ?? moderator) ===
+            currentUserIdString,
+        ),
+    })
+    const userTeamPlace =
+      isCompletedParticipationStatus(gameStatus) &&
+      canExposeCabinetGamePlace(game, { canViewRestrictedGameInfo })
       ? resolveParticipationPlace({
           game,
           teamIds: resolvedParticipation.map((team) => team.teamId),
         })
       : null
     const creatorTelegramIdNumber = normalizeTelegramId(game?.creatorTelegramId)
-    const creatorUserId = toStringId(game?.creatorUserId)
     const creatorKey = creatorTelegramIdNumber !== null
       ? String(creatorTelegramIdNumber)
       : null
@@ -589,17 +663,7 @@ const fetchGamesForCabinet = async ({
 
     return normalizeGameForCabinet({
       ...sanitizeCabinetGameForViewer(game, {
-        canViewRestrictedGameInfo: canViewCabinetGameRestrictedInfo({
-          userRole,
-          currentUserId: currentUserIdString,
-          gameCreatorUserId: creatorUserId,
-          isGameModerator: (Array.isArray(game?.moderators) ? game.moderators : [])
-            .some(
-              (moderator) =>
-                toStringId(moderator?._id ?? moderator?.id ?? moderator) ===
-                currentUserIdString,
-            ),
-        }),
+        canViewRestrictedGameInfo,
         hasUserParticipation: gameId
           ? resolvedParticipation.length > 0
           : false,
@@ -610,6 +674,21 @@ const fetchGamesForCabinet = async ({
       adminUnreadMessagesCount: gameId
         ? adminUnreadMessagesCountByGameId[gameId] || 0
         : 0,
+      reviewAverageRating: gameId
+        ? reviewSummaryByGameId[gameId]?.averageRating ?? null
+        : null,
+      reviewAverageDifficultyRating: gameId
+        ? reviewSummaryByGameId[gameId]?.averageDifficultyRating ?? null
+        : null,
+      reviewsCount: gameId
+        ? reviewSummaryByGameId[gameId]?.reviewsCount ?? 0
+        : 0,
+      userReviewRating: gameId
+        ? userReviewRatingByGameId[gameId] ?? null
+        : null,
+      userReviewDifficultyRating: gameId
+        ? userReviewDifficultyRatingByGameId[gameId] ?? null
+        : null,
       userTeamPlace,
       userParticipationTeams: resolvedParticipation,
       agents: (Array.isArray(game?.agents) ? game.agents : []).map((agent) => {

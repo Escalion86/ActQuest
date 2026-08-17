@@ -26,6 +26,7 @@ import {
   faCode,
   faXmark,
   faArrowLeft,
+  faTrophy,
 } from '@fortawesome/free-solid-svg-icons'
 import { LOCATIONS } from '@server/serverConstants'
 import { useBootstrapTheme } from '@app/providers'
@@ -93,6 +94,12 @@ const baseMenuItems = [
   { id: 'dashboard', label: 'Обзор', href: '/cabinet', icon: faGaugeHigh },
   { id: 'games', label: 'Игры', href: '/cabinet/games', icon: faGamepad },
   { id: 'teams', label: 'Мои команды', href: '/cabinet/teams', icon: faUsers },
+  {
+    id: 'rating',
+    label: 'Рейтинг',
+    href: '/cabinet/rating/teams',
+    icon: faTrophy,
+  },
   {
     id: 'profile',
     label: 'Мой профиль',
@@ -179,11 +186,26 @@ const gamesSubmenuItems = [
   },
 ]
 
+const ratingSubmenuItems = [
+  {
+    id: 'rating-teams',
+    label: 'Рейтинг команд',
+    href: '/cabinet/rating/teams',
+  },
+  {
+    id: 'rating-players',
+    label: 'Рейтинг игроков',
+    href: '/cabinet/rating/players',
+  },
+]
+
 const isGamesRoutePath = (pathname) =>
   pathname === '/cabinet/games' ||
   pathname === '/cabinet/game-orders' ||
   pathname === '/cabinet/games-upcoming' ||
   pathname === '/cabinet/games-past'
+
+const isRatingRoutePath = (pathname) => pathname?.startsWith('/cabinet/rating')
 
 const getInitials = (name, fallback) => {
   if (name) {
@@ -335,6 +357,9 @@ const CabinetLayout = ({
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(() =>
     isGamesRoutePath(pathname),
+  )
+  const [isRatingMenuOpen, setIsRatingMenuOpen] = useState(() =>
+    isRatingRoutePath(pathname),
   )
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(() =>
     pathname?.startsWith('/cabinet/admin'),
@@ -709,6 +734,18 @@ const CabinetLayout = ({
       const nextValue = !prev
       if (nextValue) {
         setIsAdminMenuOpen(false)
+        setIsRatingMenuOpen(false)
+      }
+      return nextValue
+    })
+  }, [])
+
+  const handleToggleRatingMenu = useCallback(() => {
+    setIsRatingMenuOpen((prev) => {
+      const nextValue = !prev
+      if (nextValue) {
+        setIsGamesMenuOpen(false)
+        setIsAdminMenuOpen(false)
       }
       return nextValue
     })
@@ -719,6 +756,7 @@ const CabinetLayout = ({
       const nextValue = !prev
       if (nextValue) {
         setIsGamesMenuOpen(false)
+        setIsRatingMenuOpen(false)
       }
       return nextValue
     })
@@ -998,6 +1036,69 @@ const CabinetLayout = ({
                                   gamesView === 'upcoming') ||
                                   (subItem.id === 'games-past' &&
                                     gamesView === 'past')))
+
+                            return (
+                              <Link
+                                key={subItem.id}
+                                href={subItem.href}
+                                className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                  isSubActive
+                                    ? subNavActiveClass
+                                    : subNavIdleClass
+                                }`}
+                                onClick={(event) =>
+                                  handleNavLinkClick(subItem.href, event)
+                                }
+                              >
+                                {subItem.label}
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                if (item.id === 'rating') {
+                  const isRatingSectionActive = isRatingRoutePath(pathname)
+
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={handleToggleRatingMenu}
+                        className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                          isRatingSectionActive ? navActiveClass : navIdleClass
+                        } ${isSidebarExpanded ? 'justify-start' : 'justify-center laptop:justify-start'}`}
+                      >
+                        <FontAwesomeIcon
+                          icon={item.icon}
+                          className="w-5 h-5 shrink-0"
+                        />
+                        <span
+                          className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} transition-opacity duration-150`}
+                        >
+                          {item.label}
+                        </span>
+                        <FontAwesomeIcon
+                          icon={faChevronDown}
+                          className={`ml-auto h-3 w-3 shrink-0 transition-transform duration-150 ${
+                            isRatingMenuOpen ? 'rotate-180' : ''
+                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'}`}
+                        />
+                      </button>
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-out ${
+                          isRatingMenuOpen
+                            ? 'max-h-32 opacity-100 translate-y-0'
+                            : 'max-h-0 opacity-0 -translate-y-1'
+                        }`}
+                        aria-hidden={!isRatingMenuOpen}
+                      >
+                        <div className="pb-1 pr-3 space-y-1 pl-11">
+                          {ratingSubmenuItems.map((subItem) => {
+                            const isSubActive = pathname === subItem.href
 
                             return (
                               <Link

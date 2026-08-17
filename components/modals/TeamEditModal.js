@@ -111,6 +111,12 @@ const TeamEditModal = ({
   locationOptions,
   onAddMember,
   isAddingMember,
+  joinRequests,
+  isLoadingJoinRequests,
+  joinRequestsError,
+  joinRequestActionId,
+  onAcceptJoinRequest,
+  onRejectJoinRequest,
 }) => {
   const [addMemberUser, setAddMemberUser] = useState(null)
   const { data: session } = useSession()
@@ -288,7 +294,7 @@ const TeamEditModal = ({
               onChange={(event) =>
                 onTeamFieldChange('open', event.target.checked)
               }
-              label="Разрешить новым участникам присоединяться к команде по id"
+              label="Открыть команду для заявок"
               labelClassName="text-sm text-slate-600 dark:text-slate-300"
             />
           </div>
@@ -304,6 +310,85 @@ const TeamEditModal = ({
               </span>
             </button>
           ) : null}
+        </ModalSection>
+
+        <ModalSection>
+          <div className="flex items-center justify-between gap-3">
+            <ModalSectionTitle as="h2" className={sectionTitleClassName}>
+              Заявки на вступление
+            </ModalSectionTitle>
+            {joinRequests.length > 0 ? (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                {joinRequests.length}
+              </span>
+            ) : null}
+          </div>
+
+          {joinRequestsError ? (
+            <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">
+              {joinRequestsError}
+            </p>
+          ) : isLoadingJoinRequests ? (
+            <p className="mt-3 text-sm text-slate-500">Загрузка заявок…</p>
+          ) : joinRequests.length > 0 ? (
+            <div className="mt-3 space-y-3">
+              {joinRequests.map((joinRequest) => {
+                const isProcessing = joinRequestActionId === joinRequest.id
+                return (
+                  <div
+                    key={joinRequest.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <img
+                        src={
+                          joinRequest.applicant?.photoUrl ||
+                          joinRequest.applicant?.images?.[0] ||
+                          '/img/avatars/user.png'
+                        }
+                        alt=""
+                        className="h-10 w-10 shrink-0 rounded-full object-cover"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {joinRequest.applicant?.name || 'Пользователь'}
+                        </p>
+                        {joinRequest.applicant?.username ? (
+                          <p className="truncate text-xs text-slate-500">
+                            @{joinRequest.applicant.username}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <CabinetButton
+                        onClick={() => onAcceptJoinRequest(joinRequest.id)}
+                        disabled={isProcessing}
+                        variant="secondary"
+                        tone="brand"
+                        size="sm"
+                      >
+                        Принять
+                      </CabinetButton>
+                      <CabinetButton
+                        onClick={() => onRejectJoinRequest(joinRequest.id)}
+                        disabled={isProcessing}
+                        variant="secondary"
+                        tone="danger"
+                        size="sm"
+                      >
+                        Отклонить
+                      </CabinetButton>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-500">
+              Новых заявок пока нет.
+            </p>
+          )}
         </ModalSection>
 
         <ModalSection>
@@ -459,6 +544,23 @@ const TeamEditModal = ({
 TeamEditModal.propTypes = {
   onAddMember: PropTypes.func,
   isAddingMember: PropTypes.bool,
+  joinRequests: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      userId: PropTypes.string,
+      applicant: PropTypes.shape({
+        name: PropTypes.string,
+        username: PropTypes.string,
+        photoUrl: PropTypes.string,
+        images: PropTypes.arrayOf(PropTypes.string),
+      }),
+    }),
+  ),
+  isLoadingJoinRequests: PropTypes.bool,
+  joinRequestsError: PropTypes.string,
+  joinRequestActionId: PropTypes.string,
+  onAcceptJoinRequest: PropTypes.func,
+  onRejectJoinRequest: PropTypes.func,
   selectedTeam: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
@@ -520,6 +622,12 @@ TeamEditModal.defaultProps = {
   locationOptions: [],
   onAddMember: undefined,
   isAddingMember: false,
+  joinRequests: [],
+  isLoadingJoinRequests: false,
+  joinRequestsError: '',
+  joinRequestActionId: null,
+  onAcceptJoinRequest: undefined,
+  onRejectJoinRequest: undefined,
 }
 
 TeamCarSkinPreview.propTypes = {

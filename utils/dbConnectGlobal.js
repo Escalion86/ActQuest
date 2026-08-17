@@ -21,6 +21,7 @@ import agentNotificationsLogSchema from '@schemas/agentNotificationsLogSchema'
 import gameHistoryEntriesSchema from '@schemas/gameHistoryEntriesSchema'
 import gameTestRunsSchema from '@schemas/gameTestRunsSchema'
 import gameReviewsSchema from '@schemas/gameReviewsSchema'
+import teamJoinRequestsSchema from '@schemas/teamJoinRequestsSchema'
 
 let globalConnections = global.mongooseGlobal
 
@@ -31,6 +32,7 @@ if (!globalConnections) {
 let phoneUniqueIndexPromise = null
 let gameReviewsIndexPromise = null
 let personalTeamsIndexPromise = null
+let teamJoinRequestsIndexPromise = null
 
 const ensureModel = (connection, name, schemaFactory) => {
   const hasModel = Boolean(connection.models?.[name])
@@ -87,6 +89,9 @@ async function dbConnectGlobal() {
     )
     ensureModel(globalConnections.global, 'TeamsUsers', () =>
       mongoose.Schema(teamsUsersSchema, { timestamps: true }),
+    )
+    ensureModel(globalConnections.global, 'TeamJoinRequests', () =>
+      mongoose.Schema(teamJoinRequestsSchema, { timestamps: true }),
     )
     ensureModel(globalConnections.global, 'SiteSettings', () =>
       mongoose.Schema(siteSettingsSchema),
@@ -174,6 +179,9 @@ async function dbConnectGlobal() {
   ensureModel(globalConnections.global, 'PhoneVerifications', () =>
     mongoose.Schema(phoneVerificationsSchema, { timestamps: true }),
   )
+  ensureModel(globalConnections.global, 'TeamJoinRequests', () =>
+    mongoose.Schema(teamJoinRequestsSchema, { timestamps: true }),
+  )
 
   const connection = await globalConnections.global.asPromise()
 
@@ -222,6 +230,23 @@ async function dbConnectGlobal() {
   }
 
   await personalTeamsIndexPromise
+
+  if (!teamJoinRequestsIndexPromise) {
+    teamJoinRequestsIndexPromise = connection
+      .model('TeamJoinRequests')
+      .collection.createIndex(
+        { teamId: 1, userId: 1 },
+        { unique: true, name: 'uniq_team_join_request_user' },
+      )
+      .catch((error) => {
+        console.error(
+          'dbConnectGlobal: failed to create TeamJoinRequests index',
+          error,
+        )
+      })
+  }
+
+  await teamJoinRequestsIndexPromise
 
   if (!gameReviewsIndexPromise) {
     const reviewsCollection = connection.model('GameReviews').collection

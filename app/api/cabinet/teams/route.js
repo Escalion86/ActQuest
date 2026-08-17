@@ -9,6 +9,10 @@ import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { TEAM_ROLE_CAPTAIN } from '@helpers/teamRoles'
 import { canCreateTeamForRole } from '@helpers/teamBanAccess'
+import {
+  countRegularTeamMemberships,
+  hasReachedRegularTeamLimit,
+} from '@helpers/teamMembershipLimit'
 
 const collectTeamIds = (searchParams) => {
   const rawIds = []
@@ -121,7 +125,7 @@ export async function POST(request) {
       ? payload.description.trim().slice(0, 2000)
       : ''
   const image = typeof payload?.image === 'string' ? payload.image : null
-  const open = typeof payload?.open === 'boolean' ? payload.open : true
+  const open = typeof payload?.open === 'boolean' ? payload.open : false
   const allowedLocations = resolveAllowedLocations()
   const sessionLocation = normalizeLocation(session.user?.location)
   const location = allowedLocations.includes(sessionLocation)
@@ -171,6 +175,22 @@ export async function POST(request) {
             'Чтобы создавать команды, требуется авторизованный пользователь',
         },
         { status: 403 },
+      )
+    }
+
+    const membershipsCount = await countRegularTeamMemberships({
+      TeamsModel,
+      TeamsUsersModel,
+      userId: actorUserId,
+    })
+    if (hasReachedRegularTeamLimit(membershipsCount)) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'team_limit_reached',
+          error: 'Вы уже состоите в 3 командах. Создать ещё одну нельзя.',
+        },
+        { status: 409 },
       )
     }
 

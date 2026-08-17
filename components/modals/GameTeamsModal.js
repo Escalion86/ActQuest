@@ -71,41 +71,6 @@ const parseTaskDistributionTemplateText = (value) => {
   })
 }
 
-const OpenDoorIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    className="h-3.5 w-3.5"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M4 3h11v18H4z" />
-    <path d="M15 6h4l1 3v9l-1 3h-4" />
-    <circle cx="10.5" cy="12" r="0.8" fill="currentColor" stroke="none" />
-  </svg>
-)
-
-const ClosedDoorIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    className="h-3.5 w-3.5"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M4 3h11v18H4z" />
-    <path d="M15 6h4v12h-4" />
-    <line x1="3.5" y1="20.5" x2="20.5" y2="3.5" />
-    <circle cx="10.5" cy="12" r="0.8" fill="currentColor" stroke="none" />
-  </svg>
-)
-
 const TeamStatsIcon = () => (
   <svg
     className="w-4 h-4"
@@ -1209,16 +1174,12 @@ const GameTeamsModal = ({
                                   <span
                                     className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium ${
                                       team.open
-                                        ? 'border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
-                                        : 'border-red-300 bg-red-100 text-red-700 dark:border-red-500/45 dark:bg-red-500/14 dark:text-red-200'
+                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                                        : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                                     }`}
                                     title={team.open ? 'Открыта' : 'Закрыта'}
                                   >
-                                    {team.open ? (
-                                      <OpenDoorIcon />
-                                    ) : (
-                                      <ClosedDoorIcon />
-                                    )}
+                                    {team.open ? 'Открыта' : 'Закрыта'}
                                   </span>
                                   {canEditRegisteredTeams && team.paidGame ? (
                                     <span

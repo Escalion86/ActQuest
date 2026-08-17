@@ -31,6 +31,12 @@ const gameReviewsSchema = {
     min: 1,
     max: 10,
   },
+  difficultyRating: {
+    type: Number,
+    min: 1,
+    max: 10,
+    default: null,
+  },
   tags: {
     type: [String],
     default: [],
@@ -47,10 +53,31 @@ const gameReviewsSchema = {
     type: Boolean,
     default: false,
   },
+  isRatingIncluded: {
+    type: Boolean,
+    default: true,
+  },
+  ratingExclusionReason: {
+    type: String,
+    default: '',
+  },
+  ratingExcludedByUserId: {
+    type: String,
+    default: null,
+    set: normalizeIdForStorage,
+  },
+  ratingExcludedAt: {
+    type: Date,
+    default: null,
+  },
   moderationStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
+  },
+  moderationReason: {
+    type: String,
+    default: '',
   },
   moderatedByUserId: {
     type: String,

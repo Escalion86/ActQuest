@@ -53,14 +53,22 @@ const normalizeRating = (value) => {
   }
 
   const toNumberOrNull = (input) => {
+    if (input === null || input === undefined || input === '') {
+      return null
+    }
     const numeric = Number(input)
     return Number.isFinite(numeric) ? numeric : null
   }
 
   return {
+    version: toNumberOrNull(value.version) ?? 1,
     rank: toNumberOrNull(value.rank),
     totalRanked: toNumberOrNull(value.totalRanked),
     finalScore: toNumberOrNull(value.finalScore),
+    ratingPoints: toNumberOrNull(value.ratingPoints ?? value.finalScore),
+    wins: toNumberOrNull(value.wins) ?? 0,
+    seasonId: sanitizeNullableString(value.seasonId),
+    seasonName: sanitizeNullableString(value.seasonName),
     playedGames: toNumberOrNull(value.playedGames),
     isEligible: Boolean(value.isEligible),
   }

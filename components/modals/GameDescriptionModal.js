@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useQuery } from '@tanstack/react-query'
 
 import Modal from '@components/Modal'
 import PrequelStatusIcon from '@components/PrequelStatusIcon'
@@ -23,6 +24,49 @@ import {
 import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
+
+const REVIEW_TAG_LABELS = {
+  interesting_tasks: 'Интересные задания',
+  atmosphere: 'Атмосфера',
+  organization: 'Организация',
+  story: 'Сюжет',
+  route_and_locations: 'Маршрут и локации',
+  teamwork: 'Командная игра',
+  unexpected_moments: 'Неожиданные моменты',
+  actors: 'Актёры',
+}
+
+const getReviewCountLabel = (count) => {
+  const numeric = Math.max(0, Math.trunc(Number(count) || 0))
+  const modulo100 = numeric % 100
+  const modulo10 = numeric % 10
+  if (modulo100 >= 11 && modulo100 <= 14) return `${numeric} оценок`
+  if (modulo10 === 1) return `${numeric} оценка`
+  if (modulo10 >= 2 && modulo10 <= 4) return `${numeric} оценки`
+  return `${numeric} оценок`
+}
+
+const toRatingOrNull = (value) => {
+  if (value === null || value === undefined || value === '') return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric >= 1 && numeric <= 10
+    ? numeric
+    : null
+}
+
+const formatReviewDate = (value) => {
+  const date = value ? new Date(value) : null
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium' }).format(date)
+}
+
+const loadPublishedGameReviews = async (gameId) => {
+  const { json } = await requestApiJson(
+    `/api/cabinet/games/${encodeURIComponent(gameId)}/published-reviews`,
+    { fallbackMessage: 'Не удалось загрузить отзывы' },
+  )
+  return json?.data || { items: [], meta: {} }
+}
 
 const resolveLocationLabel = (locationKey) => {
   const normalized =
@@ -85,6 +129,36 @@ const GameDescriptionModal = ({
   const [prequelCode, setPrequelCode] = useState('')
   const [prequelFeedback, setPrequelFeedback] = useState(null)
   const [isPrequelSubmitting, setIsPrequelSubmitting] = useState(false)
+  const [isReviewsOpen, setIsReviewsOpen] = useState(false)
+
+  const publishedReviewsQuery = useQuery({
+    queryKey: ['published-game-reviews', selectedGame?.id],
+    queryFn: () => loadPublishedGameReviews(selectedGame.id),
+    enabled: Boolean(isDescriptionModalOpen && selectedGame?.id),
+    staleTime: 60_000,
+  })
+
+  const publishedReviewsData = publishedReviewsQuery.data || {
+    items: [],
+    meta: {},
+  }
+  const publishedReviews = Array.isArray(publishedReviewsData.items)
+    ? publishedReviewsData.items
+    : []
+  const reviewsCount = Math.max(
+    0,
+    Number(
+      publishedReviewsData.meta?.reviewsCount ?? selectedGame?.reviewsCount,
+    ) || 0,
+  )
+  const averageRating = toRatingOrNull(
+    publishedReviewsData.meta?.averageRating ??
+      selectedGame?.reviewAverageRating,
+  )
+  const averageDifficultyRating = toRatingOrNull(
+    publishedReviewsData.meta?.averageDifficultyRating ??
+      selectedGame?.reviewAverageDifficultyRating,
+  )
 
   const prequels = useMemo(
     () =>
@@ -217,6 +291,7 @@ const GameDescriptionModal = ({
 
   useEffect(() => {
     if (!isDescriptionModalOpen) {
+      setIsReviewsOpen(false)
       setIsPrequelHelpOpen(false)
       setPrequelCode('')
       setPrequelFeedback(null)
@@ -318,7 +393,7 @@ const GameDescriptionModal = ({
   return (
     <>
       <Modal
-        isOpen={isDescriptionModalOpen}
+        isOpen={isDescriptionModalOpen && !isReviewsOpen}
         title={`Игра — ${selectedGame?.name || 'Без названия'}`}
         onClose={handleCloseDescriptionModal}
       >
@@ -549,6 +624,32 @@ const GameDescriptionModal = ({
             />
           </div>
         </div>
+
+        <ModalSection className="p-4 sm:p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <ModalSectionTitle>Отзывы</ModalSectionTitle>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800 dark:border-amber-400/45 dark:bg-amber-500/12 dark:text-amber-100">
+                  {averageRating ?? '—'} ★
+                </span>
+                <span className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-800 dark:border-violet-400/45 dark:bg-violet-500/12 dark:text-violet-100">
+                  {averageDifficultyRating ?? '—'} ◈
+                </span>
+                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  {getReviewCountLabel(reviewsCount)}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsReviewsOpen(true)}
+              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-400 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 dark:border-cyan-500/45 dark:bg-cyan-500/12 dark:text-cyan-100 dark:hover:bg-cyan-500/20"
+            >
+              Посмотреть отзывы
+            </button>
+          </div>
+        </ModalSection>
 
         {hasVisiblePrequels && (
           <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 sm:p-5 dark:border-cyan-500/35 dark:bg-cyan-500/10">
@@ -905,6 +1006,104 @@ const GameDescriptionModal = ({
     )}
       </Modal>
       <Modal
+        isOpen={isDescriptionModalOpen && isReviewsOpen}
+        onClose={() => setIsReviewsOpen(false)}
+        title={`Отзывы — ${selectedGame?.name || 'игра'}`}
+        dialogClassName="md:max-w-3xl"
+      >
+        {publishedReviewsQuery.isLoading ? (
+          <p className="text-sm text-slate-500 dark:text-slate-300">
+            Загружаем отзывы…
+          </p>
+        ) : publishedReviewsQuery.isError ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200">
+            {publishedReviewsQuery.error?.message ||
+              'Не удалось загрузить отзывы'}
+          </div>
+        ) : publishedReviews.length > 0 ? (
+          <div className="space-y-4">
+            {publishedReviews.map((review) => (
+              <article
+                key={review.id}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-amber-700 dark:text-amber-200">
+                      {review.overallRating} ★
+                    </span>
+                    {review.difficultyRating ? (
+                      <span className="font-bold text-violet-700 dark:text-violet-200">
+                        {review.difficultyRating} ◈
+                      </span>
+                    ) : null}
+                    {review.isOwn && review.moderationStatus === 'pending' ? (
+                      <span className="rounded-full border border-cyan-300 bg-cyan-50 px-2 py-0.5 text-xs font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                        Ваш отзыв · на модерации
+                      </span>
+                    ) : null}
+                    {review.isOwn && review.moderationStatus === 'rejected' ? (
+                      <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                        Ваш отзыв · не опубликован
+                      </span>
+                    ) : null}
+                    {review.isRatingIncluded === false ? (
+                      <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-700/70 dark:text-slate-200">
+                        Не учитывается в рейтинге
+                      </span>
+                    ) : null}
+                  </div>
+                  {formatReviewDate(review.createdAt) ? (
+                    <time className="text-xs text-slate-500 dark:text-slate-400">
+                      {formatReviewDate(review.createdAt)}
+                    </time>
+                  ) : null}
+                </div>
+
+                {Array.isArray(review.tags) && review.tags.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {review.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300"
+                      >
+                        {REVIEW_TAG_LABELS[tag] || tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                {review.likedText ? (
+                  <div className="mt-3 text-sm text-slate-700 dark:text-slate-200">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                      Понравилось
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {review.likedText}
+                    </p>
+                  </div>
+                ) : null}
+
+                {review.improvementText ? (
+                  <div className="mt-3 text-sm text-slate-700 dark:text-slate-200">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                      Можно улучшить
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {review.improvementText}
+                    </p>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-300">
+            Пока нет отзывов, разрешённых к публикации.
+          </p>
+        )}
+      </Modal>
+      <Modal
         isOpen={isPrequelHelpOpen}
         onClose={() => setIsPrequelHelpOpen(false)}
         title="Что такое приквел?"
@@ -942,6 +1141,9 @@ GameDescriptionModal.propTypes = {
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     prequel: PropTypes.object,
     prequels: PropTypes.arrayOf(PropTypes.object),
+    reviewAverageRating: PropTypes.number,
+    reviewAverageDifficultyRating: PropTypes.number,
+    reviewsCount: PropTypes.number,
     userParticipationTeams: PropTypes.arrayOf(
       PropTypes.shape({
         teamId: PropTypes.string,

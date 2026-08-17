@@ -699,6 +699,15 @@ const normalizeGameForCabinet = (game) => {
     tasks: normalizeTasks(game.tasks),
     teamsCount: ensureNumber(game.teamsCount, 0),
     adminUnreadMessagesCount: ensureNumber(game.adminUnreadMessagesCount, 0),
+    reviewAverageRating: ensureNullableNumber(game.reviewAverageRating),
+    reviewAverageDifficultyRating: ensureNullableNumber(
+      game.reviewAverageDifficultyRating,
+    ),
+    reviewsCount: ensureNumber(game.reviewsCount, 0),
+    userReviewRating: ensureNullableNumber(game.userReviewRating),
+    userReviewDifficultyRating: ensureNullableNumber(
+      game.userReviewDifficultyRating,
+    ),
     userTeamPlace: ensureNullableNumber(game.userTeamPlace),
     userParticipationTeams: normalizedUserParticipationTeams,
     teams: normalizedUserParticipationTeams.map((t) => t.teamName),

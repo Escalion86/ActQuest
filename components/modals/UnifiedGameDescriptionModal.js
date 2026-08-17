@@ -18,6 +18,12 @@ const CLUE_EARLY_MODE_OPTIONS = [
   { value: 'penalty', label: 'Штраф организатора за подсказку' },
 ]
 
+const currencyFormatter = new Intl.NumberFormat('ru-RU', {
+  style: 'currency',
+  currency: 'RUB',
+  minimumFractionDigits: 0,
+})
+
 const toMinutes = (seconds) => {
   const numeric = Number(seconds)
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -171,6 +177,7 @@ const UnifiedGameDescriptionModal = ({
       manyCodesLimitLabel={manyCodesLimitLabel}
       manyCodesPenaltyLabel={manyCodesPenaltyLabel}
       taskCountLabel={taskCountLabel}
+      currencyFormatter={currencyFormatter}
     />
   )
 }
@@ -182,6 +189,9 @@ UnifiedGameDescriptionModal.propTypes = {
     status: PropTypes.string,
     type: PropTypes.string,
     dateStart: PropTypes.string,
+    reviewAverageRating: PropTypes.number,
+    reviewAverageDifficultyRating: PropTypes.number,
+    reviewsCount: PropTypes.number,
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
     tasks: PropTypes.array,

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 
-import LegacyGameResultPage from '@app/[location]/game/result/[id]/page'
+import { ResultPageContent } from '@app/[location]/game/result/[id]/page'
 import { resolveGameLocationById } from '@app/api/cabinet/_lib/resolveGameLocation'
 import { getCityPageByLocationKey } from '@app/_lib/cityLandingPages'
 import { seoArticles } from '@app/_lib/seoArticles'
@@ -170,7 +170,7 @@ export default async function GameResultPage({ params }) {
           </a>
         ))}
       </div>
-      <LegacyGameResultPage params={{ id: gameId, location }} />
+      <ResultPageContent gameId={gameId} location={location} />
     </>
   )
 }

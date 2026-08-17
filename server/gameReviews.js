@@ -4,9 +4,11 @@ export const GAME_REVIEW_TAGS = [
   'interesting_tasks',
   'atmosphere',
   'organization',
-  'good_difficulty',
-  'too_difficult',
-  'technical_issues',
+  'story',
+  'route_and_locations',
+  'teamwork',
+  'unexpected_moments',
+  'actors',
 ]
 
 const REVIEW_TEXT_MAX_LENGTH = 1500
@@ -59,6 +61,18 @@ export const normalizeGameReviewInput = (body) => {
     }
   }
 
+  const difficultyRating = Number(body?.difficultyRating)
+  if (
+    !Number.isInteger(difficultyRating) ||
+    difficultyRating < 1 ||
+    difficultyRating > 10
+  ) {
+    return {
+      success: false,
+      error: 'Оценка сложности должна быть целым числом от 1 до 10',
+    }
+  }
+
   const allowedTags = new Set(GAME_REVIEW_TAGS)
   const tags = Array.from(
     new Set(
@@ -72,6 +86,7 @@ export const normalizeGameReviewInput = (body) => {
     success: true,
     data: {
       overallRating,
+      difficultyRating,
       tags,
       likedText: normalizeText(body?.likedText),
       improvementText: normalizeText(body?.improvementText),
@@ -91,6 +106,12 @@ export const serializeGameReview = (review) => {
     gameType:
       typeof review?.gameType === 'string' ? review.gameType : 'classic',
     overallRating: Number(review?.overallRating),
+    difficultyRating:
+      review?.difficultyRating !== null &&
+      review?.difficultyRating !== undefined &&
+      Number.isFinite(Number(review.difficultyRating))
+        ? Number(review.difficultyRating)
+        : null,
     tags: Array.isArray(review?.tags) ? review.tags : [],
     likedText: typeof review?.likedText === 'string' ? review.likedText : '',
     improvementText:
@@ -98,15 +119,44 @@ export const serializeGameReview = (review) => {
         ? review.improvementText
         : '',
     publicationConsent: review?.publicationConsent === true,
+    isRatingIncluded: review?.isRatingIncluded !== false,
+    ratingExclusionReason:
+      typeof review?.ratingExclusionReason === 'string'
+        ? review.ratingExclusionReason
+        : '',
+    ratingExcludedByUserId: toStringId(review?.ratingExcludedByUserId),
+    ratingExcludedAt: review?.ratingExcludedAt
+      ? new Date(review.ratingExcludedAt).toISOString()
+      : null,
     moderationStatus:
       typeof review?.moderationStatus === 'string'
         ? review.moderationStatus
         : 'pending',
+    moderationReason:
+      typeof review?.moderationReason === 'string'
+        ? review.moderationReason
+        : '',
     createdAt: review?.createdAt
       ? new Date(review.createdAt).toISOString()
       : null,
     updatedAt: review?.updatedAt
       ? new Date(review.updatedAt).toISOString()
       : null,
+  }
+}
+
+export const serializePublishedGameReview = (review) => {
+  const serialized = serializeGameReview(review)
+  if (!serialized) return null
+
+  return {
+    id: serialized.id,
+    overallRating: serialized.overallRating,
+    difficultyRating: serialized.difficultyRating,
+    tags: serialized.tags,
+    likedText: serialized.likedText,
+    improvementText: serialized.improvementText,
+    isRatingIncluded: serialized.isRatingIncluded,
+    createdAt: serialized.createdAt,
   }
 }

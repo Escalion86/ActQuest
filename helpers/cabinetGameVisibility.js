@@ -82,6 +82,11 @@ const canViewCabinetGameRestrictedInfo = ({
   return Boolean(allowCreatorFallback)
 }
 
+const canExposeCabinetGamePlace = (
+  game,
+  { canViewRestrictedGameInfo = false } = {},
+) => Boolean(canViewRestrictedGameInfo || !game?.hideResult)
+
 const sanitizeCabinetGameForViewer = (
   game,
   { canViewRestrictedGameInfo, hasUserParticipation = false },
@@ -131,6 +136,7 @@ const canManageCabinetGameFinances = ({
 }) => Boolean(canManageGameStatus)
 
 export {
+  canExposeCabinetGamePlace,
   canManageCabinetGameFinances,
   canOpenRestrictedTeamGamePreview,
   canViewPublishedGameTasks,

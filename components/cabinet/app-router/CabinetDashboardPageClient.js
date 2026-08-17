@@ -5,9 +5,12 @@ import { useCallback, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import GamePlaceBadge from '@components/cabinet/GamePlaceBadge'
 import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
+import GameReviewModal from '@components/location-game/GameReviewModal'
 import Modal from '@components/Modal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
+import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { toStringId } from '@helpers/idAndDate'
@@ -24,22 +27,15 @@ const CHAT_CITY_OPTIONS = [
   { key: 'ekb', label: 'Чат Екатеринбурга' },
 ]
 
-const OpenDoorIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    className="h-3.5 w-3.5"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M4 3h11v18H4z" />
-    <path d="M15 6h4l1 3v9l-1 3h-4" />
-    <circle cx="10.5" cy="12" r="0.8" fill="currentColor" stroke="none" />
-  </svg>
-)
+const getReviewCountLabel = (count) => {
+  const numeric = Math.max(0, Math.trunc(Number(count) || 0))
+  const modulo100 = numeric % 100
+  const modulo10 = numeric % 10
+  if (modulo100 >= 11 && modulo100 <= 14) return `${numeric} оценок`
+  if (modulo10 === 1) return `${numeric} оценка`
+  if (modulo10 >= 2 && modulo10 <= 4) return `${numeric} оценки`
+  return `${numeric} оценок`
+}
 
 const normalizeLocationName = (locationKey) => {
   const location = locationKey ? LOCATIONS[locationKey] : null
@@ -130,84 +126,6 @@ const resolveTeamNameFromResult = (gameResult, teamId) => {
 }
 
 const RATING_MIN_PLAYED_GAMES = 3
-const RATING_STABILITY_WEIGHT = 0.2
-const RATING_MISS_PENALTY_WEIGHT = 0.3
-
-const getAverage = (values = []) => {
-  if (!Array.isArray(values) || values.length === 0) {
-    return null
-  }
-
-  const sum = values.reduce((acc, value) => acc + value, 0)
-  return sum / values.length
-}
-
-const getStdDev = (values = [], average = null) => {
-  if (!Array.isArray(values) || values.length === 0) {
-    return 0
-  }
-
-  const avg = Number.isFinite(average) ? average : getAverage(values)
-  if (!Number.isFinite(avg)) {
-    return 0
-  }
-
-  const variance =
-    values.reduce((acc, value) => acc + (value - avg) ** 2, 0) / values.length
-
-  return Math.sqrt(variance)
-}
-
-const resolveParticipantRatingKey = (userId, telegramId) => {
-  if (userId) {
-    return `uid:${userId}`
-  }
-  if (Number.isFinite(telegramId)) {
-    return `tg:${telegramId}`
-  }
-  return null
-}
-
-const buildPlayerRatingMetrics = ({ places = [], missedGames = 0 }) => {
-  const normalizedPlaces = Array.isArray(places)
-    ? places
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value))
-    : []
-  const playedGames = normalizedPlaces.length
-  const normalizedMissedGames = Number.isFinite(Number(missedGames))
-    ? Math.max(0, Number(missedGames))
-    : 0
-  const averagePlace = playedGames ? getAverage(normalizedPlaces) : null
-  const stdDevPlace =
-    playedGames && Number.isFinite(averagePlace)
-      ? getStdDev(normalizedPlaces, averagePlace)
-      : 0
-  const attendanceDenominator = playedGames + normalizedMissedGames
-  const attendance =
-    attendanceDenominator > 0 ? playedGames / attendanceDenominator : 1
-  const baseScore = Number.isFinite(averagePlace)
-    ? averagePlace + RATING_STABILITY_WEIGHT * stdDevPlace
-    : null
-  const missPenalty = Number.isFinite(baseScore)
-    ? (1 - attendance) * RATING_MISS_PENALTY_WEIGHT
-    : null
-  const finalScore = Number.isFinite(baseScore) ? baseScore + missPenalty : null
-
-  return {
-    places: normalizedPlaces,
-    playedGames,
-    missedGames: normalizedMissedGames,
-    averagePlace,
-    stdDevPlace,
-    attendance,
-    baseScore,
-    missPenalty,
-    finalScore,
-    isEligible:
-      playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(finalScore),
-  }
-}
 
 const resolveTeamRatingBadge = (rating) => {
   if (!rating) {
@@ -249,6 +167,8 @@ const CabinetDashboard = ({
       rank: null,
       totalRanked: 0,
       finalScore: null,
+      wins: 0,
+      seasonName: null,
       playersAbove: null,
       playedGames: 0,
       missedGames: 0,
@@ -295,6 +215,11 @@ const CabinetDashboard = ({
       personalProgressGames: Array.isArray(source.personalProgressGames)
         ? source.personalProgressGames
         : [],
+      latestPlayedGameDetails:
+        source.latestPlayedGameDetails &&
+        typeof source.latestPlayedGameDetails === 'object'
+          ? source.latestPlayedGameDetails
+          : null,
       rating:
         source.rating && typeof source.rating === 'object'
           ? { ...fallbackRating, ...source.rating }
@@ -314,7 +239,7 @@ const CabinetDashboard = ({
   const [isTeamDescriptionOpen, setIsTeamDescriptionOpen] = useState(false)
   const [isAllPlayedGamesOpen, setIsAllPlayedGamesOpen] = useState(false)
   const [isPlayedGamePreviewOpen, setIsPlayedGamePreviewOpen] = useState(false)
-  const [previewPlayedGame, setPreviewPlayedGame] = useState(null)
+  const [reviewModalGame, setReviewModalGame] = useState(null)
   const [isRatingInfoOpen, setIsRatingInfoOpen] = useState(false)
   const [isChatLinksModalOpen, setIsChatLinksModalOpen] = useState(false)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
@@ -462,16 +387,17 @@ const CabinetDashboard = ({
                       {dashboardData.rating.totalRanked}
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                      Рейтинговый балл:{' '}
+                      Рейтинговые очки:{' '}
                       {dashboardData.rating.finalScore.toFixed(2)} · Выше вас:{' '}
                       {dashboardData.rating.playersAbove}
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                      Сыграно: {dashboardData.rating.playedGames} · Пропущено:{' '}
-                      {dashboardData.rating.missedGames}
+                      Сыграно: {dashboardData.rating.playedGames} · Побед:{' '}
+                      {dashboardData.rating.wins ?? 0}
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-300">
-                      Учтены только закрытые рейтинговые игры.
+                      Учтены закрытые рейтинговые игры города{' '}
+                      {dashboardData.cityName}.
                     </p>
                   </>
                 ) : (
@@ -592,14 +518,14 @@ const CabinetDashboard = ({
                               </span>
                             ) : null}
                             <span
-                              className={`inline-flex items-center justify-center rounded-full border text-[11px] font-semibold ${
+                              className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
                                 team.open
-                                  ? 'h-7 w-7 border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
-                                  : 'px-2.5 py-1 border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
+                                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                                  : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                               }`}
                               title={team.open ? 'Открыта' : 'Закрыта'}
                             >
-                              {team.open ? <OpenDoorIcon /> : 'Закрыта'}
+                              {team.open ? 'Открыта' : 'Закрыта'}
                             </span>
                           </div>
                           <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
@@ -730,10 +656,7 @@ const CabinetDashboard = ({
                 <>
                   <button
                     type="button"
-                    onClick={() => {
-                      setPreviewPlayedGame(latestPlayedGame)
-                      setIsPlayedGamePreviewOpen(true)
-                    }}
+                    onClick={() => setIsPlayedGamePreviewOpen(true)}
                     className="mt-4 w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -763,23 +686,60 @@ const CabinetDashboard = ({
                               {latestPlayedGame.teamName}
                             </p>
                           ) : null}
+                          {latestPlayedGame.reviewsCount > 0 &&
+                          latestPlayedGame.reviewAverageRating ? (
+                            <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-200">
+                              {latestPlayedGame.reviewAverageRating} ★
+                              {latestPlayedGame.reviewAverageDifficultyRating ? (
+                                <>
+                                  {' '}·{' '}
+                                  {latestPlayedGame.reviewAverageDifficultyRating} ◈
+                                </>
+                              ) : null}{' '}
+                              -{' '}
+                              {getReviewCountLabel(
+                                latestPlayedGame.reviewsCount,
+                              )}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
-                      <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                        {latestPlayedGame.place
-                          ? `${latestPlayedGame.place} место`
-                          : 'Без места'}
-                      </span>
+                      {latestPlayedGame.isResultPublished && latestPlayedGame.place ? (
+                        <GamePlaceBadge
+                          place={latestPlayedGame.place}
+                          label={`${latestPlayedGame.place} место`}
+                        />
+                      ) : (
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                          {latestPlayedGame.isResultPublished
+                            ? 'Без места'
+                            : 'Результаты скрыты'}
+                        </span>
+                      )}
                     </div>
                   </button>
-                  <a
-                    href={`/${encodeURIComponent(latestPlayedGame.location || activeSession?.user?.location || '')}/game/result/${encodeURIComponent(latestPlayedGame.id)}#game-review`}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReviewModalGame({
+                        id: latestPlayedGame.id,
+                        name: latestPlayedGame.gameName,
+                        location:
+                          latestPlayedGame.location ||
+                          activeSession?.user?.location ||
+                          '',
+                      })
+                    }
                     className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-cyan-400 px-4 py-2 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-50 dark:border-cyan-500/50 dark:text-cyan-200 dark:hover:bg-cyan-500/10"
                   >
                     {latestPlayedGame.reviewRating
-                      ? `Ваш отзыв: ${latestPlayedGame.reviewRating}/10`
-                      : 'Оценить игру'}
-                  </a>
+                      ? `★ ${Number(latestPlayedGame.reviewRating).toFixed(1)}${
+                          latestPlayedGame.reviewDifficultyRating
+                            ? ` · ◈ ${Number(latestPlayedGame.reviewDifficultyRating).toFixed(1)}`
+                            : ''
+                        }`
+                      : 'Оценить/Отзыв'}
+                  </button>
                   <button
                     type="button"
                     onClick={() => setIsAllPlayedGamesOpen(true)}
@@ -848,6 +808,11 @@ const CabinetDashboard = ({
           </div>
         </section>
       </CabinetLayout>
+      <GameReviewModal
+        game={reviewModalGame}
+        onClose={() => setReviewModalGame(null)}
+        onSaved={() => router.refresh()}
+      />
       <TeamDescriptionModal
         isOpen={isTeamDescriptionOpen}
         onClose={() => setIsTeamDescriptionOpen(false)}
@@ -880,15 +845,39 @@ const CabinetDashboard = ({
                       {item.teamName}
                     </p>
                   ) : null}
+                  {item.reviewsCount > 0 && item.reviewAverageRating ? (
+                    <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-200">
+                      {item.reviewAverageRating} ★
+                      {item.reviewAverageDifficultyRating ? (
+                        <>
+                          {' '}· {item.reviewAverageDifficultyRating} ◈
+                        </>
+                      ) : null}{' '}
+                      -{' '}
+                      {getReviewCountLabel(item.reviewsCount)}
+                    </p>
+                  ) : null}
                 </div>
-                <a
-                  href={`/${encodeURIComponent(item.location || activeSession?.user?.location || '')}/game/result/${encodeURIComponent(item.id)}#game-review`}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setReviewModalGame({
+                      id: item.id,
+                      name: item.gameName,
+                      location:
+                        item.location || activeSession?.user?.location || '',
+                    })
+                  }
                   className="inline-flex shrink-0 items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
                 >
                   {item.reviewRating
-                    ? `Отзыв: ${item.reviewRating}/10`
-                    : 'Оценить'}
-                </a>
+                    ? `★ ${Number(item.reviewRating).toFixed(1)}${
+                        item.reviewDifficultyRating
+                          ? ` · ◈ ${Number(item.reviewDifficultyRating).toFixed(1)}`
+                          : ''
+                      }`
+                    : 'Оценить/Отзыв'}
+                </button>
               </li>
             ))}
           </ul>
@@ -898,56 +887,36 @@ const CabinetDashboard = ({
           </p>
         )}
       </Modal>
-      <Modal
+      <UnifiedGameDescriptionModal
+        selectedGame={dashboardData.latestPlayedGameDetails}
         isOpen={isPlayedGamePreviewOpen}
         onClose={() => setIsPlayedGamePreviewOpen(false)}
-        title={previewPlayedGame?.gameName || 'Просмотр игры'}
-      >
-        {previewPlayedGame ? (
-          <div className="space-y-4">
-            <div className="h-44 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900/70">
-              {previewPlayedGame.image ? (
-                <img
-                  src={previewPlayedGame.image}
-                  alt={previewPlayedGame.gameName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500 dark:text-slate-300">
-                  Нет обложки
-                </div>
-              )}
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-700 dark:bg-slate-800/80">
-              <p className="aq-modal-item-title text-sm font-semibold">
-                {previewPlayedGame.gameName}
-              </p>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
-                {previewPlayedGame.dateLabel}
-              </p>
-              {previewPlayedGame.teamName ? (
-                <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
-                  Команда: {previewPlayedGame.teamName}
-                </p>
-              ) : null}
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                Результат:{' '}
-                {previewPlayedGame.place
-                  ? `${previewPlayedGame.place} место`
-                  : 'Без места'}
-              </p>
-            </div>
-            <a
-              href={`/${encodeURIComponent(previewPlayedGame.location || activeSession?.user?.location || '')}/game/result/${encodeURIComponent(previewPlayedGame.id)}#game-review`}
-              className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
-            >
-              {previewPlayedGame.reviewRating
-                ? `Изменить отзыв ${previewPlayedGame.reviewRating}/10`
-                : 'Оценить игру'}
-            </a>
-          </div>
-        ) : null}
-      </Modal>
+        canViewRestrictedGameInfo={['admin', 'dev'].includes(
+          String(effectiveRole).toLowerCase(),
+        )}
+        canViewGameResults={Boolean(
+          dashboardData.latestPlayedGameDetails &&
+            ['finished', 'closed'].includes(
+              String(
+                dashboardData.latestPlayedGameDetails.status || '',
+              ).toLowerCase(),
+            ) &&
+            (['admin', 'dev'].includes(String(effectiveRole).toLowerCase()) ||
+              !dashboardData.latestPlayedGameDetails.hideResult),
+        )}
+        onOpenResults={() => {
+          const game = dashboardData.latestPlayedGameDetails
+          if (!game?.id) {
+            return
+          }
+
+          router.push(
+            `/${encodeURIComponent(
+              game.location || activeSession?.user?.location || '',
+            )}/game/result/${encodeURIComponent(game.id)}`,
+          )
+        }}
+      />
       <Modal
         isOpen={isChatLinksModalOpen}
         onClose={() => setIsChatLinksModalOpen(false)}
@@ -990,20 +959,21 @@ const CabinetDashboard = ({
         title="Как считается рейтинг"
       >
         <div className="space-y-3 text-sm text-slate-600 dark:text-slate-200">
-          <p>Рейтинг считается только по закрытым рейтинговым играм.</p>
-          <p>Базовая оценка: среднее место игрока. Чем меньше, тем лучше.</p>
           <p>
-            Дополнительно учитывается стабильность: если места сильно скачут,
-            добавляется небольшой штраф.
+            Рейтинг считается по всем закрытым рейтинговым играм города{' '}
+            {dashboardData.cityName}.
           </p>
           <p>
-            Пропуски считаются только начиная с первой рейтинговой игры, где
-            игрок реально участвовал. Игры до первого участия в рейтинг не
-            влияют.
+            За каждую игру начисляется от 0 до 100 очков относительно числа
+            соперников: первое место даёт 100, последнее — 0.
           </p>
           <p>
-            Итоговый рейтинг строится по возрастанию балла. Меньший балл
-            означает более высокое место в рейтинге.
+            Рейтинг — среднее число очков. Пропуски не уменьшают его и
+            показываются только как статистика участия.
+          </p>
+          <p>
+            При равных очках выше игрок с большим числом игр, затем побед и
+            лучшим последним результатом.
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-300">
             Для попадания в рейтинг нужно минимум {RATING_MIN_PLAYED_GAMES}{' '}
@@ -1035,6 +1005,8 @@ CabinetDashboard.propTypes = {
           totalRanked: PropTypes.number,
           playersAbove: PropTypes.number,
           finalScore: PropTypes.number,
+          wins: PropTypes.number,
+          seasonName: PropTypes.string,
           playedGames: PropTypes.number,
           missedGames: PropTypes.number,
           updatedAt: PropTypes.string,
@@ -1104,14 +1076,28 @@ CabinetDashboard.propTypes = {
         dateLabel: PropTypes.string.isRequired,
         teamName: PropTypes.string,
         place: PropTypes.number,
+        isResultPublished: PropTypes.bool.isRequired,
         reviewRating: PropTypes.number,
+        reviewDifficultyRating: PropTypes.number,
+        reviewAverageRating: PropTypes.number,
+        reviewAverageDifficultyRating: PropTypes.number,
+        reviewsCount: PropTypes.number,
       }),
     ),
+    latestPlayedGameDetails: PropTypes.shape({
+      id: PropTypes.string,
+      name: PropTypes.string,
+      status: PropTypes.string,
+      location: PropTypes.string,
+      hideResult: PropTypes.bool,
+    }),
     rating: PropTypes.shape({
       isEligible: PropTypes.bool.isRequired,
       rank: PropTypes.number,
       totalRanked: PropTypes.number.isRequired,
       finalScore: PropTypes.number,
+      wins: PropTypes.number,
+      seasonName: PropTypes.string,
       playersAbove: PropTypes.number,
       playedGames: PropTypes.number.isRequired,
       missedGames: PropTypes.number.isRequired,
@@ -1149,11 +1135,14 @@ CabinetDashboard.defaultProps = {
     inProgressGame: null,
     nearestGame: null,
     personalProgressGames: [],
+    latestPlayedGameDetails: null,
     rating: {
       isEligible: false,
       rank: null,
       totalRanked: 0,
       finalScore: null,
+      wins: 0,
+      seasonName: null,
       playersAbove: null,
       playedGames: 0,
       missedGames: 0,

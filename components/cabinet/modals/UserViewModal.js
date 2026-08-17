@@ -257,7 +257,7 @@ const UserViewModal = ({
                     </p>
                     <p className="mt-1 text-sm font-semibold text-amber-800 dark:text-amber-100">
                       #{user.rating.rank} ·{' '}
-                      {Number(user.rating?.finalScore || 0).toFixed(2)}
+                      {Number(user.rating?.finalScore || 0).toFixed(2)} очков
                     </p>
                   </div>
                 )}
@@ -353,7 +353,7 @@ const UserViewModal = ({
                   <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
                     {user.rating?.isEligible &&
                     Number.isFinite(user.rating?.rank)
-                      ? `#${user.rating.rank} (${Number(user.rating?.finalScore || 0).toFixed(2)})`
+                      ? `#${user.rating.rank} (${Number(user.rating?.finalScore || 0).toFixed(2)} очков)`
                       : 'Нет рейтинга'}
                   </p>
                 </div>

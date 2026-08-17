@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import buildGameResultComputed from '../server/buildGameResultComputed.js'
+import { getAllComputedResultTeams } from '../helpers/gameResultComputed.js'
 
 test('counts mixed-case bonus and penalty codes in classic result', async () => {
   const game = {
@@ -87,4 +88,17 @@ test('does not apply photo task failure penalty to bonus tasks', async () => {
   assert.equal(teamResult.taskResults[0].failurePenaltyPoints, 10)
   assert.equal(teamResult.taskResults[1].failurePenaltyPoints, 0)
   assert.equal(teamResult.finalPoints, -10)
+})
+
+test('exposes computed data for ranked and out-of-competition teams to result UI', () => {
+  const rankedTeam = { teamId: 'ranked-team', place: 1 }
+  const outOfCompetitionTeam = { teamId: 'outside-team', place: null }
+
+  assert.deepEqual(
+    getAllComputedResultTeams({
+      teams: [rankedTeam],
+      outOfCompetitionTeams: [outOfCompetitionTeam],
+    }),
+    [rankedTeam, outOfCompetitionTeam],
+  )
 })

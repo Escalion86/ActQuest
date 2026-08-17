@@ -32,6 +32,15 @@ const buildQuery = (request) => {
     .trim()
     .toLowerCase()
   const rating = Number(requestUrl.searchParams.get('rating'))
+  const difficultyRating = Number(
+    requestUrl.searchParams.get('difficultyRating'),
+  )
+  const gameId = String(requestUrl.searchParams.get('gameId') || '').trim()
+  const ratingIncluded = String(
+    requestUrl.searchParams.get('ratingIncluded') || '',
+  )
+    .trim()
+    .toLowerCase()
 
   if (location && location !== 'all') query.location = location
   if (MODERATION_STATUSES.has(moderationStatus)) {
@@ -40,9 +49,23 @@ const buildQuery = (request) => {
   if (Number.isInteger(rating) && rating >= 1 && rating <= 10) {
     query.overallRating = rating
   }
+  if (
+    Number.isInteger(difficultyRating) &&
+    difficultyRating >= 1 &&
+    difficultyRating <= 10
+  ) {
+    query.difficultyRating = difficultyRating
+  }
+  if (OBJECT_ID_PATTERN.test(gameId)) query.gameId = gameId
+  if (ratingIncluded === 'included') {
+    query.isRatingIncluded = { $ne: false }
+  } else if (ratingIncluded === 'excluded') {
+    query.isRatingIncluded = false
+  }
 
   return {
     query,
+    gameId: OBJECT_ID_PATTERN.test(gameId) ? gameId : null,
     offset: parseNonNegativeInteger(requestUrl.searchParams.get('offset'), 0),
     limit: Math.min(
       parseNonNegativeInteger(requestUrl.searchParams.get('limit'), 20),
@@ -64,9 +87,11 @@ export async function GET(request) {
     const db = await dbConnectGlobal()
     if (!db) throw new Error('Не удалось подключиться к базе данных')
 
-    const { query, offset, limit } = buildQuery(request)
+    const { query, gameId: selectedGameId, offset, limit } = buildQuery(request)
     const GameReviews = db.model('GameReviews')
-    const [reviewDocs, total, summaryRows] = await Promise.all([
+    const gameOptionsQuery = { ...query }
+    delete gameOptionsQuery.gameId
+    const [reviewDocs, total, summaryRows, gameOptionIdsRaw] = await Promise.all([
       GameReviews.find(query)
         .sort({ createdAt: -1, _id: -1 })
         .skip(offset)
@@ -78,17 +103,55 @@ export async function GET(request) {
         {
           $group: {
             _id: null,
-            averageRating: { $avg: '$overallRating' },
+            averageRating: {
+              $avg: {
+                $cond: [
+                  { $ne: ['$isRatingIncluded', false] },
+                  '$overallRating',
+                  null,
+                ],
+              },
+            },
+            averageDifficultyRating: {
+              $avg: {
+                $cond: [
+                  { $ne: ['$isRatingIncluded', false] },
+                  '$difficultyRating',
+                  null,
+                ],
+              },
+            },
+            ratingIncludedCount: {
+              $sum: {
+                $cond: [{ $ne: ['$isRatingIncluded', false] }, 1, 0],
+              },
+            },
+            ratingExcludedCount: {
+              $sum: {
+                $cond: [{ $eq: ['$isRatingIncluded', false] }, 1, 0],
+              },
+            },
             publicationConsentCount: {
               $sum: { $cond: ['$publicationConsent', 1, 0] },
             },
           },
         },
       ]),
+      GameReviews.distinct('gameId', gameOptionsQuery),
     ])
 
+    const gameOptionIds = Array.from(
+      new Set(
+        [...gameOptionIdsRaw, selectedGameId]
+          .map(toStringId)
+          .filter((id) => id && OBJECT_ID_PATTERN.test(id)),
+      ),
+    )
     const gameIds = Array.from(
-      new Set(reviewDocs.map((item) => toStringId(item?.gameId)).filter(Boolean)),
+      new Set([
+        ...reviewDocs.map((item) => toStringId(item?.gameId)).filter(Boolean),
+        ...gameOptionIds,
+      ]),
     )
     const userIds = Array.from(
       new Set(
@@ -157,6 +220,27 @@ export async function GET(request) {
       }
     })
     const summary = summaryRows[0] || {}
+    const gameOptions = games
+      .filter((game) => gameOptionIds.includes(toStringId(game?._id)))
+      .map((game) => ({
+        id: toStringId(game?._id),
+        name:
+          typeof game?.name === 'string' && game.name.trim()
+            ? game.name.trim()
+            : 'Без названия',
+        dateStart: game?.dateStart
+          ? new Date(game.dateStart).toISOString()
+          : null,
+      }))
+      .sort((first, second) => {
+        const firstTime = first.dateStart
+          ? new Date(first.dateStart).getTime()
+          : 0
+        const secondTime = second.dateStart
+          ? new Date(second.dateStart).getTime()
+          : 0
+        return secondTime - firstTime || first.name.localeCompare(second.name, 'ru')
+      })
 
     return NextResponse.json(
       {
@@ -170,9 +254,17 @@ export async function GET(request) {
           averageRating: Number.isFinite(summary.averageRating)
             ? Number(summary.averageRating.toFixed(1))
             : null,
+          averageDifficultyRating: Number.isFinite(
+            summary.averageDifficultyRating,
+          )
+            ? Number(summary.averageDifficultyRating.toFixed(1))
+            : null,
           publicationConsentCount: Number(
             summary.publicationConsentCount || 0,
           ),
+          ratingIncludedCount: Number(summary.ratingIncludedCount || 0),
+          ratingExcludedCount: Number(summary.ratingExcludedCount || 0),
+          games: gameOptions,
         },
       },
       { status: 200 },
@@ -201,9 +293,34 @@ export async function PATCH(request) {
     typeof body?.moderationStatus === 'string'
       ? body.moderationStatus.trim().toLowerCase()
       : ''
-  if (!OBJECT_ID_PATTERN.test(reviewId) || !MODERATION_STATUSES.has(moderationStatus)) {
+  const hasModerationUpdate = MODERATION_STATUSES.has(moderationStatus)
+  const moderationReason =
+    typeof body?.moderationReason === 'string'
+      ? body.moderationReason.trim().slice(0, 500)
+      : ''
+  const hasRatingUpdate = typeof body?.ratingIncluded === 'boolean'
+  const ratingExclusionReason =
+    typeof body?.ratingExclusionReason === 'string'
+      ? body.ratingExclusionReason.trim().slice(0, 500)
+      : ''
+  if (
+    !OBJECT_ID_PATTERN.test(reviewId) ||
+    (!hasModerationUpdate && !hasRatingUpdate) ||
+    (hasModerationUpdate &&
+      moderationStatus === 'rejected' &&
+      !moderationReason) ||
+    (hasRatingUpdate && body.ratingIncluded === false && !ratingExclusionReason)
+  ) {
     return NextResponse.json(
-      { success: false, error: 'Некорректные параметры модерации' },
+      {
+        success: false,
+        error:
+          hasModerationUpdate && moderationStatus === 'rejected'
+            ? 'Укажите причину отклонения отзыва'
+            : hasRatingUpdate && body.ratingIncluded === false
+            ? 'Укажите причину исключения оценки'
+            : 'Некорректные параметры модерации',
+      },
       { status: 400 },
     )
   }
@@ -213,14 +330,27 @@ export async function PATCH(request) {
     if (!db) throw new Error('Не удалось подключиться к базе данных')
 
     const moderator = resolveSessionGameReviewIdentity(session.user)
+    const update = {}
+    if (hasModerationUpdate) {
+      update.moderationStatus = moderationStatus
+      update.moderationReason =
+        moderationStatus === 'rejected' ? moderationReason : ''
+      update.moderatedByUserId = moderator.userId
+      update.moderatedAt = new Date()
+    }
+    if (hasRatingUpdate) {
+      update.isRatingIncluded = body.ratingIncluded
+      update.ratingExclusionReason =
+        body.ratingIncluded === false ? ratingExclusionReason : ''
+      update.ratingExcludedByUserId =
+        body.ratingIncluded === false ? moderator.userId : null
+      update.ratingExcludedAt =
+        body.ratingIncluded === false ? new Date() : null
+    }
     const review = await db.model('GameReviews').findByIdAndUpdate(
       reviewId,
       {
-        $set: {
-          moderationStatus,
-          moderatedByUserId: moderator.userId,
-          moderatedAt: new Date(),
-        },
+        $set: update,
       },
       { returnDocument: 'after', runValidators: true },
     )

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 
 import sanitizeGameForPublicRead from '../helpers/sanitizeGameForPublicRead.js'
+import { canExposeCabinetGamePlace } from '../helpers/cabinetGameVisibility.js'
 
 const source = {
   _id: 'game-1',
@@ -81,5 +82,15 @@ const finished = sanitizeGameForPublicRead({ ...source, status: 'finished' })
 assert.equal(finished.tasks[0].clues[0].clue, 'CLUE_SECRET')
 assert.equal(finished.tasks[0].codes.length, 0)
 assert.equal('code' in finished.tasks[0].bonusCodes[0], false)
+
+assert.equal(canExposeCabinetGamePlace({ hideResult: false }), true)
+assert.equal(canExposeCabinetGamePlace({ hideResult: true }), false)
+assert.equal(
+  canExposeCabinetGamePlace(
+    { hideResult: true },
+    { canViewRestrictedGameInfo: true },
+  ),
+  true,
+)
 
 console.log('[test:public-game-sanitizer] OK')

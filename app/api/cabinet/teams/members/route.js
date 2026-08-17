@@ -269,20 +269,6 @@ export async function POST(request) {
       )
     }
 
-    if (!isElevatedRole(actorRole) && team?.open === false) {
-      console.warn('[team-members][add][server] forbidden_team_closed', {
-        teamId,
-      })
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
-        },
-        { status: 403 },
-      )
-    }
-
     if (!canJoinTeamForRole(session.user.role)) {
       return NextResponse.json(
         {
@@ -312,29 +298,14 @@ export async function POST(request) {
       )
     }
 
-    const createdMembership = await TeamsUsersModel.create({
-      teamId,
-      userId: actorUserId,
-      role,
-    })
-    console.log('[team-members][add][server] self_membership_created', {
-      teamId,
-      actorUserId,
-      role,
-      membershipId: toStringId(createdMembership?._id),
-    })
-
     return NextResponse.json(
       {
-        success: true,
-        data: {
-          id: toStringId(createdMembership?._id),
-          teamId,
-          role,
-        },
+        success: false,
+        error: 'Для вступления в команду подайте заявку капитану',
       },
-      { status: 201 },
+      { status: 403 },
     )
+
   } catch (error) {
     console.error('Failed to add team membership via cabinet API (app)', error)
     return NextResponse.json(

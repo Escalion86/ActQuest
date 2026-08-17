@@ -17,7 +17,7 @@ const TeamJoinModal = ({
 }) => (
   <Modal
     isOpen={isOpen}
-    title="Присоединиться к команде"
+    title="Подать заявку в команду"
     onClose={onClose}
     footer={(
       <>
@@ -35,14 +35,14 @@ const TeamJoinModal = ({
           disabled={isJoinActionDisabled}
           className="aq-modal-btn aq-modal-btn-primary"
         >
-          {isJoiningTeam ? 'Отправка…' : 'Вступить в команду'}
+          {isJoiningTeam ? 'Отправка…' : 'Подать заявку'}
         </button>
       </>
     )}
   >
     <fieldset disabled={isJoiningTeam} className="m-0 space-y-5 border-0 p-0">
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        Введите идентификатор команды. Его можно получить у капитана, если в настройках команды разрешено присоединение по id.
+        Введите идентификатор открытой команды. Капитан увидит заявку и решит, принять ли вас в состав.
       </p>
       <CabinetInputField
         id="join-team-id"
@@ -54,7 +54,7 @@ const TeamJoinModal = ({
       />
       {!canUseSelfServiceTeams ? (
         <NoticeBanner tone="warning" variant="neon">
-          Укажите площадку в профиле и привяжите Telegram, чтобы присоединяться к командам.
+          Заполните профиль, чтобы подавать заявки в команды.
         </NoticeBanner>
       ) : null}
     </fieldset>

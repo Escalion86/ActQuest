@@ -14,17 +14,64 @@ const TAG_OPTIONS = [
   { value: 'interesting_tasks', label: 'Интересные задания' },
   { value: 'atmosphere', label: 'Атмосфера' },
   { value: 'organization', label: 'Организация' },
-  { value: 'good_difficulty', label: 'Хорошая сложность' },
-  { value: 'too_difficult', label: 'Было слишком сложно' },
-  { value: 'technical_issues', label: 'Технические проблемы' },
+  { value: 'story', label: 'Сюжет' },
+  { value: 'route_and_locations', label: 'Маршрут и локации' },
+  { value: 'teamwork', label: 'Командная игра' },
+  { value: 'unexpected_moments', label: 'Неожиданные моменты' },
+  { value: 'actors', label: 'Актёры' },
 ]
+const REVIEW_STATUS = {
+  pending: {
+    label: 'На проверке',
+    className:
+      'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200',
+  },
+  approved: {
+    label: 'Одобрен',
+    className:
+      'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200',
+  },
+  rejected: {
+    label: 'Отклонён',
+    className:
+      'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200',
+  },
+}
 
 const EMPTY_FORM = {
   overallRating: 0,
+  difficultyRating: 0,
   tags: [],
   likedText: '',
   improvementText: '',
   publicationConsent: false,
+}
+
+const getReviewForm = (review) => ({
+  overallRating: Number(review?.overallRating) || 0,
+  difficultyRating: Number(review?.difficultyRating) || 0,
+  tags: Array.isArray(review?.tags) ? review.tags : [],
+  likedText: typeof review?.likedText === 'string' ? review.likedText : '',
+  improvementText:
+    typeof review?.improvementText === 'string' ? review.improvementText : '',
+  publicationConsent: review?.publicationConsent === true,
+})
+
+const areReviewFormsEqual = (left, right) => {
+  if (
+    left.overallRating !== right.overallRating ||
+    left.difficultyRating !== right.difficultyRating ||
+    left.likedText !== right.likedText ||
+    left.improvementText !== right.improvementText ||
+    left.publicationConsent !== right.publicationConsent ||
+    left.tags.length !== right.tags.length
+  ) {
+    return false
+  }
+
+  const leftTags = [...left.tags].sort()
+  const rightTags = [...right.tags].sort()
+  return leftTags.every((tag, index) => tag === rightTags[index])
 }
 
 const loadGameReview = async (gameId) => {
@@ -35,7 +82,15 @@ const loadGameReview = async (gameId) => {
   return json?.data || null
 }
 
-const GameReviewCard = ({ gameId, location }) => {
+const GameReviewCard = ({
+  gameId,
+  location,
+  embedded,
+  externalSubmit,
+  formId,
+  onFormStateChange,
+  onSaved,
+}) => {
   const { data: session, status: sessionStatus } = useSession()
   const queryClient = useQueryClient()
   const [form, setForm] = useState(EMPTY_FORM)
@@ -52,20 +107,18 @@ const GameReviewCard = ({ gameId, location }) => {
 
   const review = reviewQuery.data?.review || null
   const isEligible = reviewQuery.data?.eligible === true
+  const initialForm = getReviewForm(review)
+  const isDirty = !areReviewFormsEqual(form, initialForm)
 
   useEffect(() => {
-    if (!review) return
-    setForm({
-      overallRating: Number(review.overallRating) || 0,
-      tags: Array.isArray(review.tags) ? review.tags : [],
-      likedText: typeof review.likedText === 'string' ? review.likedText : '',
-      improvementText:
-        typeof review.improvementText === 'string'
-          ? review.improvementText
-          : '',
-      publicationConsent: review.publicationConsent === true,
-    })
-  }, [review])
+    setForm(EMPTY_FORM)
+    setFeedback(null)
+  }, [gameId])
+
+  useEffect(() => {
+    if (!reviewQuery.isSuccess) return
+    setForm(getReviewForm(review))
+  }, [review, reviewQuery.isSuccess])
 
   const saveReviewMutation = useMutation({
     mutationFn: async (payload) => {
@@ -86,12 +139,16 @@ const GameReviewCard = ({ gameId, location }) => {
         eligible: true,
         review: savedReview,
       }))
+      void queryClient.invalidateQueries({
+        queryKey: ['published-game-reviews', gameId],
+      })
       setFeedback({
         type: 'success',
         message: review
           ? 'Изменения в отзыве сохранены'
           : 'Спасибо! Ваш отзыв сохранён',
       })
+      onSaved?.(savedReview)
     },
     onError: (error) => {
       setFeedback({
@@ -101,14 +158,26 @@ const GameReviewCard = ({ gameId, location }) => {
     },
   })
 
+  useEffect(() => {
+    onFormStateChange?.({
+      isDirty,
+      isSubmitting: saveReviewMutation.isPending,
+      moderationStatus: review?.moderationStatus || null,
+    })
+  }, [isDirty, onFormStateChange, review, saveReviewMutation.isPending])
+
   if (sessionStatus === 'loading') return null
 
   if (!isAuthenticated) {
-    const callbackUrl = `/${location}/game/result/${gameId}#game-review`
+    const callbackUrl = `/${location}/game/review/${gameId}`
     return (
       <section
         id="game-review"
-        className="mx-auto my-8 max-w-3xl rounded-3xl border border-cyan-200 bg-white p-6 shadow-xl dark:border-cyan-500/30 dark:bg-slate-900"
+        className={
+          embedded
+            ? 'py-1'
+            : 'mx-auto my-8 max-w-3xl rounded-3xl border border-cyan-200 bg-white p-6 shadow-xl dark:border-cyan-500/30 dark:bg-slate-900'
+        }
       >
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           Как вам игра?
@@ -130,7 +199,11 @@ const GameReviewCard = ({ gameId, location }) => {
     return (
       <section
         id="game-review"
-        className="mx-auto my-8 max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+        className={
+          embedded
+            ? 'py-4 text-sm text-slate-500 dark:text-slate-300'
+            : 'mx-auto my-8 max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+        }
       >
         Загружаем форму отзыва…
       </section>
@@ -139,7 +212,10 @@ const GameReviewCard = ({ gameId, location }) => {
 
   if (reviewQuery.isError) {
     return (
-      <section id="game-review" className="mx-auto my-8 max-w-3xl px-4">
+      <section
+        id="game-review"
+        className={embedded ? '' : 'mx-auto my-8 max-w-3xl px-4'}
+      >
         <NoticeBanner tone="error">
           {reviewQuery.error?.message || 'Не удалось загрузить форму отзыва'}
         </NoticeBanner>
@@ -165,13 +241,24 @@ const GameReviewCard = ({ gameId, location }) => {
       setFeedback({ type: 'error', message: 'Выберите оценку от 1 до 10' })
       return
     }
+    if (!Number.isInteger(form.difficultyRating) || form.difficultyRating < 1) {
+      setFeedback({
+        type: 'error',
+        message: 'Оцените сложность игры от 1 до 10',
+      })
+      return
+    }
     saveReviewMutation.mutate(form)
   }
 
   return (
     <section
       id="game-review"
-      className="mx-auto my-8 max-w-3xl rounded-3xl border border-cyan-200 bg-white p-6 shadow-xl dark:border-cyan-500/30 dark:bg-slate-900 sm:p-8"
+      className={
+        embedded
+          ? 'py-1'
+          : 'mx-auto my-8 max-w-3xl rounded-3xl border border-cyan-200 bg-white p-6 shadow-xl dark:border-cyan-500/30 dark:bg-slate-900 sm:p-8'
+      }
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -182,19 +269,40 @@ const GameReviewCard = ({ gameId, location }) => {
             Как вам игра?
           </h2>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Оцените впечатления по шкале от 1 до 10. Комментарии необязательны.
+            Оцените впечатления и сложность по шкале от 1 до 10. Комментарии необязательны.
           </p>
         </div>
         {review ? (
-          <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-            Отзыв сохранён
+          <span
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+              REVIEW_STATUS[review.moderationStatus]?.className ||
+              REVIEW_STATUS.pending.className
+            }`}
+          >
+            {REVIEW_STATUS[review.moderationStatus]?.label ||
+              REVIEW_STATUS.pending.label}
           </span>
         ) : null}
       </div>
 
-      <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
+      {review?.moderationStatus === 'rejected' ? (
+        <div className="mt-5 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100">
+          <p className="font-semibold">Причина отклонения</p>
+          <p className="mt-1 whitespace-pre-wrap">
+            {review.moderationReason || 'Причина не указана организатором.'}
+          </p>
+          <p className="mt-2 text-xs text-rose-700 dark:text-rose-200">
+            Исправьте отзыв и сохраните изменения, чтобы повторно отправить его на проверку.
+          </p>
+        </div>
+      ) : null}
+
+      <form id={formId} className="mt-6 space-y-6" onSubmit={handleSubmit}>
         <fieldset>
           <legend className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            <span aria-hidden="true" className="mr-1.5 text-amber-500">
+              ★
+            </span>
             Ваша оценка
           </legend>
           <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-10" role="radiogroup">
@@ -226,6 +334,49 @@ const GameReviewCard = ({ gameId, location }) => {
           <div className="mt-2 flex justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>Совсем не понравилось</span>
             <span>Отличная игра</span>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            <span aria-hidden="true" className="mr-1.5 text-violet-500">
+              ◈
+            </span>
+            Сложность игры
+          </legend>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Насколько сложной игра показалась лично вам?
+          </p>
+          <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-10" role="radiogroup">
+            {RATING_VALUES.map((rating) => {
+              const isSelected = form.difficultyRating === rating
+              return (
+                <button
+                  key={rating}
+                  type="button"
+                  role="radio"
+                  aria-label={`Сложность: ${rating} из 10`}
+                  aria-checked={isSelected}
+                  onClick={() =>
+                    setForm((current) => ({
+                      ...current,
+                      difficultyRating: rating,
+                    }))
+                  }
+                  className={`h-11 rounded-xl border text-sm font-bold transition ${
+                    isSelected
+                      ? 'border-violet-600 bg-violet-600 text-white shadow-md'
+                      : 'border-slate-300 bg-white text-slate-700 hover:border-violet-400 hover:bg-violet-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-violet-500/10'
+                  }`}
+                >
+                  {rating}
+                </button>
+              )
+            })}
+          </div>
+          <div className="mt-2 flex justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Очень легко</span>
+            <span>Очень сложно</span>
           </div>
         </fieldset>
 
@@ -314,17 +465,19 @@ const GameReviewCard = ({ gameId, location }) => {
           <NoticeBanner tone={feedback.type}>{feedback.message}</NoticeBanner>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={saveReviewMutation.isPending}
-          className="inline-flex w-full justify-center rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-        >
-          {saveReviewMutation.isPending
-            ? 'Сохраняем…'
-            : review
-              ? 'Сохранить изменения'
-              : 'Отправить отзыв'}
-        </button>
+        {!externalSubmit ? (
+          <button
+            type="submit"
+            disabled={saveReviewMutation.isPending}
+            className="inline-flex w-full justify-center rounded-xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            {saveReviewMutation.isPending
+              ? 'Сохраняем…'
+              : review
+                ? 'Сохранить изменения'
+                : 'Отправить отзыв'}
+          </button>
+        ) : null}
       </form>
     </section>
   )
@@ -333,6 +486,19 @@ const GameReviewCard = ({ gameId, location }) => {
 GameReviewCard.propTypes = {
   gameId: PropTypes.string.isRequired,
   location: PropTypes.string.isRequired,
+  embedded: PropTypes.bool,
+  externalSubmit: PropTypes.bool,
+  formId: PropTypes.string,
+  onFormStateChange: PropTypes.func,
+  onSaved: PropTypes.func,
+}
+
+GameReviewCard.defaultProps = {
+  embedded: false,
+  externalSubmit: false,
+  formId: undefined,
+  onFormStateChange: undefined,
+  onSaved: undefined,
 }
 
 export default GameReviewCard

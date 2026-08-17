@@ -194,11 +194,17 @@ const TeamDescriptionModal = ({
                   <p className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
                     {selectedTeam.name || 'Без названия'}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                  <span
+                    className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                      selectedTeam.open
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                        : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                    }`}
+                  >
                     {selectedTeam.open
                       ? 'Открыта для заявок'
-                      : 'Закрытый состав'}
-                  </p>
+                      : 'Закрыта для заявок'}
+                  </span>
                 </div>
               </div>
             </ModalSection>
@@ -220,10 +226,18 @@ const TeamDescriptionModal = ({
                   <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Статус набора
                   </dt>
-                  <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                  <dd className="mt-1">
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        selectedTeam.open
+                          ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                          : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                      }`}
+                    >
                     {selectedTeam.open
                       ? 'Открыта для заявок'
-                      : 'Закрытый состав'}
+                      : 'Закрыта для заявок'}
+                    </span>
                   </dd>
                 </div>
                 <div>
@@ -257,7 +271,7 @@ const TeamDescriptionModal = ({
                   <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                     {selectedTeam.rating?.isEligible &&
                     Number.isFinite(selectedTeam.rating?.rank)
-                      ? `#${selectedTeam.rating.rank} · ${Number(selectedTeam.rating?.finalScore || 0).toFixed(2)}`
+                      ? `#${selectedTeam.rating.rank} · ${Number(selectedTeam.rating?.finalScore || 0).toFixed(2)} очков`
                       : 'Недостаточно данных для рейтинга'}
                   </dd>
                 </div>

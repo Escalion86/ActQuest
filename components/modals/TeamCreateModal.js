@@ -82,9 +82,9 @@ const TeamCreateModal = ({
         checked={newTeamOpen}
         onChange={(event) => onChangeNewTeamOpen(event.target.checked)}
         className="items-start"
-        label="Разрешить присоединяться по id"
+        label="Открыть команду для заявок"
         labelClassName="text-sm font-semibold text-slate-700 dark:text-slate-100"
-        description="Когда настройка включена, новые участники смогут вступить в команду, введя её id в личном кабинете."
+        description="Новые команды закрыты по умолчанию. Если открыть набор, игроки смогут отправлять капитану заявки по ID команды."
         descriptionClassName="text-xs text-slate-500 dark:text-slate-300"
       />
     </fieldset>

@@ -3,7 +3,7 @@
 import { getData } from '@helpers/CRUD'
 // import { getSession } from 'next-auth/react'
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { use, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import getSecondsBetween from '@helpers/getSecondsBetween'
@@ -11,12 +11,13 @@ import getSecondsBetween from '@helpers/getSecondsBetween'
 import cn from 'classnames'
 import { PASTEL_COLORS } from '@helpers/constants'
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
+import { normalizeClassicCode } from '@helpers/classicGameRules'
+import { getAllComputedResultTeams } from '@helpers/gameResultComputed'
 import ClassicCar from '@components/cars/ClassicCar'
 import SportCar from '@components/cars/SportCar'
 import SuvCar from '@components/cars/SuvCar'
 import VanCar from '@components/cars/VanCar'
 import RichTaskContentView from '@components/game/RichTaskContentView'
-import GameReviewCard from '@components/location-game/GameReviewCard'
 import PropTypes from 'prop-types'
 
 const CYBER_CAR_COLORS = [
@@ -645,7 +646,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
     result?.computed && typeof result.computed === 'object'
       ? result.computed
       : null
-  const computedTeams = Array.isArray(computed?.teams) ? computed.teams : []
+  const computedTeams = getAllComputedResultTeams(computed)
   const computedByTeamId = new Map(
     computedTeams.map((teamResult) => [
       normalizeId(teamResult?.teamId),
@@ -983,10 +984,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
   })
 
   const teamsTaskPenalty = gameTeamsWithTeams.map(
-    (
-      { computedTeam, findedPenaltyCodes, startTime, endTime, wrongCodes },
-      index,
-    ) => {
+    ({ computedTeam, findedPenaltyCodes, startTime, endTime, wrongCodes }) => {
       if (computedTeam && Array.isArray(computedTeam.taskResults)) {
         return (tasks ?? []).map((_, taskIndex) => {
           const value = Number(
@@ -1000,14 +998,17 @@ const GameBlock = ({ game, isDarkTheme }) => {
       if (findedPenaltyCodes?.length > 0) {
         for (let i = 0; i < findedPenaltyCodes.length; i++) {
           if (findedPenaltyCodes[i]?.length > 0) {
-            const codes = findedPenaltyCodes[i].map((code) =>
-              code.toLowerCase(),
+            const codes = new Set(
+              findedPenaltyCodes[i].map(normalizeClassicCode).filter(Boolean),
             )
-            const penalty = tasks[i].penaltyCodes
-              .filter(({ code }) => {
-                return codes.includes(code.toLowerCase())
-              })
-              .reduce((sum, { penalty }) => sum + penalty, 0)
+            const penaltyCodes = Array.isArray(tasks?.[i]?.penaltyCodes)
+              ? tasks[i].penaltyCodes
+              : []
+            const penalty = penaltyCodes
+              .filter(({ code } = {}) =>
+                codes.has(normalizeClassicCode(code)),
+              )
+              .reduce((sum, item) => sum + (Number(item?.penalty) || 0), 0)
             tempResult[i] += penalty
           }
         }
@@ -1042,7 +1043,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
   )
 
   const teamsTaskBonus = gameTeamsWithTeams.map(
-    ({ computedTeam, findedBonusCodes }, index) => {
+    ({ computedTeam, findedBonusCodes }) => {
       if (computedTeam && Array.isArray(computedTeam.taskResults)) {
         return (tasks ?? []).map((_, taskIndex) => {
           const value = Number(
@@ -1056,12 +1057,17 @@ const GameBlock = ({ game, isDarkTheme }) => {
       if (findedBonusCodes?.length > 0) {
         for (let i = 0; i < findedBonusCodes.length; i++) {
           if (findedBonusCodes[i]?.length > 0) {
-            const codes = findedBonusCodes[i].map((code) => code.toLowerCase())
-            const bonus = tasks[i].bonusCodes
-              .filter(({ code }) => {
-                return codes.includes(code.toLowerCase())
-              })
-              .reduce((sum, { bonus }) => sum + bonus, 0)
+            const codes = new Set(
+              findedBonusCodes[i].map(normalizeClassicCode).filter(Boolean),
+            )
+            const bonusCodes = Array.isArray(tasks?.[i]?.bonusCodes)
+              ? tasks[i].bonusCodes
+              : []
+            const bonus = bonusCodes
+              .filter(({ code } = {}) =>
+                codes.has(normalizeClassicCode(code)),
+              )
+              .reduce((sum, item) => sum + (Number(item?.bonus) || 0), 0)
             tempResult.push(bonus)
           } else {
             tempResult.push(0)
@@ -1540,7 +1546,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
         >
           <div
             ref={tableInnerRef}
-            className="overflow-x-hidden overflow-y-visible rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] origin-left -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
+            className="w-max overflow-x-hidden overflow-y-visible rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] origin-left -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
             style={{
               position: 'relative',
               display: 'flex',
@@ -2262,10 +2268,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
   )
 }
 
-function ResultPage({ params }) {
-  const gameId = params?.id
-  const location = params?.location
-
+export function ResultPageContent({ gameId, location }) {
   const [game, setGame] = useState()
   const [isDarkTheme, setIsDarkTheme] = useState(false)
 
@@ -2286,8 +2289,8 @@ function ResultPage({ params }) {
       const game = await getData('/api/' + location + '/games/' + gameId)
       setGame(game.data)
     }
-    if (gameId) getGameEffect(gameId)
-  }, [])
+    if (gameId && location) getGameEffect(gameId)
+  }, [gameId, location])
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -2341,12 +2344,28 @@ function ResultPage({ params }) {
           ) : (
             <GameBlock game={game} isDarkTheme={isDarkTheme} />
           )}
-          <GameReviewCard gameId={String(gameId)} location={String(location)} />
         </>
       ) : null}
       {/* </StateLoader> */}
     </>
   )
+}
+
+function ResultPage({ params }) {
+  const { id: gameId, location } = use(params)
+
+  return <ResultPageContent gameId={gameId} location={location} />
+}
+
+ResultPageContent.propTypes = {
+  gameId: PropTypes.string.isRequired,
+  location: PropTypes.string.isRequired,
+}
+
+ResultPage.propTypes = {
+  params: PropTypes.shape({
+    then: PropTypes.func.isRequired,
+  }).isRequired,
 }
 
 export default ResultPage

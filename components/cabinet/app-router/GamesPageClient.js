@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-query'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import GamePlaceBadge from '@components/cabinet/GamePlaceBadge'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, {
   AgentCardIcon,
@@ -27,6 +28,7 @@ import CardActionIconButton, {
 } from '@components/cabinet/CardActionIconButton'
 import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
+import GameReviewModal from '@components/location-game/GameReviewModal'
 import GameModals from '@components/modals/GameModals'
 import GameStatusModal from '@components/modals/GameStatusModal'
 import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
@@ -158,6 +160,23 @@ const GAME_TYPE_FILTER_OPTIONS = [
   { value: 'photo', label: 'Фотоквест' },
   { value: 'story', label: 'Сюжет' },
 ]
+const getReviewCountLabel = (count) => {
+  const numeric = Math.max(0, Math.trunc(Number(count) || 0))
+  const modulo100 = numeric % 100
+  const modulo10 = numeric % 10
+  if (modulo100 >= 11 && modulo100 <= 14) return `${numeric} оценок`
+  if (modulo10 === 1) return `${numeric} оценка`
+  if (modulo10 >= 2 && modulo10 <= 4) return `${numeric} оценки`
+  return `${numeric} оценок`
+}
+const normalizeUserReviewRating = (value) => {
+  if (value === null || value === undefined || value === '') return null
+
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric >= 1 && numeric <= 10
+    ? numeric
+    : null
+}
 const getGenerateResultsButtonLabel = (game, isGenerating = false) => {
   if (isGenerating) return 'Формируем…'
   return Boolean(game?.isResultGenerated)
@@ -1334,6 +1353,7 @@ const GamesPage = ({
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [selectedAgentToAdd, setSelectedAgentToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
+  const [reviewModalGame, setReviewModalGame] = useState(null)
   const [isFinancesModalOpen, setIsFinancesModalOpen] = useState(false)
   const [isGameHistoryModalOpen, setIsGameHistoryModalOpen] = useState(false)
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
@@ -6442,9 +6462,36 @@ const GamesPage = ({
       )
       const userTeamPlace = Number(game.userTeamPlace)
       const hasUserTeamPlace =
-        Number.isFinite(userTeamPlace) && userTeamPlace > 0
+        !Boolean(game.hideResult) &&
+        Number.isFinite(userTeamPlace) &&
+        userTeamPlace > 0
       const participationTeams = getUserParticipationTeams(game)
       const hasParticipation = participationTeams.length > 0
+      const reviewAverageRating = Number(game?.reviewAverageRating)
+      const reviewAverageDifficultyRating =
+        game?.reviewAverageDifficultyRating === null ||
+        game?.reviewAverageDifficultyRating === undefined
+          ? null
+          : Number(game.reviewAverageDifficultyRating)
+      const reviewsCount = Math.max(0, Number(game?.reviewsCount) || 0)
+      const hasReviewSummary =
+        reviewsCount > 0 && Number.isFinite(reviewAverageRating)
+      const hasDifficultySummary =
+        Number.isFinite(reviewAverageDifficultyRating) &&
+        reviewAverageDifficultyRating >= 1
+      const userReviewRating = normalizeUserReviewRating(
+        game?.userReviewRating,
+      )
+      const userReviewDifficultyRating = normalizeUserReviewRating(
+        game?.userReviewDifficultyRating,
+      )
+      const gameReviewLocation = String(game?.location || location || '').trim()
+      const canReviewThisGame =
+        (hasParticipation || hasUserTeamPlace || userReviewRating !== null) &&
+        ['finished', 'closed'].includes(
+          String(game?.status || '').toLowerCase(),
+        ) &&
+        Boolean(game?.id && gameReviewLocation)
       const captainParticipationTeams = participationTeams.filter(
         (entry) => entry.isCaptain,
       )
@@ -6519,6 +6566,11 @@ const GamesPage = ({
                   className="block w-full h-auto"
                   placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-6 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                 />
+                {hasUserTeamPlace ? (
+                  <div className="absolute left-2 top-2 z-10">
+                    <GamePlaceBadge place={userTeamPlace} />
+                  </div>
+                ) : null}
               </div>
               <div className="min-w-0 flex-1 p-0 sm:p-4">
                 <div className="flex items-start flex-1 w-full min-w-0 gap-3">
@@ -6537,6 +6589,11 @@ const GamesPage = ({
                       className="block w-full h-auto"
                       placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-4 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                     />
+                    {hasUserTeamPlace ? (
+                      <div className="absolute left-2 top-2 z-10">
+                        <GamePlaceBadge place={userTeamPlace} />
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -6550,6 +6607,23 @@ const GamesPage = ({
                           {seasonBadgeLabel}
                         </span>
                       )}
+                      {hasReviewSummary ? (
+                        <span
+                          className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:border-amber-400/45 dark:bg-amber-500/12 dark:text-amber-100"
+                          title={`Средняя оценка: ${reviewAverageRating} из 10${
+                            hasDifficultySummary
+                              ? `. Средняя сложность: ${reviewAverageDifficultyRating} из 10`
+                              : ''
+                          }. ${getReviewCountLabel(reviewsCount)}`}
+                        >
+                          {reviewAverageRating} ★
+                          {hasDifficultySummary ? (
+                            <> · {reviewAverageDifficultyRating} ◈</>
+                          ) : null}{' '}
+                          -{' '}
+                          {getReviewCountLabel(reviewsCount)}
+                        </span>
+                      ) : null}
                       {isHiddenGame && (
                         <span className="inline-flex items-center rounded-full border border-rose-300/70 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
                           Скрыта
@@ -6578,11 +6652,11 @@ const GamesPage = ({
                     )}
                   </div>
                 </div>
-                {(hasUserTeamPlace ||
-                  hasParticipation ||
+                {(hasParticipation ||
                   canEnterGame ||
                   canJoinGame ||
                   canCancelRegistration ||
+                  canReviewThisGame ||
                   canBroadcastThisGame ||
                   canEditThisGame ||
                   canManageThisGame ||
@@ -6591,14 +6665,9 @@ const GamesPage = ({
                   canViewThisGameResults ||
                   canGenerateThisGameResults ||
                   canViewThisGameTasks) && (
-                  <div className="flex flex-col gap-2 mt-3 phoneH:flex-row phoneH:items-center phoneH:justify-between">
-                    <div className="flex items-center order-1 gap-2 phoneH:order-2">
-                      {hasUserTeamPlace && (
-                        <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-                          Место: {userTeamPlace}
-                        </span>
-                      )}
-                      {canCancelRegistration && (
+                  <div className="flex flex-col gap-2 mt-3">
+                    {canCancelRegistration ? (
+                      <div className="order-3 flex items-center gap-2">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -6612,14 +6681,15 @@ const GamesPage = ({
                             ? 'Отменить запись'
                             : 'Снять команду с игры'}
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    ) : null}
                     {(canJoinGame ||
                       canEnterGame ||
+                      canReviewThisGame ||
                       canViewThisGameTasks ||
                       canViewThisGameResults ||
                       canGenerateThisGameResults) && (
-                      <div className="flex items-center order-2 gap-2 phoneH:order-3 phoneH:ml-auto">
+                      <div className="order-2 flex flex-wrap items-center gap-2 phoneH:justify-end">
                         {canEnterGame && (
                           <button
                             type="button"
@@ -6646,6 +6716,27 @@ const GamesPage = ({
                               : 'Присоединиться'}
                           </button>
                         )}
+                        {canReviewThisGame ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setReviewModalGame({
+                                ...game,
+                                location: gameReviewLocation,
+                              })
+                            }}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-amber-300/80 bg-amber-50/85 px-4 py-1.5 text-sm font-semibold text-amber-800 transition hover:border-amber-500 hover:bg-amber-100 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-100 dark:hover:bg-amber-500/20"
+                          >
+                            {userReviewRating !== null
+                              ? `★ ${userReviewRating.toFixed(1)}${
+                                  userReviewDifficultyRating !== null
+                                    ? ` · ◈ ${userReviewDifficultyRating.toFixed(1)}`
+                                    : ''
+                                }`
+                              : 'Оценить/Отзыв'}
+                          </button>
+                        ) : null}
                         {canViewThisGameTasks && (
                           <button
                             type="button"
@@ -6701,7 +6792,7 @@ const GamesPage = ({
                       canBroadcastThisGame ||
                       canOpenAgentPanel ||
                       canViewGameTeams) && (
-                      <div className="flex flex-wrap items-center self-start order-3 gap-2 phoneH:order-1 phoneH:self-auto">
+                      <div className="order-1 flex flex-wrap items-center gap-2 phoneH:justify-end">
                         {canOpenAgentPanel && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -6900,6 +6991,7 @@ const GamesPage = ({
       canEditAllGames,
       canSeeClosedStatus,
       gamesView,
+      location,
       canViewResultsForGame,
       canViewTasksForGame,
       currentUserDbId,
@@ -6954,6 +7046,11 @@ const GamesPage = ({
       const canManageHistoryThisGame = canManageGameStatus(game)
       const canBroadcastThisGame =
         canManageThisGame && canBroadcastByGameStatus(game.status)
+      const adminUnreadMessagesCount = Number(
+        game.adminUnreadMessagesCount || 0,
+      )
+      const adminUnreadMessagesBadge =
+        adminUnreadMessagesCount > 99 ? '99+' : adminUnreadMessagesCount || null
       const canViewThisGameResults = canViewResultsForGame(game)
       const isResultsAdminOnly =
         canViewThisGameResults &&
@@ -6976,9 +7073,36 @@ const GamesPage = ({
       )
       const userTeamPlace = Number(game.userTeamPlace)
       const hasUserTeamPlace =
-        Number.isFinite(userTeamPlace) && userTeamPlace > 0
+        !Boolean(game.hideResult) &&
+        Number.isFinite(userTeamPlace) &&
+        userTeamPlace > 0
       const participationTeams = getUserParticipationTeams(game)
       const hasParticipation = participationTeams.length > 0
+      const reviewAverageRating = Number(game?.reviewAverageRating)
+      const reviewAverageDifficultyRating =
+        game?.reviewAverageDifficultyRating === null ||
+        game?.reviewAverageDifficultyRating === undefined
+          ? null
+          : Number(game.reviewAverageDifficultyRating)
+      const reviewsCount = Math.max(0, Number(game?.reviewsCount) || 0)
+      const hasReviewSummary =
+        reviewsCount > 0 && Number.isFinite(reviewAverageRating)
+      const hasDifficultySummary =
+        Number.isFinite(reviewAverageDifficultyRating) &&
+        reviewAverageDifficultyRating >= 1
+      const userReviewRating = normalizeUserReviewRating(
+        game?.userReviewRating,
+      )
+      const userReviewDifficultyRating = normalizeUserReviewRating(
+        game?.userReviewDifficultyRating,
+      )
+      const gameReviewLocation = String(game?.location || location || '').trim()
+      const canReviewThisGame =
+        (hasParticipation || hasUserTeamPlace || userReviewRating !== null) &&
+        ['finished', 'closed'].includes(
+          String(game?.status || '').toLowerCase(),
+        ) &&
+        Boolean(game?.id && gameReviewLocation)
       const captainParticipationTeams = participationTeams.filter(
         (entry) => entry.isCaptain,
       )
@@ -7052,6 +7176,11 @@ const GamesPage = ({
                 className="block w-full h-auto"
                 placeholderClassName="flex min-h-[180px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
               />
+              {hasUserTeamPlace ? (
+                <div className="absolute left-3 top-3 z-10">
+                  <GamePlaceBadge place={userTeamPlace} />
+                </div>
+              ) : null}
             </div>
             <div className="pt-4 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -7065,6 +7194,23 @@ const GamesPage = ({
                     {seasonBadgeLabel}
                   </span>
                 )}
+                {hasReviewSummary ? (
+                  <span
+                    className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:border-amber-400/45 dark:bg-amber-500/12 dark:text-amber-100"
+                    title={`Средняя оценка: ${reviewAverageRating} из 10${
+                      hasDifficultySummary
+                        ? `. Средняя сложность: ${reviewAverageDifficultyRating} из 10`
+                        : ''
+                    }. ${getReviewCountLabel(reviewsCount)}`}
+                  >
+                    {reviewAverageRating} ★
+                    {hasDifficultySummary ? (
+                      <> · {reviewAverageDifficultyRating} ◈</>
+                    ) : null}{' '}
+                    -{' '}
+                    {getReviewCountLabel(reviewsCount)}
+                  </span>
+                ) : null}
                 {isHiddenGame && (
                   <span className="inline-flex items-center rounded-full border border-rose-300/70 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
                     Скрыта
@@ -7092,11 +7238,11 @@ const GamesPage = ({
               {(canViewThisGameResults ||
                 canGenerateThisGameResults ||
                 canViewThisGameTasks ||
-                hasUserTeamPlace ||
                 hasParticipation ||
                 canEnterGame ||
                 canJoinGame ||
                 canCancelRegistration ||
+                canReviewThisGame ||
                 canBroadcastThisGame ||
                 canEditThisGame ||
                 canManageThisGame ||
@@ -7106,10 +7252,11 @@ const GamesPage = ({
                 <div className="flex flex-col gap-2 mt-3">
                   {(canJoinGame ||
                     canEnterGame ||
+                    canReviewThisGame ||
                     canViewThisGameTasks ||
                     canViewThisGameResults ||
                     canGenerateThisGameResults) && (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="order-2 flex flex-wrap items-center gap-2">
                       {canEnterGame && (
                         <button
                           type="button"
@@ -7136,6 +7283,27 @@ const GamesPage = ({
                             : 'Присоединиться'}
                         </button>
                       )}
+                      {canReviewThisGame ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setReviewModalGame({
+                              ...game,
+                              location: gameReviewLocation,
+                            })
+                          }}
+                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-amber-300/80 bg-amber-50/80 px-4 py-1.5 text-sm font-semibold text-amber-800 transition hover:border-amber-500 hover:bg-amber-100 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-100 dark:hover:bg-amber-500/20"
+                        >
+                          {userReviewRating !== null
+                            ? `★ ${userReviewRating.toFixed(1)}${
+                                userReviewDifficultyRating !== null
+                                  ? ` · ◈ ${userReviewDifficultyRating.toFixed(1)}`
+                                  : ''
+                              }`
+                            : 'Оценить/Отзыв'}
+                        </button>
+                      ) : null}
                       {canViewThisGameTasks && (
                         <button
                           type="button"
@@ -7183,30 +7351,23 @@ const GamesPage = ({
                       )}
                     </div>
                   )}
-                  {(hasUserTeamPlace || canCancelRegistration) && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {hasUserTeamPlace && (
-                        <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-                          Место: {userTeamPlace}
-                        </span>
-                      )}
-                      {canCancelRegistration && (
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleCancelRegistrationFromGame(game)
-                          }}
-                          disabled={isCancellingRegistration}
-                          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
-                        >
-                          {game?.participationMode === 'player'
-                            ? 'Отменить запись'
-                            : 'Снять команду с игры'}
-                        </button>
-                      )}
+                  {canCancelRegistration ? (
+                    <div className="order-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleCancelRegistrationFromGame(game)
+                        }}
+                        disabled={isCancellingRegistration}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
+                      >
+                        {game?.participationMode === 'player'
+                          ? 'Отменить запись'
+                          : 'Снять команду с игры'}
+                      </button>
                     </div>
-                  )}
+                  ) : null}
                   {(canEditThisGame ||
                     canManageThisGame ||
                     canManageStatusThisGame ||
@@ -7215,7 +7376,7 @@ const GamesPage = ({
                     canBroadcastThisGame ||
                     canOpenAgentPanel ||
                     canViewGameTeams) && (
-                    <div className="flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
+                    <div className="order-1 flex flex-wrap items-center gap-2 pointer-events-auto phoneH:justify-end">
                       {canOpenAgentPanel && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -7228,7 +7389,6 @@ const GamesPage = ({
                           }}
                           label="Панель агента"
                           title="Открыть панель агента"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <AgentCardIcon />
                         </CardActionIconButton>
@@ -7242,7 +7402,6 @@ const GamesPage = ({
                           disabled={Boolean(testingGameId)}
                           label="Тестовый прогон"
                           title="Открыть игру в изолированном тестовом режиме"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-amber-300 bg-white/90 text-amber-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-500/50 dark:bg-slate-900/80 dark:text-amber-200"
                         >
                           <TestRunCardIcon />
                         </CardActionIconButton>
@@ -7254,7 +7413,6 @@ const GamesPage = ({
                             handleEditGameFromList(game)
                           }}
                           label="Редактировать игру"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <EditCardIcon />
                         </CardActionIconButton>
@@ -7267,7 +7425,6 @@ const GamesPage = ({
                           }}
                           label="Редактор заданий"
                           title="Открыть редактор заданий"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TargetCardIcon />
                         </CardActionIconButton>
@@ -7282,7 +7439,6 @@ const GamesPage = ({
                           }}
                           label="Story-редактор"
                           title="Открыть редактор сценария"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TargetCardIcon />
                         </CardActionIconButton>
@@ -7297,7 +7453,6 @@ const GamesPage = ({
                           }}
                           label="Карта заданий"
                           title="Показать задания на карте"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <MapCardIcon />
                         </CardActionIconButton>
@@ -7310,7 +7465,6 @@ const GamesPage = ({
                           }}
                           label={getStatusActionLabel(game.status)}
                           title={getStatusActionLabel(game.status)}
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <StatusCardIcon status={game.status} />
                         </CardActionIconButton>
@@ -7323,7 +7477,6 @@ const GamesPage = ({
                           }}
                           label="Финансы игры"
                           title="Открыть финансы игры"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <FinanceCardIcon />
                         </CardActionIconButton>
@@ -7336,7 +7489,6 @@ const GamesPage = ({
                           }}
                           label="История игры"
                           title="Открыть историю изменений игры"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <HistoryCardIcon />
                         </CardActionIconButton>
@@ -7349,13 +7501,7 @@ const GamesPage = ({
                           }}
                           label="Переписка с командами"
                           title="Открыть переписку с командами"
-                          badge={
-                            Number(game.adminUnreadMessagesCount || 0) > 99
-                              ? '99+'
-                              : Number(game.adminUnreadMessagesCount || 0) ||
-                                null
-                          }
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                          badge={adminUnreadMessagesBadge}
                         >
                           <ChatCardIcon />
                         </CardActionIconButton>
@@ -7371,7 +7517,6 @@ const GamesPage = ({
                             }}
                             label="Контроль игры"
                             title="Мониторинг хода игры"
-                            className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                           >
                             <GameControlCardIcon />
                           </CardActionIconButton>
@@ -7386,7 +7531,6 @@ const GamesPage = ({
                           }}
                           label="Проверка фото"
                           title="Проверить фото-ответы"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TargetCardIcon />
                         </CardActionIconButton>
@@ -7407,7 +7551,6 @@ const GamesPage = ({
                               ? 'Управление командами'
                               : 'Просмотр команд'
                           }
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TeamCardIcon />
                         </CardActionIconButton>
@@ -7428,6 +7571,7 @@ const GamesPage = ({
       canEditAllGames,
       canSeeClosedStatus,
       gamesView,
+      location,
       canViewResultsForGame,
       canViewTasksForGame,
       currentUserDbId,
@@ -8460,6 +8604,13 @@ const GamesPage = ({
           </div>
         </section>
       </CabinetLayout>
+      <GameReviewModal
+        game={reviewModalGame}
+        onClose={() => setReviewModalGame(null)}
+        onSaved={() => {
+          void queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
+        }}
+      />
     </>
   )
 }
@@ -8626,6 +8777,11 @@ GamesPage.propTypes = {
         }),
       ),
       teamsCount: PropTypes.number,
+      reviewAverageRating: PropTypes.number,
+      reviewAverageDifficultyRating: PropTypes.number,
+      reviewsCount: PropTypes.number,
+      userReviewRating: PropTypes.number,
+      userReviewDifficultyRating: PropTypes.number,
       userTeamPlace: PropTypes.number,
       userParticipationTeams: PropTypes.arrayOf(userParticipationTeamShape),
       isResultGenerated: PropTypes.bool,

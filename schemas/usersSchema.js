@@ -106,6 +106,10 @@ const usersSchema = {
     type: Object,
     default: {},
   },
+  ratingsBySeason: {
+    type: Object,
+    default: {},
+  },
   gameStats: {
     type: Object,
     default: null,

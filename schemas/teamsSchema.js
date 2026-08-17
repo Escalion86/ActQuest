@@ -39,7 +39,7 @@ const teamsSchema = {
   },
   open: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   location: {
     type: String,
@@ -56,6 +56,10 @@ const teamsSchema = {
     default: null,
   },
   ratingsByLocation: {
+    type: Object,
+    default: {},
+  },
+  ratingsBySeason: {
     type: Object,
     default: {},
   },

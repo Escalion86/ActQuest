@@ -186,6 +186,7 @@ export async function PUT(request, { params }) {
             ? context.game.type
             : 'classic',
           moderationStatus: 'pending',
+          moderationReason: '',
           moderatedByUserId: null,
           moderatedAt: null,
         },
