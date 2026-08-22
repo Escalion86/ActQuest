@@ -47,6 +47,71 @@ test('applyPrequelSubmission accepts bonus code once and rejects duplicate', () 
   assert.equal(duplicate.status, 409)
 })
 
+test('applyPrequelSubmission accepts current location time for [time] code', () => {
+  const now = new Date('2026-05-26T00:37:00.000Z')
+  const first = applyPrequelSubmission({
+    game: {
+      ...buildGame({
+        bonusCodes: [{ id: 'time', code: '[time]', value: 30 }],
+        penaltyCodes: [],
+      }),
+      location: 'ekb',
+    },
+    gameTeam: { prequelProgress: null },
+    code: '0537',
+    now,
+  })
+
+  assert.equal(first.ok, true)
+  assert.equal(first.matchedCategory, 'bonus')
+  assert.deepEqual(first.progress.foundBonusCodes, ['[time]'])
+
+  const duplicate = applyPrequelSubmission({
+    game: {
+      ...buildGame({
+        bonusCodes: [{ id: 'time', code: '[time]', value: 30 }],
+        penaltyCodes: [],
+      }),
+      location: 'ekb',
+    },
+    gameTeam: { prequelProgress: first.progress },
+    code: '0538',
+    now: new Date('2026-05-26T00:38:00.000Z'),
+  })
+
+  assert.equal(duplicate.ok, false)
+  assert.equal(duplicate.status, 409)
+})
+
+test('applyPrequelSubmission rejects non-current time for [time] code', () => {
+  const game = buildGame({
+    mainCodes: [{ id: 'time', code: '[TIME]' }],
+    bonusCodes: [],
+    penaltyCodes: [],
+  })
+  const result = applyPrequelSubmission({
+    game,
+    gameTeam: { prequelProgress: null },
+    code: '0736',
+    now: new Date('2026-05-26T00:37:00.000Z'),
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.matchedCategory, 'wrong')
+  assert.deepEqual(result.progress.wrongCodes, ['0736'])
+
+  const literalMarker = applyPrequelSubmission({
+    game,
+    gameTeam: { prequelProgress: result.progress },
+    code: '[time]',
+    now: new Date('2026-05-26T00:37:00.000Z'),
+  })
+
+  assert.equal(literalMarker.ok, true)
+  assert.equal(literalMarker.matchedCategory, 'wrong')
+  assert.deepEqual(literalMarker.progress.wrongCodes, ['0736', '[time]'])
+})
+
 test('applyPrequelSubmission applies repeated wrong-attempt penalties by limit', () => {
   let progress = null
 

@@ -9,11 +9,25 @@ import {
   normalizePrequelProgress,
   resolveRequiredPrequelMainCodesCount,
 } from '../helpers/normalizePrequel.js'
+import getLocationTimeZone from '../helpers/locationTimeZone.js'
+
+const TIME_CODE_MARKER = '[time]'
 
 const normalizeCodeKey = (value) =>
   String(value || '')
     .trim()
     .toLowerCase()
+
+const timeToCodeStr = (location, now) => {
+  const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: getLocationTimeZone(location),
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+
+  return timeFormatter.format(now).replace(':', '')
+}
 
 const createAttempt = ({
   index,
@@ -246,11 +260,21 @@ const applyPrequelSubmission = ({
     return { ok: false, status: 400, message: 'Введите код приквела', progress }
   }
 
+  const currentTimeCode = timeToCodeStr(game?.location, now)
+  const matchedItem =
+    forcedDefinition ||
+    allDefinitions.find((item) => {
+      const definitionCode = normalizeCodeKey(item.code)
+      return definitionCode === TIME_CODE_MARKER
+        ? normalizedCode === currentTimeCode
+        : definitionCode === normalizedCode
+    })
+  const duplicateCode = matchedItem?.code ?? trimmedCode
   const alreadyFound = [
     ...progress.foundMainCodes,
     ...progress.foundBonusCodes,
     ...progress.foundPenaltyCodes,
-  ].some((item) => normalizeCodeKey(item) === normalizedCode)
+  ].some((item) => normalizeCodeKey(item) === normalizeCodeKey(duplicateCode))
   if (alreadyFound) {
     return {
       ok: false,
@@ -260,9 +284,6 @@ const applyPrequelSubmission = ({
     }
   }
 
-  const matchedItem =
-    forcedDefinition ||
-    allDefinitions.find((item) => normalizeCodeKey(item.code) === normalizedCode)
   const nextProgress = {
     ...progress,
     attempts: [...progress.attempts],

@@ -1,4 +1,4 @@
-import { LOCATIONS } from '@server/serverConstants'
+import { LOCATIONS } from '../server/serverConstants.js'
 
 export const DEFAULT_LOCATION_TIME_ZONE = 'Asia/Krasnoyarsk'
 
