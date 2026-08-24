@@ -121,6 +121,7 @@ const TeamEditModal = ({
   const [addMemberUser, setAddMemberUser] = useState(null)
   const { data: session } = useSession()
   const isAdmin = isUserAdmin({ role: session?.user?.role ?? 'client' })
+  const safeJoinRequests = Array.isArray(joinRequests) ? joinRequests : []
 
   useEffect(() => {
     setAddMemberUser(null)
@@ -317,9 +318,9 @@ const TeamEditModal = ({
             <ModalSectionTitle as="h2" className={sectionTitleClassName}>
               Заявки на вступление
             </ModalSectionTitle>
-            {joinRequests.length > 0 ? (
+            {safeJoinRequests.length > 0 ? (
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
-                {joinRequests.length}
+                {safeJoinRequests.length}
               </span>
             ) : null}
           </div>
@@ -330,9 +331,9 @@ const TeamEditModal = ({
             </p>
           ) : isLoadingJoinRequests ? (
             <p className="mt-3 text-sm text-slate-500">Загрузка заявок…</p>
-          ) : joinRequests.length > 0 ? (
+          ) : safeJoinRequests.length > 0 ? (
             <div className="mt-3 space-y-3">
-              {joinRequests.map((joinRequest) => {
+              {safeJoinRequests.map((joinRequest) => {
                 const isProcessing = joinRequestActionId === joinRequest.id
                 return (
                   <div
