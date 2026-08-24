@@ -20,6 +20,7 @@ const resolveUserId = (session) =>
   );
 
 const isElevatedRole = (role) => role === "admin" || role === "dev";
+const isObjectIdString = (value) => /^[0-9a-fA-F]{24}$/.test(value || "");
 
 const canManageTeam = async ({ db, teamId, userId, role }) => {
   if (
@@ -182,6 +183,15 @@ export async function POST(request) {
       {
         success: false,
         error: "Не удалось определить команду или пользователя",
+      },
+      { status: 400 },
+    );
+  }
+  if (!isObjectIdString(teamId)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Некорректный ID команды. Скопируйте полный ID из карточки команды.",
       },
       { status: 400 },
     );

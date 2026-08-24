@@ -49,7 +49,7 @@ const TeamJoinModal = ({
         label="ID команды"
         value={joinTeamId}
         onChange={(event) => onChangeJoinTeamId(event.target.value)}
-        placeholder="Например, 64ff0c2e12"
+        placeholder="Например, 64ff0c2e12ab34cd56ef7890"
         inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
       />
       {!canUseSelfServiceTeams ? (

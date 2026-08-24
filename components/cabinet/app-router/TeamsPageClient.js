@@ -26,6 +26,7 @@ const CABINET_TEAMS_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAMS_ENTITY_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAM_MEMBERS_API_BASE = '/api/cabinet/teams/members'
 const CABINET_TEAM_REQUESTS_API_BASE = '/api/cabinet/teams/requests'
+const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
@@ -1004,6 +1005,11 @@ const TeamsPage = ({
 
     if (!trimmedTeamId) {
       snackbar.error('Введите идентификатор команды')
+      return
+    }
+
+    if (!OBJECT_ID_RE.test(trimmedTeamId)) {
+      snackbar.error('Введите полный ID команды из 24 символов')
       return
     }
 

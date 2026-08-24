@@ -270,6 +270,10 @@ const isForceLocationDebugEnabled =
   process.env.NEXT_PUBLIC_FORCE_LOCATION_DEBUG === '1' ||
   isClientSessionDebugEnabled
 const CABINET_USERS_API_BASE = '/api/cabinet/users'
+const UNPROCESSED_GAME_ORDERS_COUNT_API =
+  '/api/cabinet/admin/game-orders/unprocessed-count'
+const GAME_ORDERS_CHANGED_EVENT = 'aq:admin-game-orders-changed'
+const GAME_ORDERS_COUNT_REFRESH_MS = 60 * 1000
 const THEME_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 const clientSessionDebugLog = (stage, payload = null) => {
   if (!isClientSessionDebugEnabled || typeof window === 'undefined') {
@@ -370,6 +374,8 @@ const CabinetLayout = ({
       : 'light',
   )
   const [isLocationSaving, setIsLocationSaving] = useState(false)
+  const [unprocessedGameOrdersCount, setUnprocessedGameOrdersCount] =
+    useState(0)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
   const [forcedLocationKey, setForcedLocationKey] = useState('')
@@ -380,6 +386,7 @@ const CabinetLayout = ({
   const lastAuthenticatedAtRef = useRef(0)
 
   const role = session?.user?.role ?? 'client'
+  const isAdmin = isUserAdmin({ role })
   const userName =
     session?.user?.name || session?.user?.username || 'Пользователь'
   const userAvatar = getUserAvatarSrc(session?.user ?? null)
@@ -412,7 +419,7 @@ const CabinetLayout = ({
   const menuItems = useMemo(() => {
     const nextItems = [...baseMenuItems]
 
-    if (isUserAdmin({ role })) {
+    if (isAdmin) {
       nextItems.push(...adminMenuItems)
     }
 
@@ -421,7 +428,7 @@ const CabinetLayout = ({
     }
 
     return nextItems
-  }, [role])
+  }, [isAdmin, role])
   const currentPath = `${pathname || ''}${
     searchParams?.toString() ? `?${searchParams.toString()}` : ''
   }`
@@ -634,6 +641,56 @@ const CabinetLayout = ({
       authRedirectInProgressRef.current = false
     }
   }, [session])
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !isAdmin) {
+      setUnprocessedGameOrdersCount(0)
+      return undefined
+    }
+
+    const controller = new AbortController()
+
+    const loadCount = async () => {
+      try {
+        const response = await fetch(UNPROCESSED_GAME_ORDERS_COUNT_API, {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => null)
+
+        if (!response.ok || payload?.success === false) {
+          return
+        }
+
+        const nextCount = Number(payload?.data?.count)
+        setUnprocessedGameOrdersCount(
+          Number.isFinite(nextCount) ? Math.max(0, nextCount) : 0,
+        )
+      } catch (error) {
+        if (error?.name !== 'AbortError') {
+          console.error('Failed to load unprocessed game orders count', error)
+        }
+      }
+    }
+
+    const handleRefresh = () => void loadCount()
+    const refreshInterval = window.setInterval(
+      handleRefresh,
+      GAME_ORDERS_COUNT_REFRESH_MS,
+    )
+
+    void loadCount()
+    window.addEventListener('focus', handleRefresh)
+    window.addEventListener(GAME_ORDERS_CHANGED_EVENT, handleRefresh)
+
+    return () => {
+      controller.abort()
+      window.clearInterval(refreshInterval)
+      window.removeEventListener('focus', handleRefresh)
+      window.removeEventListener(GAME_ORDERS_CHANGED_EVENT, handleRefresh)
+    }
+  }, [isAdmin, status])
 
   useEffect(() => {
     if (authRedirectTimeoutRef.current) {
@@ -1145,11 +1202,22 @@ const CabinetLayout = ({
                         >
                           {item.label}
                         </span>
+                        {unprocessedGameOrdersCount > 0 ? (
+                          <span
+                            className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-rose-500/40 ring-2 ring-rose-300/40 transition-opacity duration-150`}
+                            aria-label={`${unprocessedGameOrdersCount} новых заявок на игры`}
+                            title={`${unprocessedGameOrdersCount} новых заявок на игры`}
+                          >
+                            {unprocessedGameOrdersCount > 99
+                              ? '99+'
+                              : unprocessedGameOrdersCount}
+                          </span>
+                        ) : null}
                         <FontAwesomeIcon
                           icon={faChevronDown}
-                          className={`ml-auto h-3 w-3 shrink-0 transition-transform duration-150 ${
+                          className={`h-3 w-3 shrink-0 transition-transform duration-150 ${
                             isAdminMenuOpen ? 'rotate-180' : ''
-                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'}`}
+                          } ${unprocessedGameOrdersCount > 0 ? '' : 'ml-auto'} ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'}`}
                         />
                       </button>
 
@@ -1176,7 +1244,7 @@ const CabinetLayout = ({
                               <Link
                                 key={subItem.id}
                                 href={subItem.href}
-                                className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
                                   isSubActive
                                     ? subNavActiveClass
                                     : subNavIdleClass
@@ -1185,7 +1253,19 @@ const CabinetLayout = ({
                                   handleNavLinkClick(subItem.href, event)
                                 }
                               >
-                                {subItem.label}
+                                <span>{subItem.label}</span>
+                                {subItem.id === 'admin-game-orders' &&
+                                unprocessedGameOrdersCount > 0 ? (
+                                  <span
+                                    className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-rose-500/40 ring-2 ring-rose-300/40"
+                                    aria-label={`${unprocessedGameOrdersCount} новых заявок`}
+                                    title={`${unprocessedGameOrdersCount} новых заявок`}
+                                  >
+                                    {unprocessedGameOrdersCount > 99
+                                      ? '99+'
+                                      : unprocessedGameOrdersCount}
+                                  </span>
+                                ) : null}
                               </Link>
                             )
                           })}

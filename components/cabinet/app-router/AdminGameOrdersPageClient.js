@@ -21,6 +21,13 @@ import { LOCATIONS } from '@server/serverConstants'
 
 const PAGE_SIZE = 20
 const API_BASE = '/api/cabinet/admin/game-orders'
+const GAME_ORDERS_CHANGED_EVENT = 'aq:admin-game-orders-changed'
+
+const notifyGameOrdersChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(GAME_ORDERS_CHANGED_EVENT))
+  }
+}
 
 const ORDER_STATUSES = [
   { value: 'all', label: 'Все статусы' },
@@ -244,6 +251,7 @@ const AdminGameOrdersPageClient = ({
         prev.map((item) => (item.id === updated.id ? updated : item)),
       )
       setSelectedOrder((prev) => (prev?.id === updated.id ? updated : prev))
+      notifyGameOrdersChanged()
       return updated
     },
     [],
@@ -313,6 +321,7 @@ const AdminGameOrdersPageClient = ({
         prev.map((item) => (item.id === updated.id ? updated : item)),
       )
       setSelectedOrder(updated)
+      notifyGameOrdersChanged()
       setFeedback({
         type: 'success',
         message: `Игра создана: ${json?.data?.game?.name || convertName}`,
@@ -349,6 +358,7 @@ const AdminGameOrdersPageClient = ({
       })
       setOrders((prev) => prev.filter((item) => item.id !== selectedOrder.id))
       setSelectedOrder(null)
+      notifyGameOrdersChanged()
       setFeedback({ type: 'success', message: 'Заявка удалена' })
     } catch (error) {
       setFeedback({

@@ -1,6 +1,16 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import normalizeGameOrderForCabinet from '@helpers/normalizeGameOrderForCabinet'
 
+export const countUnprocessedGameOrders = async () => {
+  const db = await dbConnectGlobal()
+  if (!db) {
+    return 0
+  }
+
+  const GameOrders = db.model('GameOrders')
+  return GameOrders.countDocuments({ status: 'new' })
+}
+
 export const loadCabinetAppAdminGameOrders = async ({
   offset = 0,
   limit = 20,

@@ -177,10 +177,25 @@ const fetchTeamsForCabinet = async ({
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = limit === null ? null : toPositiveInteger(limit, 0)
   const shouldPaginate = Number.isFinite(queryLimit) && queryLimit > 0
+  const resolvedSortBy = normalizeSortBy(sortBy)
+  const shouldPaginateInDatabase =
+    shouldPaginate && resolvedSortBy === DEFAULT_SORT
 
-  const teamsDocs = await TeamsModel.find(teamFilter)
-    .sort({ updatedAt: -1, _id: 1 })
-    .lean()
+  let teamsQuery = TeamsModel.find(teamFilter).sort(
+    shouldPaginateInDatabase
+      ? { createdAt: -1, _id: 1 }
+      : { updatedAt: -1, _id: 1 },
+  )
+  if (shouldPaginateInDatabase) {
+    teamsQuery = teamsQuery.skip(queryOffset).limit(queryLimit + 1)
+  }
+
+  const queriedTeamsDocs = await teamsQuery.lean()
+  const hasMoreFromDatabase =
+    shouldPaginateInDatabase && queriedTeamsDocs.length > queryLimit
+  const teamsDocs = shouldPaginateInDatabase
+    ? queriedTeamsDocs.slice(0, queryLimit)
+    : queriedTeamsDocs
 
   if (!teamsDocs || teamsDocs.length === 0) {
     return returnMeta ? { teams: [], hasMore: false } : []
@@ -323,13 +338,15 @@ const fetchTeamsForCabinet = async ({
       }),
     )
     .filter(Boolean)
-  const sortedTeams = sortTeams(teams, sortBy)
-  const pagedTeams = shouldPaginate
+  const sortedTeams = sortTeams(teams, resolvedSortBy)
+  const pagedTeams = shouldPaginate && !shouldPaginateInDatabase
     ? sortedTeams.slice(queryOffset, queryOffset + queryLimit)
     : sortedTeams
-  const hasMore = shouldPaginate
-    ? sortedTeams.length > queryOffset + queryLimit
-    : false
+  const hasMore = shouldPaginateInDatabase
+    ? hasMoreFromDatabase
+    : shouldPaginate
+      ? sortedTeams.length > queryOffset + queryLimit
+      : false
 
   if (returnMeta) {
     return { teams: pagedTeams, hasMore }
