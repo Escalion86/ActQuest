@@ -1360,7 +1360,7 @@ const CabinetLayout = ({
           />
         ) : null}
 
-        <div className={`flex h-[100dvh] min-h-0 flex-1 flex-col overflow-hidden laptop:min-h-screen ${hideSidebar ? '' : 'laptop:pl-64'}`}>
+        <div className={`flex h-[100dvh] min-h-0 min-w-0 flex-1 flex-col overflow-hidden laptop:min-h-screen ${hideSidebar ? '' : 'laptop:pl-64'}`}>
           <header
             className={`z-20 shrink-0 border-b backdrop-blur-xl ${headerClass}`}
           >
@@ -1424,9 +1424,13 @@ const CabinetLayout = ({
           </header>
 
           <main
-            className={`relative z-10 flex-1 overflow-y-auto px-4 py-6 laptop:px-8 ${mainTextClass}`}
+            className={`relative z-10 min-w-0 flex-1 overflow-y-auto px-4 py-6 laptop:px-8 ${mainTextClass}`}
           >
-            <div className={fullWidth ? 'w-full' : 'max-w-5xl mx-auto'}>
+            <div
+              className={
+                fullWidth ? 'min-w-0 w-full' : 'mx-auto min-w-0 w-full max-w-5xl'
+              }
+            >
               {showPageTitle ? (
                 <div className="mb-6">
                   <h2 className={`text-2xl font-semibold ${pageTitleClass}`}>

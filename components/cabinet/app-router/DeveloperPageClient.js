@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import UserSelectField from '@components/cabinet/UserSelectField'
+import AdminUserCard from '@components/cabinet/cards/AdminUserCard'
+import UserViewModal from '@components/cabinet/modals/UserViewModal'
 import Modal from '@components/Modal'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
@@ -110,6 +112,8 @@ const DeveloperPage = ({ session: initialSession }) => {
 
   // Состояния для режима impersonate
   const [selectedImpersonateUser, setSelectedImpersonateUser] = useState(null)
+  const [isImpersonateUserViewOpen, setIsImpersonateUserViewOpen] =
+    useState(false)
   const [impersonateError, setImpersonateError] = useState('')
   const [isImpersonating, setIsImpersonating] = useState(false)
 
@@ -913,6 +917,7 @@ const DeveloperPage = ({ session: initialSession }) => {
                 }}
                 onClear={() => {
                   setSelectedImpersonateUser(null)
+                  setIsImpersonateUserViewOpen(false)
                   setImpersonateError('')
                 }}
                 disabled={isImpersonating}
@@ -922,19 +927,10 @@ const DeveloperPage = ({ session: initialSession }) => {
               />
 
               {selectedImpersonateUser ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/60">
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">
-                    {selectedImpersonateUser.title || 'Пользователь выбран'}
-                  </p>
-                  {selectedImpersonateUser.subtitle ? (
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                      {selectedImpersonateUser.subtitle}
-                    </p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    User ID: {selectedImpersonateUser.id}
-                  </p>
-                </div>
+                <AdminUserCard
+                  user={selectedImpersonateUser.user}
+                  onOpenView={() => setIsImpersonateUserViewOpen(true)}
+                />
               ) : null}
 
               {impersonateError ? (
@@ -958,6 +954,13 @@ const DeveloperPage = ({ session: initialSession }) => {
             </div>
           ) : null}
         </section>
+
+        <UserViewModal
+          userId={selectedImpersonateUser?.id ?? null}
+          isOpen={isImpersonateUserViewOpen}
+          onClose={() => setIsImpersonateUserViewOpen(false)}
+          canViewContacts
+        />
 
         <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">

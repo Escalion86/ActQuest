@@ -359,8 +359,8 @@ const CabinetDashboard = ({
         description="Ваш личный статус, ближайшие игры и быстрый доступ к ключевым действиям."
         activePage="dashboard"
       >
-        <section className="grid gap-6 md:grid-cols-5">
-          <div className="space-y-6 md:col-span-3">
+        <section className="grid min-w-0 gap-6 md:grid-cols-5">
+          <div className="min-w-0 space-y-6 md:col-span-3">
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
               <h3 className="aq-modal-section-title text-base font-semibold">
                 Личный прогресс
@@ -685,10 +685,10 @@ const CabinetDashboard = ({
                   <button
                     type="button"
                     onClick={() => setIsPlayedGamePreviewOpen(true)}
-                    className="mt-4 w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
+                    className="mt-4 w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
                         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900/70">
                           {latestPlayedGame.image ? (
                             <img
@@ -784,7 +784,7 @@ const CabinetDashboard = ({
             </article>
           </div>
 
-          <div className="space-y-6 md:col-span-2">
+          <div className="min-w-0 space-y-6 md:col-span-2">
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
               <h3 className="aq-modal-section-title text-base font-semibold">
                 Последние события

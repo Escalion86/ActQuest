@@ -52,7 +52,7 @@ export default async function AdminGameMapPage({ params }) {
     game = await db
       .model('Games')
       .findById(gameId)
-      .select({ name: 1, location: 1, tasks: 1 })
+      .select({ name: 1, location: 1, tasks: 1, taskDistributionMode: 1 })
       .lean()
   } catch (error) {
     if (error?.name !== 'CastError') throw error
@@ -60,7 +60,8 @@ export default async function AdminGameMapPage({ params }) {
 
   if (!game) notFound()
 
-  const tasks = (Array.isArray(game.tasks) ? game.tasks : []).flatMap(
+  const sourceTasks = Array.isArray(game.tasks) ? game.tasks : []
+  const tasks = sourceTasks.flatMap(
     (task, index) => {
       const latitude = task?.coordinates?.latitude
       const longitude = task?.coordinates?.longitude
@@ -96,6 +97,9 @@ export default async function AdminGameMapPage({ params }) {
       game={{
         id: String(game._id),
         name: typeof game.name === 'string' ? game.name : 'Без названия',
+        taskDistributionMode:
+          game.taskDistributionMode === 'random' ? 'random' : 'linear',
+        hasAllTaskCoordinates: tasks.length === sourceTasks.length,
         center,
         tasks,
       }}

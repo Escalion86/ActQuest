@@ -4023,17 +4023,6 @@ const GamesPage = ({
     let validationWarningMessage = ''
     const validationIssues = validateTaskEditorRequirements(gameToSave)
     if (validationIssues.length > 0) {
-      const issueTaskIds = validationIssues
-        .map((issue) => issue.taskId)
-        .filter(Boolean)
-      if (issueTaskIds.length > 0) {
-        setExpandedTaskIds((prev) =>
-          Array.from(
-            new Set([...(Array.isArray(prev) ? prev : []), ...issueTaskIds]),
-          ),
-        )
-      }
-
       const firstIssue = validationIssues[0]?.message || 'Проверьте задания.'
       const totalIssues = validationIssues.length
       const feedbackMessage =
@@ -4048,6 +4037,20 @@ const GamesPage = ({
       (issue) => issue?.isBlocking === true,
     )
     if (blockingIssues.length > 0) {
+      const blockingTaskIds = blockingIssues
+        .map((issue) => issue.taskId)
+        .filter(Boolean)
+      if (blockingTaskIds.length > 0) {
+        setExpandedTaskIds((prev) =>
+          Array.from(
+            new Set([
+              ...(Array.isArray(prev) ? prev : []),
+              ...blockingTaskIds,
+            ]),
+          ),
+        )
+      }
+
       const firstBlockingMessage =
         blockingIssues[0]?.message || 'Проверьте уникальность кодов в заданиях.'
       const blockingMessage =

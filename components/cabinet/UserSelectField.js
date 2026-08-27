@@ -32,6 +32,7 @@ const mapUserOption = (item) => {
     id,
     title: name,
     subtitle: metaParts.join(' · '),
+    user: item,
   }
 }
 
@@ -67,6 +68,7 @@ UserSelectField.propTypes = {
     id: PropTypes.string,
     title: PropTypes.string,
     subtitle: PropTypes.string,
+    user: PropTypes.object,
   }),
   onSelect: PropTypes.func,
   onClear: PropTypes.func,

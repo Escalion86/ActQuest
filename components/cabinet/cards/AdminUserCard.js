@@ -59,13 +59,16 @@ const AdminUserCard = ({
   onOpenEdit,
   onOpenPush,
   showMissingPhoneIndicator,
-}) => (
-  <SelectableCard
-    as="button"
-    onClick={() => onOpenView(user)}
-    type="button"
-    className="w-full text-left"
-  >
+}) => {
+  const isOpenable = typeof onOpenView === 'function'
+
+  return (
+    <SelectableCard
+      as={isOpenable ? 'button' : 'div'}
+      onClick={isOpenable ? () => onOpenView(user) : undefined}
+      {...(isOpenable ? { type: 'button' } : {})}
+      className="w-full text-left"
+    >
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
         <img
@@ -99,27 +102,31 @@ const AdminUserCard = ({
               {resolveRatingBadge(user.rating)}
             </span>
           ) : null}
-          <CardActionIconButton
-            as="span"
-            onClick={(event) => {
-              event.stopPropagation()
-              onOpenEdit(user)
-            }}
-            label="Редактировать пользователя"
-          >
-            <EditCardIcon />
-          </CardActionIconButton>
-          <CardActionIconButton
-            as="span"
-            onClick={(event) => {
-              event.stopPropagation()
-              onOpenPush(user)
-            }}
-            label="Отправить push-уведомление пользователю"
-            title="Отправить push-уведомление"
-          >
-            <MegaphoneCardIcon />
-          </CardActionIconButton>
+          {typeof onOpenEdit === 'function' ? (
+            <CardActionIconButton
+              as="span"
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenEdit(user)
+              }}
+              label="Редактировать пользователя"
+            >
+              <EditCardIcon />
+            </CardActionIconButton>
+          ) : null}
+          {typeof onOpenPush === 'function' ? (
+            <CardActionIconButton
+              as="span"
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenPush(user)
+              }}
+              label="Отправить push-уведомление пользователю"
+              title="Отправить push-уведомление"
+            >
+              <MegaphoneCardIcon />
+            </CardActionIconButton>
+          ) : null}
         </div>
         {isPrivilegedRole(user.role) ? (
           <span className="px-2 py-1 text-xs font-semibold text-white bg-primary rounded-full">
@@ -142,8 +149,9 @@ const AdminUserCard = ({
           : '—'}
       </p>
     </div>
-  </SelectableCard>
-)
+    </SelectableCard>
+  )
+}
 
 AdminUserCard.propTypes = {
   user: PropTypes.shape({
@@ -163,13 +171,16 @@ AdminUserCard.propTypes = {
       }),
     ),
   }).isRequired,
-  onOpenView: PropTypes.func.isRequired,
-  onOpenEdit: PropTypes.func.isRequired,
-  onOpenPush: PropTypes.func.isRequired,
+  onOpenView: PropTypes.func,
+  onOpenEdit: PropTypes.func,
+  onOpenPush: PropTypes.func,
   showMissingPhoneIndicator: PropTypes.bool,
 }
 
 AdminUserCard.defaultProps = {
+  onOpenView: undefined,
+  onOpenEdit: undefined,
+  onOpenPush: undefined,
   showMissingPhoneIndicator: false,
 }
 
