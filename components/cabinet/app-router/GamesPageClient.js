@@ -490,6 +490,7 @@ const getStatusActionLabel = (status) => {
 const createTask = () => ({
   id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   mongoId: null,
+  publicTitle: '',
   title: '',
   task: '',
   howToSolve: '',
@@ -684,6 +685,8 @@ const buildUpdatePayload = (game) => {
       normalizedCoordinates.radius !== null
 
     const baseTask = {
+      publicTitle:
+        typeof task.publicTitle === 'string' ? task.publicTitle.trim() : '',
       title: typeof task.title === 'string' ? task.title : '',
       task:
         typeof task.task === 'string' && task.task.trim() !== ''
@@ -1007,6 +1010,7 @@ const buildUpdatePayload = (game) => {
     },
     prequels: normalizedPrequels,
     image: game.image ? game.image : null,
+    useCustomTaskPublicTitles: Boolean(game.useCustomTaskPublicTitles),
     startingPlace: game.startingPlace ?? '',
     finishingPlace: game.finishingPlace ?? '',
     showFinishingPlace: Boolean(game.showFinishingPlace),
@@ -3998,7 +4002,8 @@ const GamesPage = ({
     setFeedback(null)
   }, [editingBaselineGame])
 
-  const handleSaveChanges = useCallback(async () => {
+  const handleSaveChanges = useCallback(async (options = {}) => {
+    const keepTasksModalOpen = options?.keepTasksModalOpen === true
     const gameToSave = editingGame ?? selectedGame
     if (!gameToSave || !canEditSelectedGame) return
 
@@ -4099,11 +4104,17 @@ const GamesPage = ({
       } else {
         setFeedback({ type: 'success', message: 'Изменения сохранены' })
       }
-      setEditingGame(null)
-      setEditingBaselineGame(null)
-      setIsEditModalOpen(false)
-      setIsTasksModalOpen(false)
-      setIsFinancesModalOpen(false)
+      if (keepTasksModalOpen) {
+        const persistedDraft = cloneGameDraft(normalizedGame)
+        setEditingGame(persistedDraft)
+        setEditingBaselineGame(cloneGameDraft(normalizedGame))
+      } else {
+        setEditingGame(null)
+        setEditingBaselineGame(null)
+        setIsEditModalOpen(false)
+        setIsTasksModalOpen(false)
+        setIsFinancesModalOpen(false)
+      }
     } catch (error) {
       console.error('Failed to update game', error)
       setFeedback({
@@ -4243,6 +4254,8 @@ const GamesPage = ({
           taskDuration: Number(gameForPreview?.taskDuration) || 3600,
           cluesDuration: Number(gameForPreview?.cluesDuration) || 1200,
           breakDuration: Number(gameForPreview?.breakDuration) || 0,
+          useCustomTaskPublicTitles:
+            gameForPreview?.useCustomTaskPublicTitles === true,
         },
         tasks: Array.isArray(gameForPreview?.tasks) ? gameForPreview.tasks : [],
       }
@@ -4379,9 +4392,20 @@ const GamesPage = ({
     if (!canEditSelectedGame) return
 
     const newTask = createTask()
-    updateSelectedGame((game) => ({
-      tasks: [...(game.tasks ?? []), newTask],
-    }))
+    updateSelectedGame((game) => {
+      const tasks = game.tasks ?? []
+      return {
+        tasks: [
+          ...tasks,
+          {
+            ...newTask,
+            publicTitle: game.useCustomTaskPublicTitles
+              ? `${tasks.length + 1} Задание`
+              : '',
+          },
+        ],
+      }
+    })
     setExpandedTaskIds((prev) => [...prev, newTask.id])
   }, [canEditSelectedGame, updateSelectedGame])
 
@@ -6192,7 +6216,7 @@ const GamesPage = ({
     }
 
     if (isDirty && canEditSelectedGame) {
-      handleSaveChanges()
+      void handleSaveChanges({ keepTasksModalOpen: true })
     } else {
       handleCloseTasksModal()
     }
@@ -8705,6 +8729,7 @@ GamesPage.propTypes = {
       descriptionRich: PropTypes.string,
       descriptionMedia: PropTypes.arrayOf(taskMediaShape),
       image: PropTypes.string,
+      useCustomTaskPublicTitles: PropTypes.bool,
       startingPlace: PropTypes.string,
       finishingPlace: PropTypes.string,
       showFinishingPlace: PropTypes.bool,
@@ -8748,6 +8773,7 @@ GamesPage.propTypes = {
         PropTypes.shape({
           id: PropTypes.string.isRequired,
           mongoId: PropTypes.string,
+          publicTitle: PropTypes.string,
           title: PropTypes.string,
           task: PropTypes.string,
           howToSolve: PropTypes.string,

@@ -1919,6 +1919,12 @@ function GameTeamPage({
     }
     return 1
   }, [currentTaskDisplayMeta?.taskIndex, team?.activeNum])
+  const currentTaskPublicTitle = useMemo(() => {
+    const value = currentTaskDisplayMeta?.publicTitle
+    return typeof value === 'string' && value.trim()
+      ? value.trim()
+      : `Задание ${currentTaskNumber}`
+  }, [currentTaskDisplayMeta?.publicTitle, currentTaskNumber])
   const remainingMainCodesCount = useMemo(() => {
     if (acceptedTaskCodes.length < 1) {
       return null
@@ -2784,7 +2790,7 @@ function GameTeamPage({
                     >
                       {isBreakState
                         ? 'ПЕРЕРЫВ'
-                        : `Задание ${currentTaskNumber}`}
+                        : currentTaskPublicTitle}
                     </h2>
                     {isBonusTask ? (
                       <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold tracking-wide text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100">
@@ -3324,6 +3330,7 @@ GameTeamPage.propTypes = {
     }),
   ),
   taskDisplayMeta: PropTypes.shape({
+    publicTitle: PropTypes.string,
     isBonusTask: PropTypes.bool,
     mainCodesCount: PropTypes.number,
     requiredCodesCount: PropTypes.number,

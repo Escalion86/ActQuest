@@ -5,6 +5,7 @@ import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import ModalSection from '@components/modals/ModalSection'
 import FullscreenImageViewer from '@components/FullscreenImageViewer'
+import NeonCheckbox from '@components/NeonCheckbox'
 
 import TaskItem from './sections/TaskItem'
 import PrequelSection from '@components/modals/game-edit/sections/PrequelSection'
@@ -83,6 +84,36 @@ const GameTasksEditModal = ({
   })
 
   const isPhotoGame = selectedGame?.type === 'photo'
+  const supportsCustomTaskPublicTitles = ['classic', 'photo'].includes(
+    selectedGame?.type,
+  )
+  const useCustomTaskPublicTitles =
+    supportsCustomTaskPublicTitles &&
+    Boolean(selectedGame?.useCustomTaskPublicTitles)
+
+  const handleCustomTaskPublicTitlesChange = useCallback(
+    (eventOrChecked) => {
+      const checked =
+        typeof eventOrChecked === 'boolean'
+          ? eventOrChecked
+          : Boolean(eventOrChecked?.target?.checked)
+
+      updateSelectedGame((game) => ({
+        useCustomTaskPublicTitles: checked,
+        tasks: checked
+          ? (game.tasks || []).map((task, index) => ({
+              ...task,
+              publicTitle:
+                typeof task?.publicTitle === 'string' &&
+                task.publicTitle.trim()
+                  ? task.publicTitle
+                  : `${index + 1} Задание`,
+            }))
+          : game.tasks || [],
+      }))
+    },
+    [updateSelectedGame],
+  )
 
   const resetTouchTaskDragState = useCallback(() => {
     touchDragStateRef.current = {
@@ -385,7 +416,7 @@ const GameTasksEditModal = ({
         {isDirty
           ? isSaving
             ? 'Сохранение…'
-            : 'Сохранить и закрыть'
+            : 'Сохранить'
           : 'Закрыть'}
       </CabinetButton>
       {isDirty && (
@@ -426,6 +457,15 @@ const GameTasksEditModal = ({
             <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
               Задания
             </h2>
+            {supportsCustomTaskPublicTitles ? (
+              <NeonCheckbox
+                id={`game-custom-task-public-titles-${selectedGame.id}`}
+                checked={useCustomTaskPublicTitles}
+                onChange={handleCustomTaskPublicTitlesChange}
+                label="Произвольные публичные названия"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
+            ) : null}
           </div>
           {String(selectedGame?.status || '')
             .trim()
@@ -460,6 +500,7 @@ const GameTasksEditModal = ({
                     selectedGameAgents={selectedGameAgents}
                     canViewCodePhotos={canViewCodePhotos}
                     isPhotoGame={isPhotoGame}
+                    useCustomTaskPublicTitles={useCustomTaskPublicTitles}
                     draggedTaskId={draggedTaskId}
                     dragOverTaskId={dragOverTaskId}
                     setDraggedTaskId={setDraggedTaskId}
@@ -608,7 +649,12 @@ const GameTasksEditModal = ({
 }
 
 GameTasksEditModal.propTypes = {
-  selectedGame: PropTypes.shape({ id: PropTypes.string }),
+  selectedGame: PropTypes.shape({
+    id: PropTypes.string,
+    type: PropTypes.string,
+    useCustomTaskPublicTitles: PropTypes.bool,
+    tasks: PropTypes.array,
+  }),
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,

@@ -597,9 +597,18 @@ const gamesSchema = {
     type: String,
     default: null,
   },
+  useCustomTaskPublicTitles: {
+    type: Boolean,
+    default: false,
+  },
   tasks: {
     type: [
       {
+        publicTitle: {
+          type: String,
+          default: '',
+          trim: true,
+        },
         title: {
           type: String,
           default: '',

@@ -494,6 +494,7 @@ const normalizeTasks = (tasks = []) => {
     return {
     id: ensureString(task?._id ?? task?.id, `task-${index}`),
     mongoId: task?._id ? ensureString(task._id) : null,
+    publicTitle: ensureString(task?.publicTitle, ''),
     title: ensureString(task?.title, ''),
     task: ensureString(task?.task, ''),
     howToSolve: ensureString(task?.howToSolve, ''),
@@ -644,6 +645,10 @@ const normalizeGameForCabinet = (game) => {
           : [],
     ),
     image: normalizeMediaUrl(game.image),
+    useCustomTaskPublicTitles: ensureBoolean(
+      game.useCustomTaskPublicTitles,
+      false,
+    ),
     startingPlace: ensureString(game.startingPlace, ''),
     finishingPlace: ensureString(game.finishingPlace, ''),
     showFinishingPlace: ensureBoolean(game.showFinishingPlace, false),

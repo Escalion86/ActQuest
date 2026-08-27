@@ -1670,6 +1670,7 @@ const TaskRichEditor = ({
         },
       },
       onUpdate: ({ editor: nextEditor }) => {
+        if (!nextEditor.isFocused) return
         propagateEditorState(nextEditor)
       },
     },

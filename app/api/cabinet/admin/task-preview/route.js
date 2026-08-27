@@ -33,6 +33,7 @@ const normalizeTaskForPreview = (task) => ({
   ...task,
   task: normalizeString(task?.task),
   taskRich: normalizeString(task?.taskRich),
+  publicTitle: normalizeString(task?.publicTitle),
   title: normalizeString(task?.title),
   clues: Array.isArray(task?.clues)
     ? task.clues.map((clue) => ({
@@ -54,6 +55,7 @@ const normalizeTaskForPreview = (task) => ({
 })
 
 const buildTaskDisplayMeta = (task) => ({
+  isBonusTask: task?.isBonusTask === true,
   mainCodesCount: Array.isArray(task?.codes) ? task.codes.length : 0,
   requiredCodesCount: resolveRequiredMainCodesCount(task),
   bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
@@ -102,6 +104,7 @@ export async function GET(request) {
         taskDuration: 1,
         cluesDuration: 1,
         breakDuration: 1,
+        useCustomTaskPublicTitles: 1,
         tasks: 1,
         moderators: 1,
       })
@@ -178,10 +181,14 @@ export async function GET(request) {
             taskDuration: Number(game.taskDuration) || 3600,
             cluesDuration: Number(game.cluesDuration) || 1200,
             breakDuration: Number(game.breakDuration) || 0,
+            useCustomTaskPublicTitles:
+              game.useCustomTaskPublicTitles === true,
             tasksCount: tasks.length,
           },
           task: {
             index: safeTaskIndex,
+            isBonusTask: task.isBonusTask === true,
+            publicTitle: normalizeString(task.publicTitle),
             title: normalizeString(task.title),
             postMessage: normalizeString(task.postMessage),
             postMessageRich: normalizeString(task.postMessageRich),

@@ -39,7 +39,24 @@ const buildBackHref = ({ status, gameId }) => {
 const normalizeString = (value) =>
   typeof value === 'string' ? value.trim() : ''
 
+const resolveTaskHeading = ({ game, task }) => {
+  const rawTaskIndex = Number(task?.index)
+  const taskIndex = Number.isFinite(rawTaskIndex)
+    ? Math.max(0, Math.floor(rawTaskIndex))
+    : 0
+
+  if (
+    ['classic', 'photo'].includes(game?.type) &&
+    game?.useCustomTaskPublicTitles === true
+  ) {
+    return normalizeString(task?.publicTitle) || `${taskIndex + 1} Задание`
+  }
+
+  return `Задание ${taskIndex + 1}`
+}
+
 const buildTaskDisplayMeta = (task) => ({
+  isBonusTask: task?.isBonusTask === true,
   mainCodesCount: Array.isArray(task?.codes) ? task.codes.length : 0,
   requiredCodesCount: resolveRequiredMainCodesCount(task),
   bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
@@ -116,10 +133,14 @@ const fetchTaskPreviewData = async ({ gameId, draftKey, taskIndex }) => {
         taskDuration: Number(parsed?.game?.taskDuration) || 3600,
         cluesDuration: Number(parsed?.game?.cluesDuration) || 1200,
         breakDuration: Number(parsed?.game?.breakDuration) || 0,
+        useCustomTaskPublicTitles:
+          parsed?.game?.useCustomTaskPublicTitles === true,
         tasksCount: tasks.length,
       },
       task: {
         index: safeTaskIndex,
+        isBonusTask: task?.isBonusTask === true,
+        publicTitle: normalizeString(task?.publicTitle),
         title: String(task?.title || ''),
         postMessage: String(task?.postMessage || ''),
         postMessageRich: String(task?.postMessageRich || ''),
@@ -214,6 +235,13 @@ export default function GameTaskPreviewPageClient() {
     [data?.task?.postMessage, data?.task?.postMessageRich],
   )
   const hasPostMessage = Boolean(postMessageHtml)
+  const taskHeading = resolveTaskHeading({
+    game: data?.game,
+    task: data?.task,
+  })
+  const isBonusTask = Boolean(
+    data?.task?.isBonusTask ?? data?.task?.displayMeta?.isBonusTask,
+  )
 
   const canGoPrev = taskIndex > 0
   const canGoNext =
@@ -325,21 +353,29 @@ export default function GameTaskPreviewPageClient() {
               Следующее →
             </button>
           </div>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            Внутреннее название: {Number(data?.task?.index) + 1}.{' '}
+            {data?.task?.title || 'Без названия'}
+          </p>
         </div>
 
+        <p className="mb-3 text-xs text-slate-500 dark:text-slate-300">
+          Предпросмотр в пользовательском формате. Таймер и ввод кода на этой
+          странице отключены.
+        </p>
         <section className="rounded-3xl bg-white p-6 shadow-lg dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-primary dark:text-white">
-              Задание {Number(data?.task?.index) + 1}
-            </h2>
-            <span className="rounded-full border border-cyan-300 bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-              {Number(data?.task?.index) + 1}. {data?.task?.title || 'Без названия'}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-primary dark:text-white">
+                {taskHeading}
+              </h2>
+              {isBonusTask ? (
+                <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold tracking-wide text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100">
+                  БОНУСНОЕ
+                </span>
+              ) : null}
+            </div>
           </div>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-300">
-            Предпросмотр в пользовательском формате. Таймер и ввод кода на этой
-            странице отключены.
-          </p>
           <div className="mt-4">
             <TaskDisplayWithClues
               taskHtml={selectedTaskHtml}
@@ -351,17 +387,23 @@ export default function GameTaskPreviewPageClient() {
                   : null
               }
               directoryBase={`games/preview/task/${String(data?.game?.id || 'draft')}/${String(data?.task?.index || 0)}/${String(selectedVariant?.id || 'task')}`}
-              taskClassName="text-base leading-relaxed text-gray-700 dark:text-slate-200"
-              taskTextClassName="text-base leading-relaxed text-gray-700 dark:text-slate-200"
+              taskClassName="text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+              taskTextClassName="text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
               cluesWrapperClassName="mt-4 space-y-4"
               clueCardClassName="rounded-2xl border border-cyan-300/70 bg-cyan-50/80 p-4 dark:border-cyan-500/40 dark:bg-cyan-500/10"
               clueTitleClassName="text-sm font-semibold text-cyan-900 dark:text-cyan-100"
-              clueContentClassName="mt-2 text-base leading-relaxed text-gray-700 dark:text-slate-200"
-              clueContentTextClassName="mt-2 text-base leading-relaxed text-gray-700 dark:text-slate-200"
+              clueContentClassName="mt-2 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+              clueContentTextClassName="mt-2 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
               metaWrapperClassName="mt-4 space-y-1"
               metaTextClassName="text-base font-semibold leading-relaxed text-gray-700 dark:text-slate-200"
             />
           </div>
+          {isBonusTask ? (
+            <p className="mt-4 border-t border-amber-200 pt-4 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:text-amber-100">
+              Время, проведённое на этом задании, не учитывается в итоговом
+              результате.
+            </p>
+          ) : null}
         </section>
 
         {hasPostMessage ? (

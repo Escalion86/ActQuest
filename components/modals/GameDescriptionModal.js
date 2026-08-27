@@ -130,11 +130,18 @@ const GameDescriptionModal = ({
   const [prequelFeedback, setPrequelFeedback] = useState(null)
   const [isPrequelSubmitting, setIsPrequelSubmitting] = useState(false)
   const [isReviewsOpen, setIsReviewsOpen] = useState(false)
+  const normalizedGameStatus = String(selectedGame?.status || '')
+    .trim()
+    .toLowerCase()
+  const isGameCompleted =
+    normalizedGameStatus === 'finished' || normalizedGameStatus === 'closed'
 
   const publishedReviewsQuery = useQuery({
     queryKey: ['published-game-reviews', selectedGame?.id],
     queryFn: () => loadPublishedGameReviews(selectedGame.id),
-    enabled: Boolean(isDescriptionModalOpen && selectedGame?.id),
+    enabled: Boolean(
+      isDescriptionModalOpen && isGameCompleted && selectedGame?.id,
+    ),
     staleTime: 60_000,
   })
 
@@ -625,31 +632,33 @@ const GameDescriptionModal = ({
           </div>
         </div>
 
-        <ModalSection className="p-4 sm:p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <ModalSectionTitle>Отзывы</ModalSectionTitle>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800 dark:border-amber-400/45 dark:bg-amber-500/12 dark:text-amber-100">
-                  {averageRating ?? '—'} ★
-                </span>
-                <span className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-800 dark:border-violet-400/45 dark:bg-violet-500/12 dark:text-violet-100">
-                  {averageDifficultyRating ?? '—'} ◈
-                </span>
-                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                  {getReviewCountLabel(reviewsCount)}
-                </span>
+        {isGameCompleted ? (
+          <ModalSection className="p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <ModalSectionTitle>Отзывы</ModalSectionTitle>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800 dark:border-amber-400/45 dark:bg-amber-500/12 dark:text-amber-100">
+                    {averageRating ?? '—'} ★
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-800 dark:border-violet-400/45 dark:bg-violet-500/12 dark:text-violet-100">
+                    {averageDifficultyRating ?? '—'} ◈
+                  </span>
+                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    {getReviewCountLabel(reviewsCount)}
+                  </span>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsReviewsOpen(true)}
+                className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-400 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 dark:border-cyan-500/45 dark:bg-cyan-500/12 dark:text-cyan-100 dark:hover:bg-cyan-500/20"
+              >
+                Посмотреть отзывы
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsReviewsOpen(true)}
-              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-400 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 dark:border-cyan-500/45 dark:bg-cyan-500/12 dark:text-cyan-100 dark:hover:bg-cyan-500/20"
-            >
-              Посмотреть отзывы
-            </button>
-          </div>
-        </ModalSection>
+          </ModalSection>
+        ) : null}
 
         {hasVisiblePrequels && (
           <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 sm:p-5 dark:border-cyan-500/35 dark:bg-cyan-500/10">
@@ -1006,7 +1015,7 @@ const GameDescriptionModal = ({
     )}
       </Modal>
       <Modal
-        isOpen={isDescriptionModalOpen && isReviewsOpen}
+        isOpen={isDescriptionModalOpen && isGameCompleted && isReviewsOpen}
         onClose={() => setIsReviewsOpen(false)}
         title={`Отзывы — ${selectedGame?.name || 'игра'}`}
         dialogClassName="md:max-w-3xl"

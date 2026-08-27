@@ -69,6 +69,7 @@ const TaskItem = ({
   selectedGameAgents,
   canViewCodePhotos,
   isPhotoGame,
+  useCustomTaskPublicTitles,
   draggedTaskId,
   dragOverTaskId,
   setDraggedTaskId,
@@ -183,9 +184,13 @@ const TaskItem = ({
     !hasFilledClue ||
     (!isPhotoGame && normalizedCodes.length === 0) ||
     hasRequiredCodesError
-  const taskBadgeLabel = task.isBonusTask
-    ? `${index + 1} Бонусное задание`
-    : `${index + 1} Задание`
+  const customTaskPublicTitle =
+    typeof task.publicTitle === 'string' ? task.publicTitle.trim() : ''
+  const taskBadgeLabel = useCustomTaskPublicTitles
+    ? customTaskPublicTitle || `${index + 1} Задание`
+    : task.isBonusTask
+      ? `${index + 1} Бонусное задание`
+      : `${index + 1} Задание`
 
   return (
     <div
@@ -464,6 +469,23 @@ const TaskItem = ({
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
             </div>
+            {useCustomTaskPublicTitles ? (
+              <CabinetInputField
+                id={`task-public-title-${task.id}`}
+                label="Публичное название"
+                type="text"
+                value={task.publicTitle || ''}
+                onChange={(event) =>
+                  handleTaskFieldChange(
+                    task.id,
+                    'publicTitle',
+                    event.target.value,
+                  )
+                }
+                labelClassName={fieldLabelClassName}
+                inputClassName={fieldInputClassName}
+              />
+            ) : null}
             <CabinetInputField
               id={`task-title-${task.id}`}
               label={withRequiredMark('Название задания')}
@@ -786,6 +808,25 @@ const TaskItem = ({
                             plainText || stripHtmlToPlainText(html || '')
                           const nextClueRich =
                             typeof html === 'string' ? html : ''
+                          const currentClueText =
+                            typeof clue.clue === 'string' ? clue.clue : ''
+                          const currentClueRich =
+                            typeof clue.clueRich === 'string'
+                              ? clue.clueRich
+                              : ''
+                          const isSameClueText =
+                            normalizeComparableEditorPlainText(nextClueText) ===
+                            normalizeComparableEditorPlainText(currentClueText)
+                          const isSameClueRich =
+                            normalizeComparableRichText(
+                              nextClueRich,
+                              nextClueText,
+                            ) ===
+                            normalizeComparableRichText(
+                              currentClueRich,
+                              currentClueText,
+                            )
+                          if (isSameClueText && isSameClueRich) return
                           handleTaskClueChange(
                             task.id,
                             clue.id,
@@ -1691,6 +1732,7 @@ const TaskItem = ({
 TaskItem.propTypes = {
   task: PropTypes.shape({
     id: PropTypes.string.isRequired,
+    publicTitle: PropTypes.string,
     title: PropTypes.string,
     task: PropTypes.string,
     taskRich: PropTypes.string,
@@ -1733,6 +1775,7 @@ TaskItem.propTypes = {
   selectedGameAgents: PropTypes.array,
   canViewCodePhotos: PropTypes.bool,
   isPhotoGame: PropTypes.bool.isRequired,
+  useCustomTaskPublicTitles: PropTypes.bool.isRequired,
   draggedTaskId: PropTypes.string,
   dragOverTaskId: PropTypes.string,
   setDraggedTaskId: PropTypes.func,

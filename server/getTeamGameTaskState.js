@@ -126,7 +126,7 @@ const buildAcceptedCodeItems = (codeDefinitions, acceptedCodes) => {
   })
 }
 
-const buildTaskDisplayMeta = (task, gameTeam, taskIndex) => {
+const buildTaskDisplayMeta = (task, gameTeam, taskIndex, game) => {
   const mainCodesCount = Array.isArray(task?.codes) ? task.codes.length : 0
   const safeTaskIndex = Number.isFinite(Number(taskIndex))
     ? Math.max(Math.floor(Number(taskIndex)), 0)
@@ -157,6 +157,12 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex) => {
 
   return {
     taskIndex: safeTaskIndex,
+    publicTitle:
+      ['classic', 'photo'].includes(game?.type) &&
+      game?.useCustomTaskPublicTitles === true
+        ? (typeof task?.publicTitle === 'string' && task.publicTitle.trim()) ||
+          `${safeTaskIndex + 1} Задание`
+        : '',
     isBonusTask: Boolean(task?.isBonusTask),
     mainCodesCount,
     requiredCodesCount: resolveRequiredMainCodesCount(task),
@@ -1367,6 +1373,7 @@ const computeTaskHtml = async ({
           breakTask,
           effectiveGameTeam,
           activeTaskIndex,
+          game,
         )
         taskState = 'break'
       } else {
@@ -1418,6 +1425,7 @@ const computeTaskHtml = async ({
           activeTask,
           effectiveGameTeam,
           activeTaskIndex,
+          game,
         )
 
         taskState = 'active'
