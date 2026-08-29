@@ -252,6 +252,7 @@ const fetchGamesForCabinet = async ({
       prequel: 1,
       prequels: 1,
       image: 1,
+      useCustomTaskPublicTitles: 1,
       startingPlace: 1,
       finishingPlace: 1,
       showFinishingPlace: 1,
