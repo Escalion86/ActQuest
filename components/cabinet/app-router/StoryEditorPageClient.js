@@ -10,6 +10,8 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import InvestigationFlowEditor from '@components/cabinet/story-editor/InvestigationFlowEditor'
 import StoryAudioEditor from '@components/cabinet/story-editor/StoryAudioEditor'
+import StoryEdgesEditor from '@components/cabinet/story-editor/StoryEdgesEditor'
+import StoryVideoEditor from '@components/cabinet/story-editor/StoryVideoEditor'
 import StoryEntityCatalogModal from '@components/cabinet/story-editor/StoryEntityCatalogModal'
 import StoryEndingsEditor from '@components/cabinet/story-editor/StoryEndingsEditor'
 import StorySettingsEditor from '@components/cabinet/story-editor/StorySettingsEditor'
@@ -235,15 +237,32 @@ const sanitizeEdges = (edges, nodes, items) => {
     if (fromItemId && !itemIds.has(fromItemId)) return
     if (!fromNodeId && !fromItemId) return
 
+    const sourceNode = fromNodeId
+      ? normalizeArray(nodes).find((node) => node.id === fromNodeId)
+      : null
+    const sourceActionIds = new Set(
+      normalizeArray(sourceNode?.actions).map((action) => action.id),
+    )
+    const sourceCodeIds = new Set(
+      normalizeArray(sourceNode?.codes).map((code) => code.id),
+    )
+    const itemId = normalizeText(edge?.itemId)
+    const actionId = normalizeText(edge?.actionId)
+    const codeId = normalizeText(edge?.codeId)
+
     const nextEdge = {
       id: normalizeText(edge?.id) || createId('edge'),
       fromNodeId: fromNodeId || null,
       fromItemId: fromItemId || null,
       toNodeId,
       type,
-      itemId: null,
-      actionId: normalizeText(edge?.actionId) || null,
-      codeId: normalizeText(edge?.codeId) || null,
+      itemId: itemId && itemIds.has(itemId) ? itemId : null,
+      actionId:
+        fromNodeId && actionId && sourceActionIds.has(actionId)
+          ? actionId
+          : null,
+      codeId:
+        fromNodeId && codeId && sourceCodeIds.has(codeId) ? codeId : null,
     }
     const key = buildEdgeKey(nextEdge)
     if (seen.has(key)) return
@@ -321,7 +340,16 @@ StoryReferenceChecklist.defaultProps = {
   value: [],
 }
 
-const StoryEffectFields = ({ effect, kind, items, nodes, endings, onChange }) => {
+const StoryEffectFields = ({
+  effect,
+  kind,
+  items,
+  nodes,
+  endings,
+  directory,
+  disabled,
+  onChange,
+}) => {
   const patchEffect = (patch) => onChange({ ...effect, ...patch })
 
   return (
@@ -340,17 +368,23 @@ const StoryEffectFields = ({ effect, kind, items, nodes, endings, onChange }) =>
           </select>
         </label>
       ) : (
-        <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-          Описание действия
-          <textarea
+        <div>
+          <p className="mb-1 text-sm text-slate-600 dark:text-slate-300">
+            Описание действия
+          </p>
+          <TaskRichEditor
             value={effect.descriptionRich || ''}
-            onChange={(event) =>
-              patchEffect({ descriptionRich: event.target.value })
+            directory={`${directory}/description`}
+            disabled={disabled}
+            contentMaxHeight="280px"
+            placeholder="Поясните игроку, что произойдёт при выполнении действия."
+            onChange={({ html }) =>
+              patchEffect({
+                descriptionRich: typeof html === 'string' ? html : '',
+              })
             }
-            rows={2}
-            className={fieldClassName}
           />
-        </label>
+        </div>
       )}
 
       <div className="grid gap-2 sm:grid-cols-2">
@@ -424,18 +458,23 @@ const StoryEffectFields = ({ effect, kind, items, nodes, endings, onChange }) =>
         </select>
       </label>
 
-      <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-        Сообщение после выполнения
-        <textarea
+      <div>
+        <p className="mb-1 text-sm text-slate-600 dark:text-slate-300">
+          Сообщение после выполнения
+        </p>
+        <TaskRichEditor
           value={effect.resultMessageRich || ''}
-          onChange={(event) =>
-            patchEffect({ resultMessageRich: event.target.value })
+          directory={`${directory}/result`}
+          disabled={disabled}
+          contentMaxHeight="280px"
+          placeholder="Необязательный форматированный текст для команды."
+          onChange={({ html }) =>
+            patchEffect({
+              resultMessageRich: typeof html === 'string' ? html : '',
+            })
           }
-          rows={2}
-          placeholder="Необязательный текст для команды"
-          className={fieldClassName}
         />
-      </label>
+      </div>
     </div>
   )
 }
@@ -446,7 +485,13 @@ StoryEffectFields.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   nodes: PropTypes.arrayOf(PropTypes.object).isRequired,
   endings: PropTypes.arrayOf(PropTypes.object).isRequired,
+  directory: PropTypes.string.isRequired,
+  disabled: PropTypes.bool,
   onChange: PropTypes.func.isRequired,
+}
+
+StoryEffectFields.defaultProps = {
+  disabled: false,
 }
 
 const StoryEditorPageClient = ({ session: _session }) => {
@@ -461,6 +506,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
   const [selectedItemId, setSelectedItemId] = useState('')
   const [selectedEndingId, setSelectedEndingId] = useState('')
   const [isEndingsEditorOpen, setIsEndingsEditorOpen] = useState(false)
+  const [isEdgesEditorOpen, setIsEdgesEditorOpen] = useState(false)
   const [isLocationsEditorOpen, setIsLocationsEditorOpen] = useState(false)
   const [isItemsEditorOpen, setIsItemsEditorOpen] = useState(false)
   const [isSettingsEditorOpen, setIsSettingsEditorOpen] = useState(false)
@@ -691,9 +737,12 @@ const StoryEditorPageClient = ({ session: _session }) => {
         const storyItems = normalizeArray(prev.storyItems).filter(
           (item) => item.id !== itemId,
         )
-        const storyEdges = normalizeArray(prev.storyEdges).filter(
-          (edge) => edge.fromItemId !== itemId,
-        )
+        const storyEdges = normalizeArray(prev.storyEdges)
+          .filter((edge) => edge.fromItemId !== itemId)
+          .map((edge) => ({
+            ...edge,
+            itemId: edge.itemId === itemId ? null : edge.itemId,
+          }))
         const storyNodes = syncNodesFromEdges(prev.storyNodes, storyEdges).map(
           (node) => ({
             ...node,
@@ -812,6 +861,24 @@ const StoryEditorPageClient = ({ session: _session }) => {
       updateGame((prev) => {
         const storyEdges = normalizeArray(prev.storyEdges).filter(
           (edge) => edge.id !== edgeId,
+        )
+        return {
+          ...prev,
+          storyEdges,
+          storyNodes: syncNodesFromEdges(prev.storyNodes, storyEdges),
+        }
+      })
+    },
+    [updateGame],
+  )
+
+  const updateEdges = useCallback(
+    (nextEdges) => {
+      updateGame((prev) => {
+        const storyEdges = sanitizeEdges(
+          nextEdges,
+          prev.storyNodes,
+          prev.storyItems,
         )
         return {
           ...prev,
@@ -1033,13 +1100,22 @@ const StoryEditorPageClient = ({ session: _session }) => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {game?.storyConfig?.experienceMode !== 'investigation' ? (
-              <button
-                type="button"
-                onClick={() => setIsEndingsEditorOpen(true)}
-                className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10"
-              >
-                Концовки · {endings.length}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEdgesEditorOpen(true)}
+                  className="rounded-xl border border-cyan-300 bg-white px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50 dark:border-cyan-500/50 dark:bg-slate-900 dark:text-cyan-200 dark:hover:bg-cyan-500/10"
+                >
+                  Связи · {edges.length}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEndingsEditorOpen(true)}
+                  className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10"
+                >
+                  Концовки · {endings.length}
+                </button>
+              </>
             ) : null}
             <button
               type="button"
@@ -1473,6 +1549,15 @@ const StoryEditorPageClient = ({ session: _session }) => {
             updateGame={updateGame}
             disabled={isScenarioLocked}
           />
+          <StoryEdgesEditor
+            isOpen={isEdgesEditorOpen}
+            onClose={() => setIsEdgesEditorOpen(false)}
+            edges={edges}
+            nodes={nodes}
+            items={items}
+            onChange={updateEdges}
+            disabled={isScenarioLocked}
+          />
         </>
       ) : null}
 
@@ -1576,6 +1661,15 @@ const StoryEditorPageClient = ({ session: _session }) => {
                   directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/audio`}
                   disabled={isScenarioLocked}
                   label="Аудиодорожки локации"
+                />
+                <StoryVideoEditor
+                  media={editingNode.media}
+                  onChange={(media) =>
+                    updateNode(editingNode.id, (node) => ({ ...node, media }))
+                  }
+                  directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/video`}
+                  disabled={isScenarioLocked}
+                  label="Видеофайлы локации"
                 />
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -1809,6 +1903,8 @@ const StoryEditorPageClient = ({ session: _session }) => {
                       items={items}
                       nodes={nodes.filter((node) => node.id !== editingNode.id)}
                       endings={endings.filter((ending) => !ending.manualOnly)}
+                      directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/codes/${code.id}`}
+                      disabled={isScenarioLocked}
                       onChange={(nextCode) =>
                         updateNode(editingNode.id, (node) => ({
                           ...node,
@@ -1921,6 +2017,8 @@ const StoryEditorPageClient = ({ session: _session }) => {
                       items={items}
                       nodes={nodes.filter((node) => node.id !== editingNode.id)}
                       endings={endings.filter((ending) => !ending.manualOnly)}
+                      directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/actions/${action.id}`}
+                      disabled={isScenarioLocked}
                       onChange={(nextAction) =>
                         updateNode(editingNode.id, (node) => ({
                           ...node,
@@ -2152,10 +2250,30 @@ const StoryEditorPageClient = ({ session: _session }) => {
                 updateItem(editingItem.id, (item) => ({
                   ...item,
                   descriptionRich: typeof html === 'string' ? html : '',
-                  media: Array.isArray(media) ? media : [],
+                  media: mergeStoryEditorMedia(item.media, media),
                 }))
               }
             />
+            <div className="grid gap-4 xl:grid-cols-2">
+              <StoryAudioEditor
+                media={editingItem.media}
+                onChange={(media) =>
+                  updateItem(editingItem.id, (item) => ({ ...item, media }))
+                }
+                directory={`games/${gameId || 'draft'}/story/items/${editingItem.id}/audio`}
+                disabled={isScenarioLocked}
+                label="Аудиодорожки предмета"
+              />
+              <StoryVideoEditor
+                media={editingItem.media}
+                onChange={(media) =>
+                  updateItem(editingItem.id, (item) => ({ ...item, media }))
+                }
+                directory={`games/${gameId || 'draft'}/story/items/${editingItem.id}/video`}
+                disabled={isScenarioLocked}
+                label="Видеофайлы предмета"
+              />
+            </div>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <input

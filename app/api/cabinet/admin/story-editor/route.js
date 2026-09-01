@@ -157,32 +157,38 @@ const normalizeStoryNodes = (nodes, allowedAgentIds = null) =>
     }))
     .filter((node) => node.id)
 
-const normalizeStoryEdges = (edges, nodeIds, itemIds) =>
+const normalizeStoryEdges = (edges, nodeIds, itemIds, nodesById) =>
   (Array.isArray(edges) ? edges : [])
-    .map((edge, index) => ({
-      id: normalizeText(edge?.id, 100) || `edge-${index + 1}`,
-      fromNodeId: normalizeText(edge?.fromNodeId, 100) || null,
-      fromItemId: normalizeText(edge?.fromItemId, 100) || null,
-      toNodeId: normalizeText(edge?.toNodeId, 100),
-      type: [
-        'required_node',
-        'required_item',
-        'unlock',
-        'requires_item',
-        'ending',
-      ].includes(edge?.type)
-        ? edge.type === 'unlock'
-          ? 'required_node'
-          : edge.type === 'requires_item'
-            ? 'required_item'
-            : edge.type
-        : edge?.fromItemId
-          ? 'required_item'
-          : 'required_node',
-      itemId: normalizeText(edge?.itemId, 100) || null,
-      actionId: normalizeText(edge?.actionId, 100) || null,
-      codeId: normalizeText(edge?.codeId, 100) || null,
-    }))
+    .map((edge, index) => {
+      const fromNodeId = normalizeText(edge?.fromNodeId, 100) || null
+      const fromItemId = normalizeText(edge?.fromItemId, 100) || null
+      const sourceNode = fromNodeId ? nodesById.get(fromNodeId) : null
+      const actionIds = new Set(
+        (Array.isArray(sourceNode?.actions) ? sourceNode.actions : []).map(
+          (action) => action.id,
+        ),
+      )
+      const codeIds = new Set(
+        (Array.isArray(sourceNode?.codes) ? sourceNode.codes : []).map(
+          (code) => code.id,
+        ),
+      )
+      const itemId = normalizeText(edge?.itemId, 100) || null
+      const actionId = normalizeText(edge?.actionId, 100) || null
+      const codeId = normalizeText(edge?.codeId, 100) || null
+
+      return {
+        id: normalizeText(edge?.id, 100) || `edge-${index + 1}`,
+        fromNodeId,
+        fromItemId,
+        toNodeId: normalizeText(edge?.toNodeId, 100),
+        type: fromItemId ? 'required_item' : 'required_node',
+        itemId: itemId && itemIds.has(itemId) ? itemId : null,
+        actionId:
+          fromNodeId && actionId && actionIds.has(actionId) ? actionId : null,
+        codeId: fromNodeId && codeId && codeIds.has(codeId) ? codeId : null,
+      }
+    })
     .filter(
       (edge) =>
         edge.id &&
@@ -719,8 +725,16 @@ export async function PATCH(request) {
     )
     const storyItems = normalizeStoryItems(payload?.storyItems)
     const nodeIds = new Set(normalizedStoryNodes.map((node) => node.id))
+    const nodesById = new Map(
+      normalizedStoryNodes.map((node) => [node.id, node]),
+    )
     const itemIds = new Set(storyItems.map((item) => item.id))
-    const storyEdges = normalizeStoryEdges(payload?.storyEdges, nodeIds, itemIds)
+    const storyEdges = normalizeStoryEdges(
+      payload?.storyEdges,
+      nodeIds,
+      itemIds,
+      nodesById,
+    )
     const storyNodes = syncNodeVisibilityFromEdges(
       normalizedStoryNodes,
       storyEdges,

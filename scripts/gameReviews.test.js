@@ -9,6 +9,10 @@ import {
   serializePublishedGameReview,
 } from '../server/gameReviews.js'
 import normalizeGameForCabinet from '../helpers/normalizeGameForCabinet.js'
+import {
+  buildGameReviewSiteEventMessage,
+  shouldNotifyAdminsAboutGameReview,
+} from '../helpers/adminEventNotifications.js'
 
 test('accepts only integer game review ratings from 1 to 10', () => {
   for (const rating of [1, 5, 10]) {
@@ -167,4 +171,24 @@ test('legacy reviews remain included in rating by default', () => {
   assert.equal(review.ratingExclusionReason, '')
   assert.equal(review.ratingExcludedAt, null)
   assert.equal(review.moderationReason, '')
+})
+
+test('notifies city admins for new and resubmitted reviews without duplicate pending alerts', () => {
+  assert.equal(shouldNotifyAdminsAboutGameReview(null), true)
+  assert.equal(
+    shouldNotifyAdminsAboutGameReview({ moderationStatus: 'rejected' }),
+    true,
+  )
+  assert.equal(
+    shouldNotifyAdminsAboutGameReview({ moderationStatus: 'pending' }),
+    false,
+  )
+  assert.match(
+    buildGameReviewSiteEventMessage({
+      gameName: 'Ночной маршрут',
+      overallRating: 9,
+      difficultyRating: 7,
+    }),
+    /Поступил новый отзыв об игре «Ночной маршрут»/,
+  )
 })

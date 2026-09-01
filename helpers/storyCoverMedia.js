@@ -4,7 +4,10 @@ const normalizeMedia = (media) => (Array.isArray(media) ? media : [])
 
 const isStoryCoverMedia = (item) => item?.id === STORY_COVER_MEDIA_ID
 
-const isAudioMedia = (item) => item?.type === 'audio'
+const isMediaType = (type) => (item) => item?.type === type
+
+const isAudioMedia = isMediaType('audio')
+const isVideoMedia = isMediaType('video')
 
 export const getStoryCoverImage = (media) =>
   normalizeMedia(media).find(isStoryCoverMedia)?.url || ''
@@ -30,7 +33,8 @@ export const setStoryCoverImage = (media, imageUrl) => {
 
 export const mergeStoryEditorMedia = (currentMedia, editorMedia) => {
   const retainedMedia = normalizeMedia(currentMedia).filter(
-    (item) => isStoryCoverMedia(item) || isAudioMedia(item),
+    (item) =>
+      isStoryCoverMedia(item) || isAudioMedia(item) || isVideoMedia(item),
   )
   const contentMedia = normalizeMedia(editorMedia).filter(
     (item) => !isStoryCoverMedia(item),
@@ -48,23 +52,30 @@ export const mergeStoryEditorMedia = (currentMedia, editorMedia) => {
 export const getStoryAudioMedia = (media) =>
   normalizeMedia(media).filter(isAudioMedia)
 
-export const setStoryAudioMedia = (media, audioMedia) => {
+export const getStoryMediaByType = (media, type) =>
+  normalizeMedia(media).filter(isMediaType(type))
+
+export const setStoryMediaByType = (media, type, typedMedia) => {
+  const matchesType = isMediaType(type)
   const currentMedia = normalizeMedia(media)
-  const nextAudio = normalizeMedia(audioMedia).filter(isAudioMedia)
-  const firstAudioIndex = currentMedia.findIndex(isAudioMedia)
-  const remainingMedia = currentMedia.filter((item) => !isAudioMedia(item))
+  const nextMedia = normalizeMedia(typedMedia).filter(matchesType)
+  const firstMediaIndex = currentMedia.findIndex(matchesType)
+  const remainingMedia = currentMedia.filter((item) => !matchesType(item))
   const insertIndex =
-    firstAudioIndex < 0
+    firstMediaIndex < 0
       ? remainingMedia.length
       : currentMedia
-          .slice(0, firstAudioIndex)
-          .filter((item) => !isAudioMedia(item)).length
+          .slice(0, firstMediaIndex)
+          .filter((item) => !matchesType(item)).length
 
   return [
     ...remainingMedia.slice(0, insertIndex),
-    ...nextAudio,
+    ...nextMedia,
     ...remainingMedia.slice(insertIndex),
   ]
 }
+
+export const setStoryAudioMedia = (media, audioMedia) =>
+  setStoryMediaByType(media, 'audio', audioMedia)
 
 export { STORY_COVER_MEDIA_ID }

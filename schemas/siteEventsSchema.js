@@ -13,6 +13,7 @@ const siteEventsSchema = {
       'team_registered_to_game',
       'team_unregistered_from_game',
       'game_order_created',
+      'game_review_submitted',
       'client_diagnostic',
     ],
   },

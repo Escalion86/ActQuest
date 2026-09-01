@@ -130,6 +130,8 @@ const developerMenuItem = {
   icon: faCode,
 }
 
+const formatMenuBadgeCount = (count) => (count > 99 ? '99+' : count)
+
 const adminSubmenuItems = [
   {
     id: 'admin-reviews',
@@ -272,8 +274,11 @@ const isForceLocationDebugEnabled =
 const CABINET_USERS_API_BASE = '/api/cabinet/users'
 const UNPROCESSED_GAME_ORDERS_COUNT_API =
   '/api/cabinet/admin/game-orders/unprocessed-count'
+const PENDING_GAME_REVIEWS_COUNT_API =
+  '/api/cabinet/admin/game-reviews/pending-count'
 const GAME_ORDERS_CHANGED_EVENT = 'aq:admin-game-orders-changed'
-const GAME_ORDERS_COUNT_REFRESH_MS = 60 * 1000
+const GAME_REVIEWS_CHANGED_EVENT = 'aq:admin-game-reviews-changed'
+const ADMIN_BADGES_REFRESH_MS = 60 * 1000
 const THEME_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 const clientSessionDebugLog = (stage, payload = null) => {
   if (!isClientSessionDebugEnabled || typeof window === 'undefined') {
@@ -376,6 +381,7 @@ const CabinetLayout = ({
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [unprocessedGameOrdersCount, setUnprocessedGameOrdersCount] =
     useState(0)
+  const [pendingGameReviewsCount, setPendingGameReviewsCount] = useState(0)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
   const [forcedLocationKey, setForcedLocationKey] = useState('')
@@ -440,6 +446,8 @@ const CabinetLayout = ({
         : ''
   const gamesView =
     gamesViewFromPath || (searchParams?.get('view') || '').toLowerCase()
+  const adminAttentionCount =
+    unprocessedGameOrdersCount + pendingGameReviewsCount
 
   useIsomorphicLayoutEffect(() => {
     const initialTheme = resolveInitialTheme() ?? 'light'
@@ -645,50 +653,72 @@ const CabinetLayout = ({
   useEffect(() => {
     if (status !== 'authenticated' || !isAdmin) {
       setUnprocessedGameOrdersCount(0)
+      setPendingGameReviewsCount(0)
       return undefined
     }
 
     const controller = new AbortController()
 
-    const loadCount = async () => {
+    const loadCounts = async () => {
       try {
-        const response = await fetch(UNPROCESSED_GAME_ORDERS_COUNT_API, {
-          headers: { Accept: 'application/json' },
-          cache: 'no-store',
-          signal: controller.signal,
-        })
-        const payload = await response.json().catch(() => null)
+        const [ordersResult, reviewsResult] = await Promise.all(
+          [
+            UNPROCESSED_GAME_ORDERS_COUNT_API,
+            PENDING_GAME_REVIEWS_COUNT_API,
+          ].map(async (url) => {
+            const response = await fetch(url, {
+              headers: { Accept: 'application/json' },
+              cache: 'no-store',
+              signal: controller.signal,
+            })
+            const payload = await response.json().catch(() => null)
+            return { response, payload }
+          }),
+        )
 
-        if (!response.ok || payload?.success === false) {
-          return
+        if (
+          ordersResult.response.ok &&
+          ordersResult.payload?.success !== false
+        ) {
+          const nextCount = Number(ordersResult.payload?.data?.count)
+          setUnprocessedGameOrdersCount(
+            Number.isFinite(nextCount) ? Math.max(0, nextCount) : 0,
+          )
         }
 
-        const nextCount = Number(payload?.data?.count)
-        setUnprocessedGameOrdersCount(
-          Number.isFinite(nextCount) ? Math.max(0, nextCount) : 0,
-        )
+        if (
+          reviewsResult.response.ok &&
+          reviewsResult.payload?.success !== false
+        ) {
+          const nextCount = Number(reviewsResult.payload?.data?.count)
+          setPendingGameReviewsCount(
+            Number.isFinite(nextCount) ? Math.max(0, nextCount) : 0,
+          )
+        }
       } catch (error) {
         if (error?.name !== 'AbortError') {
-          console.error('Failed to load unprocessed game orders count', error)
+          console.error('Failed to load admin badge counts', error)
         }
       }
     }
 
-    const handleRefresh = () => void loadCount()
+    const handleRefresh = () => void loadCounts()
     const refreshInterval = window.setInterval(
       handleRefresh,
-      GAME_ORDERS_COUNT_REFRESH_MS,
+      ADMIN_BADGES_REFRESH_MS,
     )
 
-    void loadCount()
+    void loadCounts()
     window.addEventListener('focus', handleRefresh)
     window.addEventListener(GAME_ORDERS_CHANGED_EVENT, handleRefresh)
+    window.addEventListener(GAME_REVIEWS_CHANGED_EVENT, handleRefresh)
 
     return () => {
       controller.abort()
       window.clearInterval(refreshInterval)
       window.removeEventListener('focus', handleRefresh)
       window.removeEventListener(GAME_ORDERS_CHANGED_EVENT, handleRefresh)
+      window.removeEventListener(GAME_REVIEWS_CHANGED_EVENT, handleRefresh)
     }
   }, [isAdmin, status])
 
@@ -1202,22 +1232,20 @@ const CabinetLayout = ({
                         >
                           {item.label}
                         </span>
-                        {unprocessedGameOrdersCount > 0 ? (
+                        {adminAttentionCount > 0 ? (
                           <span
                             className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-rose-500/40 ring-2 ring-rose-300/40 transition-opacity duration-150`}
-                            aria-label={`${unprocessedGameOrdersCount} новых заявок на игры`}
-                            title={`${unprocessedGameOrdersCount} новых заявок на игры`}
+                            aria-label={`${adminAttentionCount} элементов требуют внимания`}
+                            title={`Ожидают обработки: отзывов — ${pendingGameReviewsCount}, заявок — ${unprocessedGameOrdersCount}`}
                           >
-                            {unprocessedGameOrdersCount > 99
-                              ? '99+'
-                              : unprocessedGameOrdersCount}
+                            {formatMenuBadgeCount(adminAttentionCount)}
                           </span>
                         ) : null}
                         <FontAwesomeIcon
                           icon={faChevronDown}
                           className={`h-3 w-3 shrink-0 transition-transform duration-150 ${
                             isAdminMenuOpen ? 'rotate-180' : ''
-                          } ${unprocessedGameOrdersCount > 0 ? '' : 'ml-auto'} ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'}`}
+                          } ${adminAttentionCount > 0 ? '' : 'ml-auto'} ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'}`}
                         />
                       </button>
 
@@ -1254,6 +1282,18 @@ const CabinetLayout = ({
                                 }
                               >
                                 <span>{subItem.label}</span>
+                                {subItem.id === 'admin-reviews' &&
+                                pendingGameReviewsCount > 0 ? (
+                                  <span
+                                    className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-rose-500/40 ring-2 ring-rose-300/40"
+                                    aria-label={`${pendingGameReviewsCount} отзывов ожидают проверки`}
+                                    title={`${pendingGameReviewsCount} отзывов ожидают проверки`}
+                                  >
+                                    {formatMenuBadgeCount(
+                                      pendingGameReviewsCount,
+                                    )}
+                                  </span>
+                                ) : null}
                                 {subItem.id === 'admin-game-orders' &&
                                 unprocessedGameOrdersCount > 0 ? (
                                   <span
@@ -1261,9 +1301,9 @@ const CabinetLayout = ({
                                     aria-label={`${unprocessedGameOrdersCount} новых заявок`}
                                     title={`${unprocessedGameOrdersCount} новых заявок`}
                                   >
-                                    {unprocessedGameOrdersCount > 99
-                                      ? '99+'
-                                      : unprocessedGameOrdersCount}
+                                    {formatMenuBadgeCount(
+                                      unprocessedGameOrdersCount,
+                                    )}
                                   </span>
                                 ) : null}
                               </Link>

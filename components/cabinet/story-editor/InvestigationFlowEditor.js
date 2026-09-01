@@ -8,6 +8,7 @@ import Modal from '@components/Modal'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import InvestigationScenarioEditors from '@components/cabinet/story-editor/InvestigationScenarioEditors'
 import StoryAudioEditor from '@components/cabinet/story-editor/StoryAudioEditor'
+import StoryVideoEditor from '@components/cabinet/story-editor/StoryVideoEditor'
 import { mergeStoryEditorMedia } from '@helpers/storyCoverMedia'
 
 const TaskRichEditor = dynamic(
@@ -709,9 +710,30 @@ const InvestigationFlowEditor = ({
                   onChange={({ html, media }) =>
                     patchCharacter(selectedCharacter.id, {
                       descriptionRich: typeof html === 'string' ? html : '',
-                      media: Array.isArray(media) ? media : [],
+                      media: mergeStoryEditorMedia(selectedCharacter.media, media),
                     })
                   }
+                />
+              </div>
+
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                <StoryAudioEditor
+                  media={selectedCharacter.media}
+                  onChange={(media) =>
+                    patchCharacter(selectedCharacter.id, { media })
+                  }
+                  directory={`games/${gameId || 'draft'}/story/characters/${selectedCharacter.id}/audio`}
+                  disabled={disabled}
+                  label="Аудиодорожки персонажа"
+                />
+                <StoryVideoEditor
+                  media={selectedCharacter.media}
+                  onChange={(media) =>
+                    patchCharacter(selectedCharacter.id, { media })
+                  }
+                  directory={`games/${gameId || 'draft'}/story/characters/${selectedCharacter.id}/video`}
+                  disabled={disabled}
+                  label="Видеофайлы персонажа"
                 />
               </div>
 
@@ -931,13 +953,22 @@ const InvestigationFlowEditor = ({
           </div>
 
           <div className="mt-4">
-            <StoryAudioEditor
-              media={selectedInteraction.media}
-              onChange={(media) => patchInteraction(selectedInteraction.id, { media })}
-              directory={`games/${gameId || 'draft'}/story/interactions/${selectedInteraction.id}/audio`}
-              disabled={disabled}
-              label="Аудиодорожки ответа"
-            />
+            <div className="grid gap-4 xl:grid-cols-2">
+              <StoryAudioEditor
+                media={selectedInteraction.media}
+                onChange={(media) => patchInteraction(selectedInteraction.id, { media })}
+                directory={`games/${gameId || 'draft'}/story/interactions/${selectedInteraction.id}/audio`}
+                disabled={disabled}
+                label="Аудиодорожки ответа"
+              />
+              <StoryVideoEditor
+                media={selectedInteraction.media}
+                onChange={(media) => patchInteraction(selectedInteraction.id, { media })}
+                directory={`games/${gameId || 'draft'}/story/interactions/${selectedInteraction.id}/video`}
+                disabled={disabled}
+                label="Видеофайлы ответа"
+              />
+            </div>
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-2">

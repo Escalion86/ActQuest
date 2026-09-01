@@ -13,6 +13,7 @@ const fetchCabinetGameDetails = async ({ gameId, location = null }) => {
   const endpointBase = '/api/cabinet/game-details'
 
   const { json } = await requestApiJson(`${endpointBase}?${params.toString()}`, {
+    cache: 'no-store',
     fallbackMessage: 'Не удалось загрузить данные игры',
   })
 

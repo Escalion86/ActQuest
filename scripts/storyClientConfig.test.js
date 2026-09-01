@@ -7,9 +7,11 @@ import pauseOtherAudioElements from '../helpers/audioPlayback.js'
 import {
   getStoryAudioMedia,
   getStoryCoverImage,
+  getStoryMediaByType,
   mergeStoryEditorMedia,
   setStoryAudioMedia,
   setStoryCoverImage,
+  setStoryMediaByType,
 } from '../helpers/storyCoverMedia.js'
 import lastBroadcastScenario from '../data/storyLastBroadcastScenario.js'
 
@@ -32,7 +34,10 @@ test('обычный story-квест не превращается в расс�
 
 test('обложка story-сущности сохраняется отдельно от медиа rich-text редактора', () => {
   const withCover = setStoryCoverImage(
-    [{ id: 'audio-1', type: 'audio', url: '/audio.mp3' }],
+    [
+      { id: 'audio-1', type: 'audio', url: '/audio.mp3' },
+      { id: 'video-1', type: 'video', url: '/video.mp4' },
+    ],
     '/cover.jpg',
   )
 
@@ -49,6 +54,7 @@ test('обложка story-сущности сохраняется отдель�
         title: '',
       },
       { id: 'audio-1', type: 'audio', url: '/audio.mp3' },
+      { id: 'video-1', type: 'video', url: '/video.mp4' },
       { id: 'image-1', type: 'image', url: '/inside.jpg' },
     ],
   )
@@ -67,6 +73,25 @@ test('обложка story-сущности сохраняется отдель�
         title: '',
       },
       { id: 'audio-2', type: 'audio', url: '/replacement.mp3' },
+      { id: 'video-1', type: 'video', url: '/video.mp4' },
+    ],
+  )
+  assert.deepEqual(getStoryMediaByType(withCover, 'video'), [
+    { id: 'video-1', type: 'video', url: '/video.mp4' },
+  ])
+  assert.deepEqual(
+    setStoryMediaByType(withCover, 'video', [
+      { id: 'video-2', type: 'video', url: '/replacement.mp4' },
+    ]),
+    [
+      {
+        id: 'story-cover-image',
+        type: 'image',
+        url: '/cover.jpg',
+        title: '',
+      },
+      { id: 'audio-1', type: 'audio', url: '/audio.mp3' },
+      { id: 'video-2', type: 'video', url: '/replacement.mp4' },
     ],
   )
   assert.equal(getStoryCoverImage(setStoryCoverImage(withCover, '')), '')

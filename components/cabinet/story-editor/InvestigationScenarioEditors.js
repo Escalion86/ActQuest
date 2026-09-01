@@ -6,6 +6,9 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import StoryAudioEditor from '@components/cabinet/story-editor/StoryAudioEditor'
+import StoryVideoEditor from '@components/cabinet/story-editor/StoryVideoEditor'
+import { mergeStoryEditorMedia } from '@helpers/storyCoverMedia'
 
 const TaskRichEditor = dynamic(
   () => import('@components/cabinet/TaskRichEditor'),
@@ -344,7 +347,11 @@ const EvidenceEditorModal = ({ isOpen, onClose, game, gameId, updateGame, disabl
               <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">Вес доказательства<input type="number" value={selectedEvidence.weight ?? 0} disabled={disabled} onChange={(event) => patchEvidence(selectedEvidence.id, { weight: Number(event.target.value) || 0 })} className={fieldClassName} /></label>
               <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">Категории через запятую<input value={normalizeArray(selectedEvidence.tags).join(', ')} disabled={disabled} onChange={(event) => patchEvidence(selectedEvidence.id, { tags: event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) })} className={fieldClassName} placeholder="время, мотив, орудие" /></label>
             </div>
-            <div className="mt-4"><p className="mb-1 text-sm text-slate-600 dark:text-slate-300">Описание и медиа</p><TaskRichEditor value={selectedEvidence.descriptionRich || ''} directory={`games/${gameId || 'draft'}/story/evidence/${selectedEvidence.id}/description/editor`} disabled={disabled} contentMaxHeight="380px" placeholder="Опишите улику, её происхождение и значение для дела." onChange={({ html, media }) => patchEvidence(selectedEvidence.id, { descriptionRich: typeof html === 'string' ? html : '', media: Array.isArray(media) ? media : [] })} /></div>
+            <div className="mt-4"><p className="mb-1 text-sm text-slate-600 dark:text-slate-300">Описание и медиа</p><TaskRichEditor value={selectedEvidence.descriptionRich || ''} directory={`games/${gameId || 'draft'}/story/evidence/${selectedEvidence.id}/description/editor`} disabled={disabled} contentMaxHeight="380px" placeholder="Опишите улику, её происхождение и значение для дела." onChange={({ html, media }) => patchEvidence(selectedEvidence.id, { descriptionRich: typeof html === 'string' ? html : '', media: mergeStoryEditorMedia(selectedEvidence.media, media) })} /></div>
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              <StoryAudioEditor media={selectedEvidence.media} onChange={(media) => patchEvidence(selectedEvidence.id, { media })} directory={`games/${gameId || 'draft'}/story/evidence/${selectedEvidence.id}/audio`} disabled={disabled} label="Аудиодорожки доказательства" />
+              <StoryVideoEditor media={selectedEvidence.media} onChange={(media) => patchEvidence(selectedEvidence.id, { media })} directory={`games/${gameId || 'draft'}/story/evidence/${selectedEvidence.id}/video`} disabled={disabled} label="Видеофайлы доказательства" />
+            </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"><input type="checkbox" checked={Boolean(selectedEvidence.isKey)} disabled={disabled} onChange={(event) => patchEvidence(selectedEvidence.id, { isKey: event.target.checked })} />Ключевое доказательство</label>
               <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"><input type="checkbox" checked={selectedEvidence.hiddenUntilDiscovered !== false} disabled={disabled} onChange={(event) => patchEvidence(selectedEvidence.id, { hiddenUntilDiscovered: event.target.checked })} />Скрывать до обнаружения</label>

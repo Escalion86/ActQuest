@@ -54,6 +54,7 @@ import {
   canViewPublishedGameTasks,
 } from '@helpers/cabinetGameVisibility'
 import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
+import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import {
   applyGameDraftPatch,
   areGameDraftsEqual,
@@ -225,6 +226,7 @@ const fetchCabinetGamesPage = async ({
   const { json } = await requestApiJson(
     `${CABINET_GAMES_LIST_API_BASE}?${params.toString()}`,
     {
+      cache: 'no-store',
       fallbackMessage: 'Не удалось загрузить список игр',
     },
   )
@@ -1868,6 +1870,25 @@ const GamesPage = ({
       }),
     enabled: isGamesQueryEnabled,
     initialPageParam: 0,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    refetchInterval: (query) => {
+      const pages = Array.isArray(query.state.data?.pages)
+        ? query.state.data.pages
+        : []
+      const hasCurrentGame = pages.some((page) =>
+        (Array.isArray(page?.games) ? page.games : []).some((game) => {
+          const status = String(game?.status || '')
+            .trim()
+            .toLowerCase()
+          return status === 'active' || status === 'started'
+        }),
+      )
+
+      return hasCurrentGame ? 30_000 : false
+    },
     initialData:
       isGamesQueryEnabled &&
       safeInitialGames.length > 0 &&
@@ -5400,17 +5421,52 @@ const GamesPage = ({
   )
 
   const handleOpenStatusModal = useCallback(
-    (gameCandidate = null) => {
+    async (gameCandidate = null) => {
       const game = gameCandidate || selectedGame
-      if (!game || !canEditAllGames || !canManageGameStatus(game)) {
+      if (
+        !game ||
+        !canEditAllGames ||
+        !canManageGameStatus(game) ||
+        isStatusChanging
+      ) {
         return
       }
 
-      setStatusModalGameId(game.id)
-      setStatusValidationResult(null)
-      setIsStatusModalOpen(true)
+      setIsStatusChanging(true)
+      setStatusProgressMessage('Обновляем статус игры…')
+
+      try {
+        const freshGame = await fetchCabinetGameDetails({
+          gameId: game.id,
+          location: 'all',
+        })
+
+        applyPersistedGameUpdate(game.id, (currentGame) => ({
+          ...currentGame,
+          status: freshGame.status,
+          dateStartFact: freshGame.dateStartFact,
+          dateEndFact: freshGame.dateEndFact,
+        }))
+        setStatusModalGameId(game.id)
+        setStatusValidationResult(null)
+        setIsStatusModalOpen(true)
+      } catch (error) {
+        const message =
+          extractErrorMessage(error) || 'Не удалось обновить статус игры'
+        setFeedback({ type: 'error', message })
+      } finally {
+        setIsStatusChanging(false)
+        setStatusProgressMessage('')
+      }
     },
-    [canEditAllGames, canManageGameStatus, selectedGame],
+    [
+      applyPersistedGameUpdate,
+      canEditAllGames,
+      canManageGameStatus,
+      isStatusChanging,
+      selectedGame,
+      setFeedback,
+    ],
   )
 
   const handleCloseStatusModal = useCallback(() => {

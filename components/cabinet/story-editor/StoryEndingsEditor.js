@@ -7,6 +7,7 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import StoryAudioEditor from '@components/cabinet/story-editor/StoryAudioEditor'
+import StoryVideoEditor from '@components/cabinet/story-editor/StoryVideoEditor'
 import {
   getStoryCoverImage,
   mergeStoryEditorMedia,
@@ -305,7 +306,7 @@ const StoryEndingsEditor = ({
               />
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
               <StoryAudioEditor
                 media={selectedEnding.media}
                 onChange={(media) => onUpdateEnding(selectedEnding.id, (ending) => ({
@@ -315,6 +316,16 @@ const StoryEndingsEditor = ({
                 directory={`games/${gameId || 'draft'}/story/endings/${selectedEnding.id}/audio`}
                 disabled={disabled}
                 label="Аудиодорожки концовки"
+              />
+              <StoryVideoEditor
+                media={selectedEnding.media}
+                onChange={(media) => onUpdateEnding(selectedEnding.id, (ending) => ({
+                  ...ending,
+                  media,
+                }))}
+                directory={`games/${gameId || 'draft'}/story/endings/${selectedEnding.id}/video`}
+                disabled={disabled}
+                label="Видеофайлы концовки"
               />
             </div>
 

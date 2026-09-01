@@ -139,7 +139,10 @@ const AdminGameReviewsPageClient = ({ session: initialSession }) => {
       })
       return json?.data?.review || null
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-game-reviews'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-game-reviews'] })
+      window.dispatchEvent(new CustomEvent('aq:admin-game-reviews-changed'))
+    },
   })
 
   const handleExcludeFromRating = (review) => {
