@@ -67,6 +67,7 @@ import {
   normalizePrequelConfigs,
   normalizePrequelStoryEffect,
 } from '@helpers/normalizePrequel'
+import canCreateStoryGame from '@helpers/storyGameAccess'
 import { LOCATIONS } from '@server/serverConstants'
 
 const GAME_STATUS_BADGE_STYLES = {
@@ -114,7 +115,7 @@ const STORY_GAME_TYPE_OPTION = { value: 'story', label: 'Сюжетный кве
 const ALL_GAME_TYPE_OPTIONS = [...GAME_TYPE_OPTIONS, STORY_GAME_TYPE_OPTION]
 
 const getGameTypeOptionsForRole = (role) =>
-  role === 'dev' ? ALL_GAME_TYPE_OPTIONS : GAME_TYPE_OPTIONS
+  canCreateStoryGame(role) ? ALL_GAME_TYPE_OPTIONS : GAME_TYPE_OPTIONS
 
 const CLUE_EARLY_MODE_OPTIONS = [
   { value: 'time', label: 'Добавить время до следующей подсказки' },

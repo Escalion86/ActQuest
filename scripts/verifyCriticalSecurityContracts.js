@@ -136,8 +136,11 @@ requireText('app/api/cabinet/admin/story-control/_lib.js', [
 ])
 requireText('app/api/cabinet/games/route.js', [
   "gameType === 'story'",
-  "normalizeRole(session.user.role) !== 'dev'",
-  'Создание story-игр пока доступно только разработчику',
+  '!canCreateStoryGame(session.user.role)',
+  'Создание story-игр доступно только администраторам и разработчикам',
+])
+requireText('helpers/storyGameAccess.js', [
+  "['admin', 'dev'].includes",
 ])
 requireText('server/getTeamGameTaskState.js', [
   'buildStoryClientConfig',
@@ -205,5 +208,5 @@ console.log('- административные маршруты требуют 
 console.log('- публичные ответы не содержат правильные коды')
 console.log('- внешние прокси и телефонная верификация защищены')
 console.log('- основной web-маршрут ввода кодов сохранён')
-console.log('- создание story-игр ограничено ролью dev')
+console.log('- создание story-игр ограничено ролями admin и dev')
 console.log('- story-сценарий изменяется только через специализированный редактор')

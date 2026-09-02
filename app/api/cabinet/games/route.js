@@ -10,6 +10,7 @@ import {
   normalizeGameOrganizerId,
   resolveGameOrganizerForCreate,
 } from '@helpers/gameOrganizer'
+import canCreateStoryGame from '@helpers/storyGameAccess'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -117,11 +118,11 @@ export async function POST(request) {
       { status: 400 },
     )
   }
-  if (gameType === 'story' && normalizeRole(session.user.role) !== 'dev') {
+  if (gameType === 'story' && !canCreateStoryGame(session.user.role)) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Создание story-игр пока доступно только разработчику',
+        error: 'Создание story-игр доступно только администраторам и разработчикам',
       },
       { status: 403 },
     )

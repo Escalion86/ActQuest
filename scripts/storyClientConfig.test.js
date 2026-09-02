@@ -4,6 +4,7 @@ import test from 'node:test'
 import buildStoryClientConfig from '../helpers/buildStoryClientConfig.js'
 import { buildStoryInvestigationGraph } from '../helpers/buildStoryInvestigationGraph.js'
 import pauseOtherAudioElements from '../helpers/audioPlayback.js'
+import canCreateStoryGame from '../helpers/storyGameAccess.js'
 import {
   getStoryAudioMedia,
   getStoryCoverImage,
@@ -30,6 +31,15 @@ test('обычный story-квест не превращается в расс�
     experienceMode: 'quest',
   })
   assert.equal(buildStoryClientConfig({ type: 'classic' }), null)
+})
+
+test('администраторы и разработчики могут создавать story-игры', () => {
+  assert.equal(canCreateStoryGame('admin'), true)
+  assert.equal(canCreateStoryGame('dev'), true)
+  assert.equal(canCreateStoryGame('ADMIN'), true)
+  assert.equal(canCreateStoryGame('client'), false)
+  assert.equal(canCreateStoryGame('moder'), false)
+  assert.equal(canCreateStoryGame(null), false)
 })
 
 test('обложка story-сущности сохраняется отдельно от медиа rich-text редактора', () => {
