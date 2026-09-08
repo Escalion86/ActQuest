@@ -429,6 +429,12 @@ const TaskItem = ({
       </div>
 
       {isExpanded && (
+        /* Блокируем все поля задания при просмотре (закрытая игра /
+           нет прав), не затрагивая кнопку раскрытия в шапке. */
+        <fieldset
+          disabled={!canEditSelectedGame || isSaving}
+          className="m-0 border-0 p-0"
+        >
         <div className="px-3 py-4 space-y-5 sm:px-4 sm:py-5">
           <div className="space-y-4">
             <div className="flex justify-end">
@@ -454,6 +460,7 @@ const TaskItem = ({
                 }}
                 label="Бонусное задание"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                disabled={!canEditSelectedGame || isSaving}
               />
               <NeonCheckbox
                 id={`task-canceled-${task.id}`}
@@ -467,6 +474,7 @@ const TaskItem = ({
                 }}
                 label="Задание отменено"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                disabled={!canEditSelectedGame || isSaving}
               />
             </div>
             {useCustomTaskPublicTitles ? (
@@ -1724,6 +1732,7 @@ const TaskItem = ({
             </CabinetButton>
           </div>
         </div>
+        </fieldset>
       )}
     </div>
   )

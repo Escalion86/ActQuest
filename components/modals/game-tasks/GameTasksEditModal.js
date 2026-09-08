@@ -444,8 +444,11 @@ const GameTasksEditModal = ({
       onClose={handleCloseTasksModal}
       footer={modalFooter}
     >
+      {/* В режиме просмотра (закрытая игра или нет прав) fieldset не блокируется:
+          иначе нельзя раскрывать задания. Все поля редактирования дизейблятся
+          на уровне компонентов через canEditSelectedGame. */}
       <fieldset
-        disabled={!canEditSelectedGame || isSaving}
+        disabled={isSaving}
         className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
       >
         <ModalSection>
@@ -475,6 +478,7 @@ const GameTasksEditModal = ({
                 id={`game-custom-task-public-titles-${selectedGame.id}`}
                 checked={useCustomTaskPublicTitles}
                 onChange={handleCustomTaskPublicTitlesChange}
+                disabled={!canEditSelectedGame || isSaving}
                 label="Произвольные публичные названия"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
@@ -577,7 +581,11 @@ const GameTasksEditModal = ({
             </p>
           )}
           <div className="mt-4">
-            <CabinetButton onClick={handleAddTask} variant="primary">
+            <CabinetButton
+              onClick={handleAddTask}
+              disabled={!canEditSelectedGame || isSaving}
+              variant="primary"
+            >
               Добавить задание
             </CabinetButton>
           </div>
