@@ -429,12 +429,10 @@ const TaskItem = ({
       </div>
 
       {isExpanded && (
-        /* Блокируем все поля задания при просмотре (закрытая игра /
-           нет прав), не затрагивая кнопку раскрытия в шапке. */
-        <fieldset
-          disabled={!canEditSelectedGame || isSaving}
-          className="m-0 border-0 p-0"
-        >
+        /* В read-only режиме (закрытая игра / нет прав) поля блокируются
+           явным disabled на каждом контроле — обёртка fieldset не
+           используется, чтобы не блокировать медиа-элементы
+           (аудио, видео, просмотр изображений). */
         <div className="px-3 py-4 space-y-5 sm:px-4 sm:py-5">
           <div className="space-y-4">
             <div className="flex justify-end">
@@ -442,7 +440,7 @@ const TaskItem = ({
                 type="button"
                 variant="secondary"
                 onClick={() => handleSaveAndOpenTaskPreview(index)}
-                disabled={isSaving}
+                disabled={!canEditSelectedGame || isSaving}
               >
                 Сохранить и открыть предпросмотр
               </CabinetButton>
@@ -483,6 +481,7 @@ const TaskItem = ({
                 label="Публичное название"
                 type="text"
                 value={task.publicTitle || ''}
+              disabled={!canEditSelectedGame || isSaving}
                 onChange={(event) =>
                   handleTaskFieldChange(
                     task.id,
@@ -499,6 +498,7 @@ const TaskItem = ({
               label={withRequiredMark('Название задания')}
               type="text"
               value={task.title}
+              disabled={!canEditSelectedGame || isSaving}
               onChange={(event) =>
                 handleTaskFieldChange(task.id, 'title', event.target.value)
               }
@@ -856,6 +856,7 @@ const TaskItem = ({
                           tone="danger"
                           size="sm"
                           className="inline-flex items-center justify-center"
+                          disabled={!canEditSelectedGame || isSaving}
                         >
                           Удалить подсказку
                         </CabinetButton>
@@ -889,6 +890,7 @@ const TaskItem = ({
                 tone="brand"
                 size="sm"
                 className="inline-flex justify-center"
+                disabled={!canEditSelectedGame || isSaving}
               >
                 Добавить подсказку
               </CabinetButton>
@@ -903,6 +905,7 @@ const TaskItem = ({
                 label="Бонус за выполнение"
                 min="0"
                 value={task.taskBonusForComplite ?? 0}
+                disabled={!canEditSelectedGame || isSaving}
                 onChange={(event) =>
                   handleTaskNumberChange(
                     task.id,
@@ -922,6 +925,7 @@ const TaskItem = ({
             label="Как разгадать?"
             rows={4}
             value={task.howToSolve || ''}
+            disabled={!canEditSelectedGame || isSaving}
             onChange={(event) =>
               handleTaskFieldChange(task.id, 'howToSolve', event.target.value)
             }
@@ -994,6 +998,7 @@ const TaskItem = ({
                 label="Широта"
                 step="any"
                 value={task.coordinates?.latitude ?? ''}
+                disabled={!canEditSelectedGame || isSaving}
                 onChange={(event) =>
                   handleTaskCoordinateChange(
                     task.id,
@@ -1010,6 +1015,7 @@ const TaskItem = ({
                 label="Долгота"
                 step="any"
                 value={task.coordinates?.longitude ?? ''}
+                disabled={!canEditSelectedGame || isSaving}
                 onChange={(event) =>
                   handleTaskCoordinateChange(
                     task.id,
@@ -1026,6 +1032,7 @@ const TaskItem = ({
                 label="Радиус (м)"
                 min="0"
                 value={task.coordinates?.radius ?? ''}
+                disabled={!canEditSelectedGame || isSaving}
                 onChange={(event) =>
                   handleTaskCoordinateChange(
                     task.id,
@@ -1132,6 +1139,7 @@ const TaskItem = ({
                             label={null}
                             type="text"
                             value={codeValue}
+                            disabled={!canEditSelectedGame || isSaving}
                             onChange={(event) =>
                               handleTaskCodeChange(
                                 task.id,
@@ -1144,6 +1152,7 @@ const TaskItem = ({
                             inputClassName={compactInputClassName}
                           />
                           <CabinetButton
+                          disabled={!canEditSelectedGame || isSaving}
                             onClick={() =>
                               handleRemoveTaskCode(task.id, codeIndex)
                             }
@@ -1216,6 +1225,7 @@ const TaskItem = ({
                   tone="brand"
                   size="sm"
                   className="inline-flex justify-center"
+                  disabled={!canEditSelectedGame || isSaving}
                 >
                   Добавить код
                 </CabinetButton>
@@ -1227,6 +1237,7 @@ const TaskItem = ({
                   min="1"
                   step="1"
                   value={task.numCodesToCompliteTask ?? ''}
+                  disabled={!canEditSelectedGame || isSaving}
                   onChange={(event) =>
                     handleTaskOptionalNumberChange(
                       task.id,
@@ -1258,6 +1269,7 @@ const TaskItem = ({
                   tone="brand"
                   size="sm"
                   className="inline-flex justify-center"
+                  disabled={!canEditSelectedGame || isSaving}
                 >
                   Добавить подзадание
                 </CabinetButton>
@@ -1274,6 +1286,7 @@ const TaskItem = ({
                           Подзадание {subIndex + 1}
                         </p>
                         <CabinetButton
+                        disabled={!canEditSelectedGame || isSaving}
                           onClick={() =>
                             handleRemoveSubTask(task.id, subTask.id)
                           }
@@ -1291,6 +1304,7 @@ const TaskItem = ({
                           label="Название"
                           type="text"
                           value={subTask.name}
+                          disabled={!canEditSelectedGame || isSaving}
                           onChange={(event) =>
                             handleSubTaskChange(
                               task.id,
@@ -1308,6 +1322,7 @@ const TaskItem = ({
                           label="Бонус"
                           min="0"
                           value={subTask.bonus ?? 0}
+                          disabled={!canEditSelectedGame || isSaving}
                           onChange={(event) =>
                             handleSubTaskChange(
                               task.id,
@@ -1326,6 +1341,7 @@ const TaskItem = ({
                         label="Описание"
                         rows={3}
                         value={subTask.task}
+                        disabled={!canEditSelectedGame || isSaving}
                         onChange={(event) =>
                           handleSubTaskChange(
                             task.id,
@@ -1412,6 +1428,7 @@ const TaskItem = ({
                             label="Код"
                             type="text"
                             value={penalty.code}
+                            disabled={!canEditSelectedGame || isSaving}
                             onChange={(event) =>
                               handlePenaltyCodeChange(
                                 task.id,
@@ -1445,6 +1462,7 @@ const TaskItem = ({
                           label="Комментарий"
                           type="text"
                           value={penalty.description}
+                          disabled={!canEditSelectedGame || isSaving}
                           onChange={(event) =>
                             handlePenaltyCodeChange(
                               task.id,
@@ -1484,6 +1502,7 @@ const TaskItem = ({
                         )}
                         <div className="flex justify-end">
                           <CabinetButton
+                          disabled={!canEditSelectedGame || isSaving}
                             onClick={() =>
                               handleRemovePenaltyCode(task.id, penalty.id)
                             }
@@ -1522,6 +1541,7 @@ const TaskItem = ({
                   tone="brand"
                   size="sm"
                   className="inline-flex justify-center"
+                  disabled={!canEditSelectedGame || isSaving}
                 >
                   Добавить штраф
                 </CabinetButton>
@@ -1592,6 +1612,7 @@ const TaskItem = ({
                             label="Код"
                             type="text"
                             value={bonus.code}
+                            disabled={!canEditSelectedGame || isSaving}
                             onChange={(event) =>
                               handleBonusCodeChange(
                                 task.id,
@@ -1625,6 +1646,7 @@ const TaskItem = ({
                           label="Комментарий"
                           type="text"
                           value={bonus.description}
+                          disabled={!canEditSelectedGame || isSaving}
                           onChange={(event) =>
                             handleBonusCodeChange(
                               task.id,
@@ -1664,6 +1686,7 @@ const TaskItem = ({
                         )}
                         <div className="flex justify-end">
                           <CabinetButton
+                          disabled={!canEditSelectedGame || isSaving}
                             onClick={() =>
                               handleRemoveBonusCode(task.id, bonus.id)
                             }
@@ -1702,6 +1725,7 @@ const TaskItem = ({
                   tone="brand"
                   size="sm"
                   className="inline-flex justify-center"
+                  disabled={!canEditSelectedGame || isSaving}
                 >
                   Добавить бонус
                 </CabinetButton>
@@ -1727,12 +1751,12 @@ const TaskItem = ({
               tone="danger"
               size="sm"
               className="inline-flex items-center justify-center"
+              disabled={!canEditSelectedGame || isSaving}
             >
               Удалить задание
             </CabinetButton>
           </div>
         </div>
-        </fieldset>
       )}
     </div>
   )

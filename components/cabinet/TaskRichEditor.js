@@ -15,6 +15,7 @@ import FontFamily from '@tiptap/extension-font-family'
 import { Node, mergeAttributes } from '@tiptap/core'
 import { NodeSelection } from '@tiptap/pm/state'
 
+import FullscreenImageViewer from '@components/FullscreenImageViewer'
 import Modal from '@components/Modal'
 import SystemPromptMdEditor from '@components/cabinet/SystemPromptMdEditor'
 import pauseOtherAudioElements from '@helpers/audioPlayback'
@@ -1372,11 +1373,13 @@ const FrameBox = Node.create({
 const ResizableImageNodeView = ({ node, editor }) => {
   const src = typeof node?.attrs?.src === 'string' ? node.attrs.src : ''
   const alt = typeof node?.attrs?.alt === 'string' ? node.attrs.alt : ''
+  const isEditable = Boolean(editor?.isEditable)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   return (
     <NodeViewWrapper
       as="div"
-      className={`aq-image-node ${editor?.isEditable ? 'aq-image-node--editable' : ''}`}
+      className={`aq-image-node ${isEditable ? 'aq-image-node--editable' : ''}`}
       data-aq-image-node="true"
     >
       <img
@@ -1384,8 +1387,17 @@ const ResizableImageNodeView = ({ node, editor }) => {
         alt={alt}
         loading="lazy"
         draggable="false"
-        className="aq-image-node__image"
+        onClick={isEditable ? undefined : () => setIsPreviewOpen(true)}
+        className={`aq-image-node__image ${isEditable ? '' : 'cursor-zoom-in'}`}
       />
+      {isEditable ? null : (
+        <FullscreenImageViewer
+          isOpen={isPreviewOpen}
+          src={src}
+          alt={alt}
+          onClose={() => setIsPreviewOpen(false)}
+        />
+      )}
     </NodeViewWrapper>
   )
 }
