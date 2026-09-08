@@ -149,6 +149,29 @@ test('ignores technical ids and timestamps after display sanitization', async ()
   ])
 })
 
+test('truncates oversized diff values instead of storing full arrays', () => {
+  const hugeBefore = Array.from({ length: 5000 }, (_, index) => ({
+    code: `code-${index}`,
+    createdAt: '2026-05-24T10:00:00.000Z',
+  }))
+  const hugeAfter = [
+    ...hugeBefore,
+    { code: 'code-new', createdAt: '2026-05-24T10:05:00.000Z' },
+  ]
+
+  const diff = buildGameHistoryDiff({
+    before: { game: null, gameTeams: [{ codeAttempts: hugeBefore }] },
+    after: { game: null, gameTeams: [{ codeAttempts: hugeAfter }] },
+  })
+
+  assert.equal(diff.length, 1)
+  assert.equal(diff[0].path, 'gameTeams')
+  assert.equal(diff[0].beforeValue.__truncated, true)
+  assert.equal(diff[0].afterValue.__truncated, true)
+  assert.ok(diff[0].beforeValue.size > 20000)
+  assert.equal(typeof diff[0].beforeValue.note, 'string')
+})
+
 test('drops nested technical churn from raw history states and keeps only meaningful game changes', () => {
   const before = {
     game: {

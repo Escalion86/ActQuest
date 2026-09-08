@@ -76,6 +76,15 @@ export async function GET(request, { params }) {
     const displayAfter = sanitizeGameHistoryDisplayState(doc?.after ?? null)
     const isDeveloper = normalizeRole(session?.user?.role) === 'dev'
 
+    // Новые записи не хранят полные before/after (только компактный diff),
+    // поэтому при их отсутствии используем сохранённый diff.
+    const diff =
+      displayBefore || displayAfter
+        ? buildGameHistoryDiff({ before: displayBefore, after: displayAfter })
+        : Array.isArray(doc?.diff)
+          ? doc.diff
+          : []
+
     return NextResponse.json(
       {
         success: true,
@@ -91,10 +100,7 @@ export async function GET(request, { params }) {
           canRollback: Boolean(doc?.snapshot) && !isLatestEntry,
           before: isDeveloper ? displayBefore : null,
           after: isDeveloper ? displayAfter : null,
-          diff: buildGameHistoryDiff({
-            before: displayBefore,
-            after: displayAfter,
-          }),
+          diff,
           rollback: doc?.rollback ?? null,
         },
       },

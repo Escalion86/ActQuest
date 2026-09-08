@@ -61,8 +61,17 @@ export async function GET(request, { params }) {
       )
     }
 
+    // Тяжёлые поля (before/after/rollback и тело snapshot) списку не нужны —
+    // для canRollback достаточно факта наличия snapshot.
     const docs = await GameHistoryEntries.find({ gameId })
       .sort({ createdAt: -1, _id: -1 })
+      .select({
+        before: 0,
+        after: 0,
+        rollback: 0,
+        'snapshot.schemaVersion': 1,
+        'snapshot.capturedAt': 1,
+      })
       .lean()
 
     return NextResponse.json(

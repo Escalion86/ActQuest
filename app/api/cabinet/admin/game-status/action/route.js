@@ -7,7 +7,6 @@ import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
 import webGameProcess from '@server/webGameProcess'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
-import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
 import {
@@ -368,7 +367,9 @@ export async function POST(request) {
         actor: buildHistoryActorFromSession(session),
         beforeState: beforeHistoryState,
         afterState: afterHistoryState,
-        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        // Live-действие в процессе игры: полный snapshot не сохраняем,
+        // чтобы не раздувать историю (откат к такой записи недоступен).
+        snapshot: null,
         context: {
           summary: `Администратор зачёл код для команды: ${code}`,
         },
@@ -411,7 +412,9 @@ export async function POST(request) {
         actor: buildHistoryActorFromSession(session),
         beforeState: beforeHistoryState,
         afterState: afterHistoryState,
-        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        // Live-действие в процессе игры: полный snapshot не сохраняем,
+        // чтобы не раздувать историю (откат к такой записи недоступен).
+        snapshot: null,
         context: {
           summary: 'Администратор принудительно завершил текущее задание команды',
         },
@@ -453,7 +456,9 @@ export async function POST(request) {
         actor: buildHistoryActorFromSession(session),
         beforeState: beforeHistoryState,
         afterState: afterHistoryState,
-        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        // Live-действие в процессе игры: полный snapshot не сохраняем,
+        // чтобы не раздувать историю (откат к такой записи недоступен).
+        snapshot: null,
         context: {
           summary: 'Администратор принудительно провалил текущее задание команды',
         },

@@ -23,6 +23,7 @@
     "test:closed-game-protection": "node --no-warnings --test scripts/closedGameUpdateProtection.test.js",
     "test:rating": "node --no-warnings --test scripts/ratingV2.test.js",
     "backfill:participation-stats": "node --no-warnings scripts/backfillCompletedParticipationStats.mjs",
+    "cleanup:game-history": "node --no-warnings scripts/cleanupGameHistory.mjs",
     "import:story-last-broadcast": "node --no-warnings scripts/importStoryLastBroadcast.mjs",
     "audio:story-last-broadcast:generate": "node --no-warnings scripts/generateStoryLastBroadcastVoices.mjs",
     "audio:story-last-broadcast:package": "node --no-warnings scripts/generateStoryLastBroadcastScenePack.mjs",

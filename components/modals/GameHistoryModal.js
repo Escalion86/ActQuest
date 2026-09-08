@@ -361,6 +361,15 @@ const GameHistoryModal = ({
                             </details>
                           ) : null}
 
+                          {canViewRawHistoryState &&
+                          !detail.before &&
+                          !detail.after ? (
+                            <p className="text-xs text-slate-400 dark:text-slate-500">
+                              Полное состояние для этой записи не сохранено
+                              (хранится только компактный diff).
+                            </p>
+                          ) : null}
+
                           {rollbackWarnings.length > 0 ? (
                             <div>
                               <h3 className="text-sm font-semibold text-slate-800 dark:text-white">

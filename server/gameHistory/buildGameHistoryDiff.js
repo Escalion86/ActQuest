@@ -7,6 +7,26 @@ const isPlainObject = (value) =>
 const valuesEqual = (left, right) =>
   JSON.stringify(left) === JSON.stringify(right)
 
+// Максимальный размер одного значения в diff-записи (в символах JSON).
+// Большие массивы (codeAttempts, photos и т.п.) целиком в истории не храним —
+// иначе каждая запись истории раздувается до сотен килобайт.
+const MAX_DIFF_VALUE_SIZE = 20000
+
+const truncateDiffValue = (value) => {
+  if (value === null || value === undefined) {
+    return value ?? null
+  }
+  const serialized = JSON.stringify(value)
+  if (typeof serialized !== 'string' || serialized.length <= MAX_DIFF_VALUE_SIZE) {
+    return value
+  }
+  return {
+    __truncated: true,
+    size: serialized.length,
+    note: 'Значение скрыто из-за большого размера',
+  }
+}
+
 const buildEntries = ({ before, after, path = '' }) => {
   if (valuesEqual(before, after)) {
     return []
@@ -40,8 +60,8 @@ const buildEntries = ({ before, after, path = '' }) => {
       path,
       label: formatGameHistoryLabel(path),
       kind: 'changed',
-      beforeValue: before ?? null,
-      afterValue: after ?? null,
+      beforeValue: truncateDiffValue(before),
+      afterValue: truncateDiffValue(after),
     },
   ]
 }
