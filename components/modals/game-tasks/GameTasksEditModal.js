@@ -15,6 +15,7 @@ const GameTasksEditModal = ({
   isEditModalOpen: isTasksModalOpen,
   handleCloseEditModal: handleCloseTasksModal,
   canEditSelectedGame,
+  isGameClosed,
   isSaving,
   location,
   isDirty,
@@ -419,6 +420,11 @@ const GameTasksEditModal = ({
             : 'Сохранить'
           : 'Закрыть'}
       </CabinetButton>
+      {isDirty && !canEditSelectedGame ? (
+        <span className="text-xs text-amber-700 dark:text-amber-300">
+          Игра закрыта — изменения заданий сохранить нельзя.
+        </span>
+      ) : null}
       {isDirty && (
         <CabinetButton
           onClick={handleResetChanges}
@@ -443,6 +449,13 @@ const GameTasksEditModal = ({
         className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
       >
         <ModalSection>
+          {isGameClosed ? (
+            <p className="mb-4 rounded-xl border border-amber-300/70 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200">
+              Игра закрыта: задания можно только просматривать. Сохранение
+              изменений недоступно, чтобы не менять задания завершённой игры
+              и не искажать её результаты.
+            </p>
+          ) : null}
           <div className="mb-6">
             <PrequelSection
               selectedGame={selectedGame}
@@ -658,6 +671,7 @@ GameTasksEditModal.propTypes = {
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
+  isGameClosed: PropTypes.bool,
   isSaving: PropTypes.bool.isRequired,
   location: PropTypes.oneOfType([
     PropTypes.string,
@@ -703,6 +717,7 @@ GameTasksEditModal.propTypes = {
 
 GameTasksEditModal.defaultProps = {
   selectedGame: null,
+  isGameClosed: false,
   location: null,
   startedGameLockedTaskCount: 0,
   canViewCodePhotos: false,

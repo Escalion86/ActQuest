@@ -3739,6 +3739,11 @@ const GamesPage = ({
 
   const canViewRestrictedGameInfo = canEditSelectedGame
 
+  // Закрытая игра доступна только для просмотра: задания редактировать и
+  // сохранять нельзя, чтобы не искажать результаты завершённой игры.
+  const isSelectedGameClosed = isClosedStatus(selectedGame?.status)
+  const canEditSelectedGameTasks = canEditSelectedGame && !isSelectedGameClosed
+
   const canManageGameStatus = useCallback(
     (game) => {
       if (!game) {
@@ -3792,6 +3797,14 @@ const GamesPage = ({
     [canManageGameStatus],
   )
 
+  // Редактор заданий остаётся доступен и после закрытия игры (в режиме
+  // просмотра): та же аудитория, что у canManageGameStatus, без проверки
+  // статуса. Сохранение закрытой игры по-прежнему запрещено.
+  const canViewGameTasksEditor = useCallback(
+    (game) => canManageGameStatus(game),
+    [canManageGameStatus],
+  )
+
   useEffect(() => {
     const requestedGameId = searchParams?.get('gameId')
     const requestedOpen = String(searchParams?.get('open') || '')
@@ -3807,7 +3820,7 @@ const GamesPage = ({
       return
     }
 
-    if (requestedOpen === 'tasks' && canManageGame(targetGame)) {
+    if (requestedOpen === 'tasks' && canViewGameTasksEditor(targetGame)) {
       setSelectedGameId(targetGame.id)
       const draft = cloneGameDraft(targetGame)
       setEditingGame(draft)
@@ -3835,7 +3848,7 @@ const GamesPage = ({
       ? `${pathname}?${nextQuery.toString()}`
       : pathname
     router.replace(nextUrl, { scroll: false })
-  }, [canManageGame, games, pathname, router, searchParams])
+  }, [canViewGameTasksEditor, games, pathname, router, searchParams])
 
   const canOpenGameEditModal = useCallback(
     (game) => {
@@ -3850,7 +3863,10 @@ const GamesPage = ({
 
   const updateSelectedGame = useCallback(
     (updater) => {
-      if (!canEditSelectedGame || !editingGame) {
+      const canEditActiveDraft = isTasksModalOpen
+        ? canEditSelectedGameTasks
+        : canEditSelectedGame
+      if (!canEditActiveDraft || !editingGame) {
         return
       }
 
@@ -3869,7 +3885,13 @@ const GamesPage = ({
         return result.nextGame
       })
     },
-    [canEditSelectedGame, editingBaselineGame, editingGame],
+    [
+      canEditSelectedGame,
+      canEditSelectedGameTasks,
+      editingBaselineGame,
+      editingGame,
+      isTasksModalOpen,
+    ],
   )
   const isEditingPhotoGame = useMemo(() => {
     const type =
@@ -5326,7 +5348,7 @@ const GamesPage = ({
 
   const handleEditTasksFromList = useCallback(
     (game) => {
-      if (!game || !canManageGame(game)) {
+      if (!game || !canViewGameTasksEditor(game)) {
         return
       }
 
@@ -5341,7 +5363,7 @@ const GamesPage = ({
       setIsEditModalOpen(false)
       setIsTasksModalOpen(true)
     },
-    [canManageGame, prepareGameDraftForModal],
+    [canViewGameTasksEditor, prepareGameDraftForModal],
   )
 
   const handleStartTestRun = useCallback(
@@ -6275,13 +6297,13 @@ const GamesPage = ({
       return
     }
 
-    if (isDirty && canEditSelectedGame) {
+    if (isDirty && canEditSelectedGameTasks) {
       void handleSaveChanges({ keepTasksModalOpen: true })
     } else {
       handleCloseTasksModal()
     }
   }, [
-    canEditSelectedGame,
+    canEditSelectedGameTasks,
     handleCloseTasksModal,
     handleSaveChanges,
     isDirty,
@@ -6511,6 +6533,7 @@ const GamesPage = ({
 
       const canManageThisGame = canManageGame(game)
       const canEditThisGame = canOpenGameEditModal(game)
+      const canViewTasksEditorThisGame = canViewGameTasksEditor(game)
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
       const canManageFinancesThisGame = canManageCabinetGameFinances({
@@ -6914,18 +6937,23 @@ const GamesPage = ({
                             <EditCardIcon />
                           </CardActionIconButton>
                         )}
-                        {canManageThisGame && game.type !== 'story' && (
-                          <CardActionIconButton
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              handleEditTasksFromList(game)
-                            }}
-                            label="Редактор заданий"
-                            title="Открыть редактор заданий"
-                          >
-                            <TargetCardIcon />
-                          </CardActionIconButton>
-                        )}
+                        {(canManageThisGame || canViewTasksEditorThisGame) &&
+                          game.type !== 'story' && (
+                            <CardActionIconButton
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleEditTasksFromList(game)
+                              }}
+                              label="Редактор заданий"
+                              title={
+                                canManageThisGame
+                                  ? 'Открыть редактор заданий'
+                                  : 'Открыть редактор заданий (игра закрыта — только просмотр)'
+                              }
+                            >
+                              <TargetCardIcon />
+                            </CardActionIconButton>
+                          )}
                         {canManageThisGame && game.type === 'story' && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -7075,6 +7103,7 @@ const GamesPage = ({
       location,
       canViewResultsForGame,
       canViewTasksForGame,
+      canViewGameTasksEditor,
       currentUserDbId,
       currentUserIdString,
       getNounTeams,
@@ -7119,6 +7148,7 @@ const GamesPage = ({
 
       const canManageThisGame = canManageGame(game)
       const canEditThisGame = canOpenGameEditModal(game)
+      const canViewTasksEditorThisGame = canViewGameTasksEditor(game)
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
       const canManageFinancesThisGame = canManageCabinetGameFinances({
@@ -7495,18 +7525,23 @@ const GamesPage = ({
                           <EditCardIcon />
                         </CardActionIconButton>
                       )}
-                      {canManageThisGame && game.type !== 'story' && (
-                        <CardActionIconButton
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleEditTasksFromList(game)
-                          }}
-                          label="Редактор заданий"
-                          title="Открыть редактор заданий"
-                        >
-                          <TargetCardIcon />
-                        </CardActionIconButton>
-                      )}
+                      {(canManageThisGame || canViewTasksEditorThisGame) &&
+                        game.type !== 'story' && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleEditTasksFromList(game)
+                            }}
+                            label="Редактор заданий"
+                            title={
+                              canManageThisGame
+                                ? 'Открыть редактор заданий'
+                                : 'Открыть редактор заданий (игра закрыта — только просмотр)'
+                            }
+                          >
+                            <TargetCardIcon />
+                          </CardActionIconButton>
+                        )}
                       {canManageThisGame && game.type === 'story' && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -7652,6 +7687,7 @@ const GamesPage = ({
       location,
       canViewResultsForGame,
       canViewTasksForGame,
+      canViewGameTasksEditor,
       currentUserDbId,
       currentUserIdString,
       getNounTeams,
@@ -8383,6 +8419,8 @@ const GamesPage = ({
                 handleCloseEditModal={handleCloseEditModal}
                 isTasksModalOpen={isTasksModalOpen}
                 handleCloseTasksModal={handleCloseTasksModal}
+                canEditSelectedGameTasks={canEditSelectedGameTasks}
+                isSelectedGameClosed={isSelectedGameClosed}
                 canEditSelectedGame={canEditSelectedGame}
                 isSaving={isSaving}
                 location={selectedGameApiLocation}

@@ -64,6 +64,8 @@ const GameModals = ({
   // Tasks modal
   isTasksModalOpen,
   handleCloseTasksModal,
+  canEditSelectedGameTasks,
+  isSelectedGameClosed,
   handleTasksModalPrimaryAction,
   expandedTaskIds,
   toggleTaskExpansion,
@@ -273,7 +275,8 @@ const GameModals = ({
           selectedGame={gameForEdit}
           isEditModalOpen={isTasksModalOpen}
           handleCloseEditModal={handleCloseTasksModal}
-          canEditSelectedGame={canEditSelectedGame}
+          canEditSelectedGame={canEditSelectedGameTasks}
+          isGameClosed={isSelectedGameClosed}
           isSaving={isSaving}
           location={location}
           isDirty={isDirty}
@@ -568,6 +571,8 @@ GameModals.propTypes = {
   // Tasks modal
   isTasksModalOpen: PropTypes.bool.isRequired,
   handleCloseTasksModal: PropTypes.func.isRequired,
+  canEditSelectedGameTasks: PropTypes.bool.isRequired,
+  isSelectedGameClosed: PropTypes.bool,
   handleTasksModalPrimaryAction: PropTypes.func.isRequired,
   expandedTaskIds: PropTypes.array.isRequired,
   toggleTaskExpansion: PropTypes.func.isRequired,
@@ -782,6 +787,7 @@ GameModals.defaultProps = {
   currentUserId: null,
   currentUserRole: null,
   canViewCodePhotos: false,
+  isSelectedGameClosed: false,
   startedGameLockedTaskCount: 0,
   isCloneSourceGamesLoading: false,
   createGameOrganizerId: '',

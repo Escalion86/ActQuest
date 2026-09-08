@@ -9,6 +9,7 @@ import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import sanitize from '@helpers/sanitize'
+import { resolveClosedGameUpdateViolation } from '@helpers/closedGameUpdateProtection'
 import {
   buildDefaultPrequel,
   hasPrequelAdjustments,
@@ -1030,6 +1031,19 @@ const execute = (request, params) =>
         const prequelResetMeta = updateData._prequelResetMeta || null
         if (Object.prototype.hasOwnProperty.call(updateData, '_prequelResetMeta')) {
           delete updateData._prequelResetMeta
+        }
+
+        if (previousStatus === 'closed') {
+          const closedGameViolation = resolveClosedGameUpdateViolation({
+            updateData,
+            existingGame,
+          })
+          if (closedGameViolation) {
+            return res.status(409).json({
+              success: false,
+              error: `Игра закрыта: ${closedGameViolation} изменять нельзя. Закрытая игра считается завершённой — её задания и игровые настройки не должны меняться, чтобы не искажать результаты.`,
+            })
+          }
         }
 
         let updatedGame = await Games.findByIdAndUpdate(id, updateData, {
