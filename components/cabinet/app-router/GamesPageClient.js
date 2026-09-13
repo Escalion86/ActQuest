@@ -56,6 +56,10 @@ import {
 import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import {
+  buildGameMapHref,
+  buildGamesListReturnHref,
+} from '@helpers/gameMapNavigation'
+import {
   applyGameDraftPatch,
   areGameDraftsEqual,
 } from '@helpers/gameDraftDirtyState'
@@ -645,6 +649,14 @@ const isCurrentUserGameAgent = (game, currentUserId) => {
 
 const isObjectIdLike = (value) =>
   typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
+
+const resolvePersistedGameId = (game) => {
+  const mongoId = typeof game?.mongoId === 'string' ? game.mongoId.trim() : ''
+  if (isObjectIdLike(mongoId)) return mongoId
+
+  const gameId = typeof game?.id === 'string' ? game.id.trim() : ''
+  return isObjectIdLike(gameId) ? gameId : ''
+}
 
 const cloneGameDraft = (game) => {
   if (!game || typeof game !== 'object') {
@@ -1427,6 +1439,15 @@ const GamesPage = ({
   const gamesView = normalizeGamesViewValue(rawViewQuery)
   const isUpcomingView = gamesView === 'upcoming'
   const isPastView = gamesView === 'past'
+  const currentSearchParams = searchParams?.toString() || ''
+  const gamesListReturnHref = useMemo(
+    () =>
+      buildGamesListReturnHref({
+        pathname,
+        searchParams: currentSearchParams,
+      }),
+    [currentSearchParams, pathname],
+  )
   const shouldShowLocationFilter =
     canEditAllGames && (isUpcomingView || isPastView)
   const canFilterCanceledGames = canEditAllGames
@@ -4162,12 +4183,14 @@ const GamesPage = ({
         setIsTasksModalOpen(false)
         setIsFinancesModalOpen(false)
       }
+      return normalizedGame
     } catch (error) {
       console.error('Failed to update game', error)
       setFeedback({
         type: 'error',
         message: error?.message || 'Не удалось сохранить игру',
       })
+      return null
     }
   }, [
     applyPersistedGameUpdate,
@@ -4325,6 +4348,61 @@ const GamesPage = ({
       setEditingBaselineGame,
     ],
   )
+
+  const handleOpenGameMapFromList = useCallback(
+    (game) => {
+      const gameId = resolvePersistedGameId(game)
+      if (!gameId) return
+
+      router.push(
+        buildGameMapHref({
+          gameId,
+          returnTo: gamesListReturnHref,
+        }),
+      )
+    },
+    [gamesListReturnHref, router],
+  )
+
+  const handleOpenGameMapFromTasksEditor = useCallback(async () => {
+    if (!canEditAllGames) return
+
+    let gameToMap = editingGame ?? selectedGame
+    if (!gameToMap || !hasTaskCoordinates(gameToMap)) return
+
+    if (canEditSelectedGameTasks && isDirty) {
+      gameToMap = await handleSaveChanges({ keepTasksModalOpen: true })
+      if (!gameToMap) return
+    }
+
+    const gameId = resolvePersistedGameId(gameToMap)
+    if (!gameId) {
+      setFeedback({
+        type: 'error',
+        message: 'Сначала сохраните игру, чтобы открыть карту.',
+      })
+      return
+    }
+
+    const returnTo = buildGamesListReturnHref({
+      pathname,
+      searchParams: currentSearchParams,
+      gameId,
+      reopenTasks: true,
+    })
+    router.push(buildGameMapHref({ gameId, returnTo }))
+  }, [
+    canEditAllGames,
+    canEditSelectedGameTasks,
+    currentSearchParams,
+    editingGame,
+    handleSaveChanges,
+    isDirty,
+    pathname,
+    router,
+    selectedGame,
+    setFeedback,
+  ])
 
   const handleAddPrice = useCallback(() => {
     if (!canEditSelectedGame) return
@@ -6972,9 +7050,7 @@ const GamesPage = ({
                           <CardActionIconButton
                             onClick={(event) => {
                               event.stopPropagation()
-                              router.push(
-                                `/cabinet/admin/game-map/${encodeURIComponent(game.id)}`,
-                              )
+                              handleOpenGameMapFromList(game)
                             }}
                             label="Карта заданий"
                             title="Показать задания на карте"
@@ -7110,6 +7186,7 @@ const GamesPage = ({
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
+      handleOpenGameMapFromList,
       handleStartTestRun,
       handleOpenFinancesModal,
       handleOpenGameHistoryModal,
@@ -7560,9 +7637,7 @@ const GamesPage = ({
                         <CardActionIconButton
                           onClick={(event) => {
                             event.stopPropagation()
-                            router.push(
-                              `/cabinet/admin/game-map/${encodeURIComponent(game.id)}`,
-                            )
+                            handleOpenGameMapFromList(game)
                           }}
                           label="Карта заданий"
                           title="Показать задания на карте"
@@ -7694,6 +7769,7 @@ const GamesPage = ({
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
+      handleOpenGameMapFromList,
       handleStartTestRun,
       handleOpenFinancesModal,
       handleOpenGameHistoryModal,
@@ -8630,6 +8706,11 @@ const GamesPage = ({
                 )}
                 handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
                 handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
+                canViewGameMap={
+                  canEditAllGames &&
+                  hasTaskCoordinates(editingGame ?? selectedGame)
+                }
+                handleOpenGameMap={handleOpenGameMapFromTasksEditor}
                 taskDurationLabel={taskDurationLabel}
                 cluesDurationLabel={cluesDurationLabel}
                 clueModeDetails={clueModeDetails}

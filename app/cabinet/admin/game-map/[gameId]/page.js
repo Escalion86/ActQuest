@@ -3,6 +3,11 @@ import { notFound, redirect } from 'next/navigation'
 
 import GameMapPageClient from '@components/cabinet/app-router/GameMapPageClient'
 import isUserAdmin from '@helpers/isUserAdmin'
+import {
+  buildGameMapHref,
+  resolveGameMapReturnHref,
+  resolveGamesListPathByStatus,
+} from '@helpers/gameMapNavigation'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
@@ -31,9 +36,18 @@ const isValidLongitude = (value) =>
   Number(value) >= -180 &&
   Number(value) <= 180
 
-export default async function AdminGameMapPage({ params }) {
-  const { gameId } = await params
-  const callbackUrl = `/cabinet/admin/game-map/${encodeURIComponent(gameId)}`
+export default async function AdminGameMapPage({ params, searchParams }) {
+  const [{ gameId }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ])
+  const requestedReturnTo = resolvedSearchParams?.returnTo
+  const callbackUrl = requestedReturnTo
+    ? buildGameMapHref({
+        gameId,
+        returnTo: requestedReturnTo,
+      })
+    : `/cabinet/admin/game-map/${encodeURIComponent(gameId)}`
   const session = await getServerSession(authOptions)
 
   if (!session?.user) {
@@ -52,7 +66,13 @@ export default async function AdminGameMapPage({ params }) {
     game = await db
       .model('Games')
       .findById(gameId)
-      .select({ name: 1, location: 1, tasks: 1, taskDistributionMode: 1 })
+      .select({
+        name: 1,
+        location: 1,
+        status: 1,
+        tasks: 1,
+        taskDistributionMode: 1,
+      })
       .lean()
   } catch (error) {
     if (error?.name !== 'CastError') throw error
@@ -85,6 +105,10 @@ export default async function AdminGameMapPage({ params }) {
   if (tasks.length === 0) notFound()
 
   const fallbackCenter = LOCATION_CENTERS[game.location] || LOCATION_CENTERS.krsk
+  const backHref = resolveGameMapReturnHref(
+    requestedReturnTo,
+    resolveGamesListPathByStatus(game.status),
+  )
   const center = tasks.length
     ? [
         tasks.reduce((sum, task) => sum + task.latitude, 0) / tasks.length,
@@ -94,6 +118,7 @@ export default async function AdminGameMapPage({ params }) {
 
   return (
     <GameMapPageClient
+      backHref={backHref}
       game={{
         id: String(game._id),
         name: typeof game.name === 'string' ? game.name : 'Без названия',

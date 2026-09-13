@@ -97,6 +97,8 @@ const GameModals = ({
   handleBonusCodeChange,
   handleRemoveBonusCode,
   handleSaveAndOpenTaskPreview,
+  canViewGameMap,
+  handleOpenGameMap,
 
   // Finances modal
   isFinancesModalOpen,
@@ -315,6 +317,8 @@ const GameModals = ({
           canViewCodePhotos={canViewCodePhotos}
           updateSelectedGame={updateSelectedGame}
           handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
+          canViewGameMap={canViewGameMap}
+          handleOpenGameMap={handleOpenGameMap}
         />
       ) : null}
 
@@ -604,6 +608,8 @@ GameModals.propTypes = {
   handleBonusCodeChange: PropTypes.func.isRequired,
   handleRemoveBonusCode: PropTypes.func.isRequired,
   handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
+  canViewGameMap: PropTypes.bool,
+  handleOpenGameMap: PropTypes.func,
 
   // Finances modal
   isFinancesModalOpen: PropTypes.bool.isRequired,
@@ -787,6 +793,8 @@ GameModals.defaultProps = {
   currentUserId: null,
   currentUserRole: null,
   canViewCodePhotos: false,
+  canViewGameMap: false,
+  handleOpenGameMap: undefined,
   isSelectedGameClosed: false,
   startedGameLockedTaskCount: 0,
   isCloneSourceGamesLoading: false,

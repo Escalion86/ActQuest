@@ -54,6 +54,8 @@ const GameTasksEditModal = ({
   updateSelectedGame,
   canViewCodePhotos,
   handleSaveAndOpenTaskPreview,
+  canViewGameMap,
+  handleOpenGameMap,
 }) => {
   const [expandedCodeAccordions, setExpandedCodeAccordions] = useState(
     () => new Set(),
@@ -409,6 +411,16 @@ const GameTasksEditModal = ({
 
   const modalFooter = (
     <>
+      {canViewGameMap ? (
+        <CabinetButton
+          onClick={handleOpenGameMap}
+          disabled={isSaving}
+          variant="secondary"
+          tone="cyan"
+        >
+          Посмотреть карту
+        </CabinetButton>
+      ) : null}
       <CabinetButton
         onClick={handleTasksModalPrimaryAction}
         disabled={isSaving || (isDirty && (!canEditSelectedGame || !location))}
@@ -721,6 +733,8 @@ GameTasksEditModal.propTypes = {
   updateSelectedGame: PropTypes.func.isRequired,
   canViewCodePhotos: PropTypes.bool,
   handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
+  canViewGameMap: PropTypes.bool,
+  handleOpenGameMap: PropTypes.func,
 }
 
 GameTasksEditModal.defaultProps = {
@@ -729,6 +743,8 @@ GameTasksEditModal.defaultProps = {
   location: null,
   startedGameLockedTaskCount: 0,
   canViewCodePhotos: false,
+  canViewGameMap: false,
+  handleOpenGameMap: undefined,
 }
 
 export default memo(GameTasksEditModal)

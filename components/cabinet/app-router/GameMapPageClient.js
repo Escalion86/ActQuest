@@ -108,7 +108,7 @@ const getTotalDistanceKm = (tasks) =>
     return totalDistance + getDistanceKm(tasks[index - 1], task)
   }, 0)
 
-export default function GameMapPageClient({ game }) {
+export default function GameMapPageClient({ game, backHref }) {
   const containerRef = useRef(null)
   const [loadError, setLoadError] = useState('')
   const totalDistanceLabel =
@@ -254,7 +254,7 @@ export default function GameMapPageClient({ game }) {
           </div>
         </div>
         <Link
-          href="/cabinet/games"
+          href={backHref}
           className="rounded-lg border border-cyan-400/50 px-3 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/10"
         >
           Вернуться к играм
@@ -275,6 +275,7 @@ export default function GameMapPageClient({ game }) {
 }
 
 GameMapPageClient.propTypes = {
+  backHref: PropTypes.string.isRequired,
   game: PropTypes.shape({
     id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
