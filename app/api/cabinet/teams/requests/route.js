@@ -4,12 +4,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@server/auth/authOptions";
 import dbConnectGlobal from "@utils/dbConnectGlobal";
 import { toStringId } from "@helpers/idAndDate";
-import { getCaptainRoleQuery } from "@helpers/teamRoles";
+import {
+  getCaptainRoleQuery,
+  TEAM_ROLE_PARTICIPANT,
+} from "@helpers/teamRoles";
 import { canJoinTeamForRole } from "@helpers/teamBanAccess";
 import {
   countRegularTeamMemberships,
   hasReachedRegularTeamLimit,
 } from "@helpers/teamMembershipLimit";
+import {
+  TEAM_JOIN_POLICY_CLOSED,
+  TEAM_JOIN_POLICY_OPEN,
+  normalizeTeamJoinPolicy,
+} from "@helpers/teamJoinPolicy";
 
 const resolveUserId = (session) =>
   toStringId(
@@ -209,7 +217,7 @@ export async function POST(request) {
     const [team, membershipsCount, existingMembership, existingRequest] =
       await Promise.all([
         TeamsModel.findById(teamId)
-          .select({ _id: 1, name: 1, open: 1, kind: 1 })
+          .select({ _id: 1, name: 1, joinPolicy: 1, kind: 1 })
           .lean(),
         countRegularTeamMemberships({ TeamsModel, TeamsUsersModel, userId }),
         TeamsUsersModel.findOne({ teamId, userId }).select({ _id: 1 }).lean(),
@@ -224,6 +232,12 @@ export async function POST(request) {
         { status: 404 },
       );
     }
+    if (existingMembership?._id) {
+      return NextResponse.json(
+        { success: false, error: "Вы уже состоите в этой команде" },
+        { status: 409 },
+      );
+    }
     if (hasReachedRegularTeamLimit(membershipsCount)) {
       return NextResponse.json(
         {
@@ -234,18 +248,49 @@ export async function POST(request) {
         { status: 409 },
       );
     }
-    if (existingMembership?._id) {
+
+    const joinPolicy = normalizeTeamJoinPolicy(team.joinPolicy);
+    if (joinPolicy === TEAM_JOIN_POLICY_CLOSED) {
       return NextResponse.json(
-        { success: false, error: "Вы уже состоите в этой команде" },
-        { status: 409 },
-      );
-    }
-    if (team.open !== true) {
-      return NextResponse.json(
-        { success: false, error: "Команда закрыта для заявок" },
+        { success: false, error: "Команда закрыта для вступления" },
         { status: 403 },
       );
     }
+
+    if (joinPolicy === TEAM_JOIN_POLICY_OPEN) {
+      const membership = await TeamsUsersModel.create({
+        teamId,
+        userId,
+        role: TEAM_ROLE_PARTICIPANT,
+      });
+
+      if (existingRequest?._id) {
+        await TeamJoinRequestsModel.updateOne(
+          { _id: existingRequest._id },
+          {
+            $set: {
+              status: "accepted",
+              processedAt: new Date(),
+              processedByUserId: userId,
+            },
+          },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            id: toStringId(membership?._id),
+            teamId,
+            teamName: team.name || "Без названия",
+            status: "accepted",
+          },
+        },
+        { status: 201 },
+      );
+    }
+
     if (existingRequest?.status === "pending") {
       return NextResponse.json(
         { success: false, error: "Ваша заявка уже ожидает решения капитана" },
@@ -286,7 +331,10 @@ export async function POST(request) {
   } catch (error) {
     if (error?.code === 11000) {
       return NextResponse.json(
-        { success: false, error: "Ваша заявка уже ожидает решения капитана" },
+        {
+          success: false,
+          error: "Вы уже состоите в команде или ваша заявка уже ожидает решения капитана",
+        },
         { status: 409 },
       );
     }

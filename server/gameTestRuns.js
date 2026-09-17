@@ -72,6 +72,7 @@ export const buildTestTeamFromRun = (run) => ({
   description: 'Изолированный тестовый прогон администратора',
   location: run?.gameSnapshot?.location || null,
   open: false,
+  joinPolicy: 'closed',
   runtimeMode: 'test',
 })
 

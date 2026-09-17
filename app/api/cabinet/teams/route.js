@@ -13,6 +13,10 @@ import {
   countRegularTeamMemberships,
   hasReachedRegularTeamLimit,
 } from '@helpers/teamMembershipLimit'
+import {
+  normalizeTeamJoinPolicy,
+  teamCanBeJoinedById,
+} from '@helpers/teamJoinPolicy'
 
 const collectTeamIds = (searchParams) => {
   const rawIds = []
@@ -125,7 +129,8 @@ export async function POST(request) {
       ? payload.description.trim().slice(0, 2000)
       : ''
   const image = typeof payload?.image === 'string' ? payload.image : null
-  const open = typeof payload?.open === 'boolean' ? payload.open : false
+  const joinPolicy = normalizeTeamJoinPolicy(payload?.joinPolicy)
+  const open = teamCanBeJoinedById(joinPolicy)
   const allowedLocations = resolveAllowedLocations()
   const sessionLocation = normalizeLocation(session.user?.location)
   const location = allowedLocations.includes(sessionLocation)
@@ -200,6 +205,7 @@ export async function POST(request) {
       description,
       image,
       open,
+      joinPolicy,
       location,
     })
 
@@ -229,6 +235,7 @@ export async function POST(request) {
       teamName: createdTeamName,
       metadata: {
         open: Boolean(createdTeam?.open ?? open),
+        joinPolicy: normalizeTeamJoinPolicy(createdTeam?.joinPolicy),
       },
     })
 
@@ -242,6 +249,7 @@ export async function POST(request) {
           description: createdTeam?.description ?? description,
           image: createdTeam?.image ?? image,
           open: Boolean(createdTeam?.open ?? open),
+          joinPolicy: normalizeTeamJoinPolicy(createdTeam?.joinPolicy),
           location:
             typeof createdTeam?.location === 'string'
               ? createdTeam.location

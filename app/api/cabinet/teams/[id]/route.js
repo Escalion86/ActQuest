@@ -6,6 +6,10 @@ import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { getCaptainRoleQuery } from '@helpers/teamRoles'
+import {
+  normalizeTeamJoinPolicy,
+  teamCanBeJoinedById,
+} from '@helpers/teamJoinPolicy'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -61,6 +65,7 @@ export async function GET(request, { params }) {
         description: 1,
         image: 1,
         open: 1,
+        joinPolicy: 1,
         location: 1,
         updatedAt: 1,
       })
@@ -73,7 +78,18 @@ export async function GET(request, { params }) {
       )
     }
 
-    return NextResponse.json({ success: true, data: team }, { status: 200 })
+    const joinPolicy = normalizeTeamJoinPolicy(team.joinPolicy)
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          ...team,
+          joinPolicy,
+          open: teamCanBeJoinedById(joinPolicy),
+        },
+      },
+      { status: 200 },
+    )
   } catch (error) {
     console.error('Failed to load team from cabinet (app)', error)
     return NextResponse.json(
@@ -118,7 +134,10 @@ export async function PUT(request, { params }) {
       ? payload.description.trim().slice(0, 2000)
       : ''
   const image = typeof payload?.image === 'string' ? payload.image : null
-  const open = typeof payload?.open === 'boolean' ? payload.open : false
+  const requestedJoinPolicy =
+    typeof payload?.joinPolicy === 'string'
+      ? normalizeTeamJoinPolicy(payload.joinPolicy)
+      : null
   const rawLocation =
     typeof payload?.location === 'string' ? payload.location : ''
   const normalizedLocation = normalizeLocation(rawLocation)
@@ -151,7 +170,7 @@ export async function PUT(request, { params }) {
     const TeamsUsersModel = db.model('TeamsUsers')
 
     const team = await TeamsModel.findById(teamId)
-      .select({ _id: 1, kind: 1 })
+      .select({ _id: 1, kind: 1, joinPolicy: 1 })
       .lean()
     if (!team?._id) {
       return NextResponse.json(
@@ -165,6 +184,10 @@ export async function PUT(request, { params }) {
         { status: 403 },
       )
     }
+
+    const joinPolicy =
+      requestedJoinPolicy ?? normalizeTeamJoinPolicy(team.joinPolicy)
+    const open = teamCanBeJoinedById(joinPolicy)
 
     if (!isElevatedRole(userRole)) {
       if (!userId) {
@@ -199,6 +222,7 @@ export async function PUT(request, { params }) {
           description,
           image,
           open,
+          joinPolicy,
           ...(shouldUpdateLocation ? { location: normalizedLocation } : {}),
         },
       },
@@ -211,6 +235,7 @@ export async function PUT(request, { params }) {
         description: 1,
         image: 1,
         open: 1,
+        joinPolicy: 1,
         location: 1,
         updatedAt: 1,
       })

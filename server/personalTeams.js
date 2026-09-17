@@ -42,6 +42,7 @@ export const findOrCreatePersonalTeam = async ({ db, user, location }) => {
       name: displayName,
       name_lowered: displayName.toLowerCase(),
       open: false,
+      joinPolicy: 'closed',
       systemManaged: true,
     },
     $setOnInsert: {

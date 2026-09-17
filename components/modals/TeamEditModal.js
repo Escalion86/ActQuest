@@ -11,7 +11,6 @@ import ModalSection from '@components/modals/ModalSection'
 import ModalSectionTitle from '@components/modals/ModalSectionTitle'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import UserSelectField from '@components/cabinet/UserSelectField'
-import NeonCheckbox from '@components/NeonCheckbox'
 import ClassicCar from '@components/cars/ClassicCar'
 import SportCar from '@components/cars/SportCar'
 import SuvCar from '@components/cars/SuvCar'
@@ -289,17 +288,28 @@ const TeamEditModal = ({
             Доступность команды
           </ModalSectionTitle>
           <div className="mt-3">
-            <NeonCheckbox
-              id="team-open"
-              checked={Boolean(selectedTeam.open)}
+            <CabinetSelectField
+              id="team-join-policy"
+              label="Режим вступления"
+              value={selectedTeam.joinPolicy || 'open'}
               onChange={(event) =>
-                onTeamFieldChange('open', event.target.checked)
+                onTeamFieldChange('joinPolicy', event.target.value)
               }
-              label="Открыть команду для заявок"
-              labelClassName="text-sm text-slate-600 dark:text-slate-300"
-            />
+              labelClassName={fieldLabelClassName}
+              selectClassName={fieldInputClassName}
+            >
+              <option value="open">
+                Открытая — вступление без подтверждения
+              </option>
+              <option value="request">
+                По заявке — подтверждает капитан
+              </option>
+              <option value="closed">
+                Закрытая — вступление запрещено
+              </option>
+            </CabinetSelectField>
           </div>
-          {selectedTeam.open ? (
+          {selectedTeam.joinPolicy !== 'closed' ? (
             <button
               type="button"
               onClick={onCopyTeamId}
@@ -313,17 +323,18 @@ const TeamEditModal = ({
           ) : null}
         </ModalSection>
 
-        <ModalSection>
-          <div className="flex items-center justify-between gap-3">
-            <ModalSectionTitle as="h2" className={sectionTitleClassName}>
-              Заявки на вступление
-            </ModalSectionTitle>
-            {safeJoinRequests.length > 0 ? (
-              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
-                {safeJoinRequests.length}
-              </span>
-            ) : null}
-          </div>
+        {selectedTeam.joinPolicy === 'request' || safeJoinRequests.length > 0 ? (
+          <ModalSection>
+            <div className="flex items-center justify-between gap-3">
+              <ModalSectionTitle as="h2" className={sectionTitleClassName}>
+                Заявки на вступление
+              </ModalSectionTitle>
+              {safeJoinRequests.length > 0 ? (
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                  {safeJoinRequests.length}
+                </span>
+              ) : null}
+            </div>
 
           {joinRequestsError ? (
             <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">
@@ -390,7 +401,8 @@ const TeamEditModal = ({
               Новых заявок пока нет.
             </p>
           )}
-        </ModalSection>
+          </ModalSection>
+        ) : null}
 
         <ModalSection>
           <div className="flex items-center justify-between">
@@ -568,6 +580,7 @@ TeamEditModal.propTypes = {
     description: PropTypes.string,
     image: PropTypes.string,
     open: PropTypes.bool,
+    joinPolicy: PropTypes.oneOf(['open', 'request', 'closed']),
     location: PropTypes.string,
     carSkin: PropTypes.string,
     captain: PropTypes.shape({

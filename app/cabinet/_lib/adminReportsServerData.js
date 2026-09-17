@@ -1,5 +1,6 @@
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
+import { teamCanBeJoinedById } from '@helpers/teamJoinPolicy'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const createEmptyReports = () => ({
@@ -63,7 +64,9 @@ export const loadCabinetAppAdminReports = async ({ location }) => {
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000
   const monthAgo = now - 30 * 24 * 60 * 60 * 1000
 
-  const openTeamsCount = teamsDocs.filter((team) => Boolean(team?.open)).length
+  const openTeamsCount = teamsDocs.filter((team) =>
+    teamCanBeJoinedById(team?.joinPolicy),
+  ).length
 
   const summary = {
     totalUsers: usersDocs.length,

@@ -25,6 +25,10 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import requestApiJson from '@helpers/requestApiJson'
 import useMergedSession from '@helpers/useMergedSession'
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
+import {
+  getTeamJoinPolicyLabel,
+  normalizeTeamJoinPolicy,
+} from '@helpers/teamJoinPolicy'
 import { LOCATIONS } from '@server/serverConstants'
 
 const TEAMS_PAGE_SIZE = 10
@@ -42,7 +46,7 @@ const serializeTeamForComparison = (team) => {
     name: team.name ?? '',
     description: team.description ?? '',
     image: team.image ?? '',
-    open: Boolean(team.open),
+    joinPolicy: normalizeTeamJoinPolicy(team.joinPolicy),
     carSkin: normalizeTeamCarSkin(team.carSkin),
     location: team.location ?? '',
   })
@@ -56,7 +60,7 @@ const buildTeamUpdatePayload = (team) => {
     name_lowered: name.toLowerCase(),
     description: team.description ?? '',
     image: team.image ?? null,
-    open: Boolean(team.open),
+    joinPolicy: normalizeTeamJoinPolicy(team.joinPolicy),
     carSkin: normalizeTeamCarSkin(team.carSkin),
     location: team.location ?? '',
   }
@@ -147,7 +151,12 @@ const saveAdminTeam = async (team) => {
     ...team,
     name: json.data?.name ?? team.name,
     description: json.data?.description ?? team.description,
-    open: Boolean(json.data?.open ?? team.open),
+    joinPolicy: normalizeTeamJoinPolicy(
+      json.data?.joinPolicy ?? team.joinPolicy,
+    ),
+    open: json.data?.joinPolicy
+      ? json.data.joinPolicy !== 'closed'
+      : team.open,
     updatedAt: json.data?.updatedAt
       ? new Date(json.data.updatedAt).toISOString()
       : team.updatedAt,
@@ -907,7 +916,7 @@ const AdminTeamsPage = ({
         gamesCount: Number(team.gamesCount) || 0,
         membersLabel: getNounUsers(team.membersCount ?? 0),
         ratingBadge: resolveRatingBadge(team.rating),
-        open: Boolean(team.open),
+        joinPolicy: normalizeTeamJoinPolicy(team.joinPolicy),
       }
     })
   }, [teams])
@@ -982,6 +991,7 @@ const AdminTeamsPage = ({
             >
               <option value="all">Все команды</option>
               <option value="open">Открытые</option>
+              <option value="request">По заявке</option>
               <option value="closed">Закрытые</option>
             </CabinetSelectField>
 
@@ -1044,13 +1054,15 @@ const AdminTeamsPage = ({
                           ) : null}
                           <span
                             className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-xs font-medium ${
-                              team.open
+                              team.joinPolicy === 'open'
                                 ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-                                : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                                : team.joinPolicy === 'request'
+                                  ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200'
+                                  : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                             }`}
-                            title={team.open ? 'Открыта' : 'Закрыта'}
+                            title={getTeamJoinPolicyLabel(team.joinPolicy)}
                           >
-                            {team.open ? 'Открыта' : 'Закрыта'}
+                            {getTeamJoinPolicyLabel(team.joinPolicy)}
                           </span>
                           {canManageSelectedTeam ? (
                             <CardActionIconButton
@@ -1165,6 +1177,7 @@ AdminTeamsPage.propTypes = {
       description: PropTypes.string,
       image: PropTypes.string,
       open: PropTypes.bool,
+      joinPolicy: PropTypes.oneOf(['open', 'request', 'closed']),
       location: PropTypes.string,
       carSkin: PropTypes.string,
       members: PropTypes.arrayOf(teamMemberShape),

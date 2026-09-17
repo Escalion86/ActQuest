@@ -17,6 +17,10 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 import requestApiJson from '@helpers/requestApiJson'
+import {
+  getTeamJoinPolicyLabel,
+  normalizeTeamJoinPolicy,
+} from '@helpers/teamJoinPolicy'
 import resolveEntityRating from '@helpers/resolveEntityRating'
 import { resolveGameEntryHref } from '@helpers/resolveGameEntryHref'
 import useMergedSession from '@helpers/useMergedSession'
@@ -547,13 +551,15 @@ const CabinetDashboard = ({
                             ) : null}
                             <span
                               className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                                team.open
+                                normalizeTeamJoinPolicy(team.joinPolicy) === 'open'
                                   ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-                                  : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                                  : normalizeTeamJoinPolicy(team.joinPolicy) === 'request'
+                                    ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200'
+                                    : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                               }`}
-                              title={team.open ? 'Открыта' : 'Закрыта'}
+                              title={getTeamJoinPolicyLabel(team.joinPolicy)}
                             >
-                              {team.open ? 'Открыта' : 'Закрыта'}
+                              {getTeamJoinPolicyLabel(team.joinPolicy)}
                             </span>
                           </div>
                           <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
@@ -1033,6 +1039,7 @@ CabinetDashboard.propTypes = {
         isCaptain: PropTypes.bool,
         description: PropTypes.string,
         open: PropTypes.bool,
+        joinPolicy: PropTypes.oneOf(['open', 'request', 'closed']),
         rating: PropTypes.shape({
           isEligible: PropTypes.bool,
           rank: PropTypes.number,

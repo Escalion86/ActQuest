@@ -13,6 +13,10 @@ import NoticeBanner from '@components/NoticeBanner'
 import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import requestApiJson from '@helpers/requestApiJson'
 import {
+  getTeamJoinPolicyLabel,
+  normalizeTeamJoinPolicy,
+} from '@helpers/teamJoinPolicy'
+import {
   formatTaskDistributionTemplate,
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionTemplate,
@@ -914,8 +918,8 @@ const GameTeamsModal = ({
       name: String(details?.name || team?.teamName || '').trim(),
       description: String(details?.description || team?.teamDescription || ''),
       image: String(details?.image || team?.teamImage || ''),
-      open: Boolean(
-        typeof details?.open === 'boolean' ? details.open : team?.open,
+      joinPolicy: normalizeTeamJoinPolicy(
+        details?.joinPolicy ?? team?.joinPolicy,
       ),
       location: String(details?.location || ''),
     }
@@ -969,7 +973,7 @@ const GameTeamsModal = ({
               name: String(teamToEdit.name || '').trim(),
               description: String(teamToEdit.description || ''),
               image: String(teamToEdit.image || ''),
-              open: Boolean(teamToEdit.open),
+              joinPolicy: normalizeTeamJoinPolicy(teamToEdit.joinPolicy),
               location: String(teamToEdit.location || '').trim(),
             },
           }),
@@ -1004,7 +1008,7 @@ const GameTeamsModal = ({
       name: team?.teamName || 'Без названия',
       description: team?.teamDescription || '',
       image: team?.teamImage || '',
-      open: Boolean(team?.open),
+      joinPolicy: normalizeTeamJoinPolicy(team?.joinPolicy),
       membersCount,
       gamesCount: 0,
       captain: null,
@@ -1022,10 +1026,9 @@ const GameTeamsModal = ({
           description:
             team.teamDetails.description || fallbackTeamDetails.description,
           image: team.teamDetails.image || fallbackTeamDetails.image,
-          open:
-            typeof team.teamDetails.open === 'boolean'
-              ? team.teamDetails.open
-              : fallbackTeamDetails.open,
+          joinPolicy: normalizeTeamJoinPolicy(
+            team.teamDetails.joinPolicy ?? fallbackTeamDetails.joinPolicy,
+          ),
           membersCount: Number.isFinite(team.teamDetails.membersCount)
             ? team.teamDetails.membersCount
             : fallbackTeamDetails.membersCount,
@@ -1173,13 +1176,15 @@ const GameTeamsModal = ({
                                   ) : null}
                                   <span
                                     className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium ${
-                                      team.open
+                                      team.joinPolicy === 'open'
                                         ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-                                        : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                                        : team.joinPolicy === 'request'
+                                          ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200'
+                                          : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                                     }`}
-                                    title={team.open ? 'Открыта' : 'Закрыта'}
+                                    title={getTeamJoinPolicyLabel(team.joinPolicy)}
                                   >
-                                    {team.open ? 'Открыта' : 'Закрыта'}
+                                    {getTeamJoinPolicyLabel(team.joinPolicy)}
                                   </span>
                                   {canEditRegisteredTeams && team.paidGame ? (
                                     <span
@@ -1819,17 +1824,19 @@ const GameTeamsModal = ({
               />
             </div>
           </div>
-          <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-            <input
-              type="checkbox"
-              checked={Boolean(teamToEdit?.open)}
-              onChange={(event) =>
-                handleTeamEditFieldChange('open', event.target.checked)
-              }
-              className="w-4 h-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-600"
-            />
-            Команда открыта для вступления
-          </label>
+          <CabinetSelectField
+            id="game-team-edit-join-policy"
+            label="Вступление в команду"
+            value={teamToEdit?.joinPolicy || 'open'}
+            onChange={(event) =>
+              handleTeamEditFieldChange('joinPolicy', event.target.value)
+            }
+            selectClassName="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70"
+          >
+            <option value="open">Открытая — без подтверждения</option>
+            <option value="request">По заявке — подтверждает капитан</option>
+            <option value="closed">Закрытая — вступление запрещено</option>
+          </CabinetSelectField>
         </div>
       </Modal>
       <Modal
@@ -2244,6 +2251,7 @@ const teamShape = PropTypes.shape({
   teamKind: PropTypes.oneOf(['regular', 'personal']),
   teamId: PropTypes.string,
   open: PropTypes.bool,
+  joinPolicy: PropTypes.oneOf(['open', 'request', 'closed']),
   outOfCompetition: PropTypes.bool,
   paidGame: PropTypes.bool,
   totalPaid: PropTypes.number,

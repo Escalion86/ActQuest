@@ -19,6 +19,10 @@ import useSnackbar from '@helpers/useSnackbar'
 import useMergedSession from '@helpers/useMergedSession'
 import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
 import { MAX_REGULAR_TEAMS_PER_USER } from '@helpers/teamMembershipLimit'
+import {
+  getTeamJoinPolicyLabel,
+  normalizeTeamJoinPolicy,
+} from '@helpers/teamJoinPolicy'
 import { LOCATIONS } from '@server/serverConstants'
 
 const MAX_TEAMS_PER_USER = MAX_REGULAR_TEAMS_PER_USER
@@ -40,7 +44,7 @@ const serializeTeamForComparison = (team) => {
     name: team.name ?? '',
     description: team.description ?? '',
     image: team.image ?? '',
-    open: Boolean(team.open),
+    joinPolicy: normalizeTeamJoinPolicy(team.joinPolicy),
     location: team.location ?? '',
   })
 }
@@ -53,7 +57,7 @@ const buildTeamUpdatePayload = (team) => {
     name_lowered: name.toLowerCase(),
     description: team.description ?? '',
     image: team.image ?? null,
-    open: Boolean(team.open),
+    joinPolicy: normalizeTeamJoinPolicy(team.joinPolicy),
     location: team.location ?? '',
   }
 }
@@ -91,7 +95,7 @@ const TeamsPage = ({
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamDescription, setNewTeamDescription] = useState('')
   const [newTeamImage, setNewTeamImage] = useState('')
-  const [newTeamOpen, setNewTeamOpen] = useState(false)
+  const [newTeamJoinPolicy, setNewTeamJoinPolicy] = useState('open')
   const [joinTeamId, setJoinTeamId] = useState('')
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
@@ -378,12 +382,12 @@ const TeamsPage = ({
   }, [])
 
   const createTeamMutation = useMutation({
-    mutationFn: async ({ name, description, image, open }) => {
+    mutationFn: async ({ name, description, image, joinPolicy }) => {
       const createPayload = buildTeamUpdatePayload({
         name,
         description,
         image: image || null,
-        open: Boolean(open),
+        joinPolicy,
       })
 
       const { json } = await requestApiJson(CABINET_TEAMS_API_BASE, {
@@ -418,7 +422,7 @@ const TeamsPage = ({
       setNewTeamName('')
       setNewTeamDescription('')
       setNewTeamImage('')
-      setNewTeamOpen(false)
+      setNewTeamJoinPolicy('open')
       snackbar.success(
         `Команда «${team.name || fallbackName}» создана. Вы назначены капитаном.`,
       )
@@ -437,13 +441,24 @@ const TeamsPage = ({
         body: JSON.stringify({ teamId }),
         fallbackMessage: 'Не удалось отправить заявку',
       })
-      return json?.data ?? { teamId, teamName: 'Без названия' }
+      const result = json?.data ?? { teamId, teamName: 'Без названия' }
+      if (result.status !== 'accepted') {
+        return { ...result, team: null }
+      }
+
+      const [freshTeam] = await fetchTeamsSnapshot([teamId])
+      return { ...result, team: freshTeam ?? null }
     },
-    onSuccess: (joinRequest) => {
+    onSuccess: (joinResult) => {
+      if (joinResult.team) {
+        upsertPersistedTeam(joinResult.team)
+      }
       setIsJoinModalOpen(false)
       setJoinTeamId('')
       snackbar.success(
-        `Заявка в команду «${joinRequest.teamName || 'без названия'}» отправлена капитану.`,
+        joinResult.status === 'accepted'
+          ? `Вы вступили в команду «${joinResult.teamName || 'без названия'}».`
+          : `Заявка в команду «${joinResult.teamName || 'без названия'}» отправлена капитану.`,
       )
     },
     onError: (error) => {
@@ -508,7 +523,12 @@ const TeamsPage = ({
         ...team,
         name: json.data?.name ?? team.name,
         description: json.data?.description ?? team.description,
-        open: Boolean(json.data?.open ?? team.open),
+        joinPolicy: normalizeTeamJoinPolicy(
+          json.data?.joinPolicy ?? team.joinPolicy,
+        ),
+        open: json.data?.joinPolicy
+          ? json.data.joinPolicy !== 'closed'
+          : team.open,
         updatedAt: json.data?.updatedAt
           ? new Date(json.data.updatedAt).toISOString()
           : team.updatedAt,
@@ -854,7 +874,7 @@ const TeamsPage = ({
     setNewTeamName('')
     setNewTeamDescription('')
     setNewTeamImage('')
-    setNewTeamOpen(false)
+    setNewTeamJoinPolicy('open')
   }, [isCreatingTeam])
 
   const handleOpenJoinModal = useCallback(() => {
@@ -977,7 +997,7 @@ const TeamsPage = ({
       name: trimmedName,
       description: trimmedDescription,
       image: newTeamImage,
-      open: newTeamOpen,
+      joinPolicy: newTeamJoinPolicy,
     })
   }, [
     canUseSelfServiceTeamsActions,
@@ -987,7 +1007,7 @@ const TeamsPage = ({
     newTeamDescription,
     newTeamImage,
     newTeamName,
-    newTeamOpen,
+    newTeamJoinPolicy,
     snackbar,
   ])
 
@@ -1199,7 +1219,7 @@ const TeamsPage = ({
         membersCount: getNounUsers(team.membersCount ?? 0),
         gamesCount: team.gamesCount ?? 0,
         ratingBadge: resolveRatingBadge(team.rating),
-        open: Boolean(team.open),
+        joinPolicy: normalizeTeamJoinPolicy(team.joinPolicy),
         canManage: canManageTeam,
         isCaptain: isCaptainForCurrentUser,
       }
@@ -1385,7 +1405,7 @@ const TeamsPage = ({
                     : 'border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
                 }`}
               >
-                Подать заявку по ID
+                Вступить по ID
               </button>
             </div>
             {isTeamsLimitReached && (
@@ -1439,14 +1459,29 @@ const TeamsPage = ({
                             )}
                             <span
                               className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-xs font-medium ${
-                                team.open
+                                team.joinPolicy === 'open'
                                   ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-                                  : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                                  : team.joinPolicy === 'request'
+                                    ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200'
+                                    : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                               }`}
-                              title={team.open ? 'Открыта' : 'Закрыта'}
+                              title={getTeamJoinPolicyLabel(team.joinPolicy)}
                             >
-                              {team.open ? 'Открыта' : 'Закрыта'}
+                              {getTeamJoinPolicyLabel(team.joinPolicy)}
                             </span>
+                            {team.canManage && team.joinPolicy === 'request' ? (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleEditTeamFromList(team.id)
+                                }}
+                                className="cursor-pointer rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
+                                title="Открыть заявки на вступление"
+                              >
+                                Заявки
+                              </button>
+                            ) : null}
                             {team.canManage && (
                               <button
                                 type="button"
@@ -1548,8 +1583,8 @@ const TeamsPage = ({
           onChangeNewTeamDescription={setNewTeamDescription}
           newTeamImage={newTeamImage}
           onChangeNewTeamImage={setNewTeamImage}
-          newTeamOpen={newTeamOpen}
-          onChangeNewTeamOpen={setNewTeamOpen}
+          newTeamJoinPolicy={newTeamJoinPolicy}
+          onChangeNewTeamJoinPolicy={setNewTeamJoinPolicy}
           onCreateTeam={handleCreateTeam}
         />
         <TeamJoinModal
@@ -1612,6 +1647,7 @@ TeamsPage.propTypes = {
       description: PropTypes.string,
       image: PropTypes.string,
       open: PropTypes.bool,
+      joinPolicy: PropTypes.oneOf(['open', 'request', 'closed']),
       location: PropTypes.string,
       members: PropTypes.arrayOf(teamMemberShape),
       membersCount: PropTypes.number,

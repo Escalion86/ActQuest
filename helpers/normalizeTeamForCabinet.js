@@ -7,6 +7,10 @@ import {
   isLiaisonRole,
   normalizeTeamRoleForWrite,
 } from '@helpers/teamRoles'
+import {
+  normalizeTeamJoinPolicy,
+  teamCanBeJoinedById,
+} from '@helpers/teamJoinPolicy'
 
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -149,6 +153,7 @@ const normalizeTeamForCabinet = ({ team, members, games, location = null }) => {
   const captain = normalizedMembers.find((member) => member.isCaptain) ?? null
   const liaison =
     normalizedMembers.find((member) => member.isLiaison) ?? captain
+  const joinPolicy = normalizeTeamJoinPolicy(team?.joinPolicy)
 
   return {
     id,
@@ -158,7 +163,8 @@ const normalizeTeamForCabinet = ({ team, members, games, location = null }) => {
     name: ensureString(team?.name, ''),
     description: ensureString(team?.description, ''),
     image: ensureString(team?.image, ''),
-    open: ensureBoolean(team?.open, true),
+    joinPolicy,
+    open: teamCanBeJoinedById(joinPolicy),
     location: ensureString(team?.location, ''),
     carSkin: normalizeTeamCarSkin(team?.carSkin),
     members: normalizedMembers,

@@ -17,7 +17,7 @@ const TeamJoinModal = ({
 }) => (
   <Modal
     isOpen={isOpen}
-    title="Подать заявку в команду"
+    title="Вступить в команду"
     onClose={onClose}
     footer={(
       <>
@@ -35,14 +35,14 @@ const TeamJoinModal = ({
           disabled={isJoinActionDisabled}
           className="aq-modal-btn aq-modal-btn-primary"
         >
-          {isJoiningTeam ? 'Отправка…' : 'Подать заявку'}
+          {isJoiningTeam ? 'Проверяем…' : 'Продолжить'}
         </button>
       </>
     )}
   >
     <fieldset disabled={isJoiningTeam} className="m-0 space-y-5 border-0 p-0">
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        Введите идентификатор открытой команды. Капитан увидит заявку и решит, принять ли вас в состав.
+        Введите идентификатор команды. В открытую команду вы вступите сразу, а для команды «По заявке» запрос подтвердит капитан.
       </p>
       <CabinetInputField
         id="join-team-id"
@@ -54,7 +54,7 @@ const TeamJoinModal = ({
       />
       {!canUseSelfServiceTeams ? (
         <NoticeBanner tone="warning" variant="neon">
-          Заполните профиль, чтобы подавать заявки в команды.
+          Заполните профиль, чтобы вступать в команды.
         </NoticeBanner>
       ) : null}
     </fieldset>

@@ -5067,6 +5067,7 @@ const GamesPage = ({
             teamImage: teamInfo?.image || '',
             teamKind: teamInfo?.kind === 'personal' ? 'personal' : 'regular',
             open: Boolean(teamInfo?.open),
+            joinPolicy: teamInfo?.joinPolicy || 'open',
             updatedAt: teamInfo?.updatedAt || null,
             membersCount,
             rating: teamInfo?.rating ?? null,

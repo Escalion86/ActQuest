@@ -33,6 +33,10 @@ import {
   validateTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
 import { getGameRegistrationError } from '@helpers/gameRegistration'
+import {
+  normalizeTeamJoinPolicy,
+  teamCanBeJoinedById,
+} from '@helpers/teamJoinPolicy'
 
 const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
 
@@ -1729,7 +1733,13 @@ export async function PATCH(request, { params }) {
           ? update.description.trim().slice(0, 2000)
           : ''
       const image = typeof update?.image === 'string' ? update.image : null
-      const open = typeof update?.open === 'boolean' ? update.open : undefined
+      const shouldUpdateJoinPolicy = typeof update?.joinPolicy === 'string'
+      const joinPolicy = shouldUpdateJoinPolicy
+        ? normalizeTeamJoinPolicy(update.joinPolicy)
+        : null
+      const open = shouldUpdateJoinPolicy
+        ? teamCanBeJoinedById(joinPolicy)
+        : null
       const rawLocation =
         typeof update?.location === 'string' ? update.location : ''
       const normalizedLocation = normalizeLocation(rawLocation)
@@ -1760,7 +1770,7 @@ export async function PATCH(request, { params }) {
             name_lowered: name.toLowerCase(),
             description,
             image,
-            ...(typeof open === 'boolean' ? { open } : {}),
+            ...(shouldUpdateJoinPolicy ? { open, joinPolicy } : {}),
             ...(shouldUpdateLocation ? { location: normalizedLocation } : {}),
           },
         },
@@ -1773,6 +1783,7 @@ export async function PATCH(request, { params }) {
           description: 1,
           image: 1,
           open: 1,
+          joinPolicy: 1,
           location: 1,
           updatedAt: 1,
         })

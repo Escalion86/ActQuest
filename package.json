@@ -39,7 +39,9 @@
     "migrate:escalioncloud-urls": "node scripts/migrateEscalionCloudUrls.js",
     "migrate:escalioncloud-urls:apply": "node scripts/migrateEscalionCloudUrls.js --apply",
     "migrate:multiple-prequels": "node scripts/migrateMultiplePrequels.js",
-    "migrate:multiple-prequels:apply": "node scripts/migrateMultiplePrequels.js --apply"
+    "migrate:multiple-prequels:apply": "node scripts/migrateMultiplePrequels.js --apply",
+    "migrate:team-join-policy": "node scripts/migrateTeamJoinPolicy.js",
+    "migrate:team-join-policy:apply": "node scripts/migrateTeamJoinPolicy.js --apply"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",

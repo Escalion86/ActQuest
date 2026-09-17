@@ -20,7 +20,11 @@ const normalizeVisibilityFilter = (value) => {
   }
 
   const normalized = value.trim().toLowerCase()
-  if (normalized === 'open' || normalized === 'closed') {
+  if (
+    normalized === 'open' ||
+    normalized === 'request' ||
+    normalized === 'closed'
+  ) {
     return normalized
   }
 
@@ -157,9 +161,17 @@ const fetchTeamsForCabinet = async ({
     : null
   const visibilityDbFilter =
     normalizedVisibilityFilter === 'open'
-      ? { open: true }
+      ? {
+          $or: [
+            { joinPolicy: 'open' },
+            { joinPolicy: { $exists: false } },
+            { joinPolicy: null },
+          ],
+        }
+      : normalizedVisibilityFilter === 'request'
+        ? { joinPolicy: 'request' }
       : normalizedVisibilityFilter === 'closed'
-        ? { open: false }
+        ? { joinPolicy: 'closed' }
         : null
   const locationDbFilter =
     normalizedTeamLocation && normalizedTeamLocation !== 'all'

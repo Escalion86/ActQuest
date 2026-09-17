@@ -37,8 +37,14 @@
 - `name`, `name_lowered` (для поиска), `description`, `image`
 - `kind`: `regular` или системная `personal`; для `personal` заполнены
   `ownerUserId` и `systemManaged`
-- `open` (открыта для заявок; для новой команды по умолчанию `false`),
-  `location`, `carSkin`
+- `joinPolicy`: `open` (мгновенное вступление), `request` (после решения
+  капитана), `closed` (вступление запрещено). Значение по умолчанию — `open`;
+  старые команды без поля также считаются открытыми. Поле `open` сохраняется
+  как совместимое производное значение, `location`, `carSkin`
+- Для переноса старых закрытых команд используется
+  `npm run migrate:team-join-policy` (предпросмотр), затем
+  `npm run migrate:team-join-policy:apply`: всем командам с `open: false`
+  устанавливается `joinPolicy: closed`.
 - Рейтинг: `rating`, `ratingsByLocation`
 - Статистика: `gameStats`
 
@@ -61,8 +67,8 @@
   (`pending|accepted|rejected`)
 - Решение капитана: `processedByUserId`, `processedAt`
 - Игрок может состоять не более чем в трёх обычных командах; системные
-  персональные команды в лимит не входят. Ограничение проверяется при подаче и
-  принятии заявки.
+  персональные команды в лимит не входят. Ограничение проверяется при прямом
+  вступлении, подаче и принятии заявки.
 
 **GamesTeams** (`gamesTeamsSchema.js`)
 - Регистрация команды на игру: `gameId`, `teamId`, `outOfCompetition`

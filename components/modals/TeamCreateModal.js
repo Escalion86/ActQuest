@@ -4,9 +4,9 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ImagesInput from '@components/cabinet/ImagesInput'
-import NeonCheckbox from '@components/NeonCheckbox'
 
 const TeamCreateModal = ({
   isOpen,
@@ -19,8 +19,8 @@ const TeamCreateModal = ({
   onChangeNewTeamDescription,
   newTeamImage,
   onChangeNewTeamImage,
-  newTeamOpen,
-  onChangeNewTeamOpen,
+  newTeamJoinPolicy,
+  onChangeNewTeamJoinPolicy,
   onCreateTeam,
 }) => (
   <Modal
@@ -77,16 +77,17 @@ const TeamCreateModal = ({
         disabled={isCreatingTeam}
         previewShape="circle"
       />
-      <NeonCheckbox
-        id="new-team-open"
-        checked={newTeamOpen}
-        onChange={(event) => onChangeNewTeamOpen(event.target.checked)}
-        className="items-start"
-        label="Открыть команду для заявок"
-        labelClassName="text-sm font-semibold text-slate-700 dark:text-slate-100"
-        description="Новые команды закрыты по умолчанию. Если открыть набор, игроки смогут отправлять капитану заявки по ID команды."
-        descriptionClassName="text-xs text-slate-500 dark:text-slate-300"
-      />
+      <CabinetSelectField
+        id="new-team-join-policy"
+        label="Вступление в команду"
+        value={newTeamJoinPolicy}
+        onChange={(event) => onChangeNewTeamJoinPolicy(event.target.value)}
+        selectClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
+      >
+        <option value="open">Открытая — вступление без подтверждения</option>
+        <option value="request">По заявке — подтверждает капитан</option>
+        <option value="closed">Закрытая — вступление запрещено</option>
+      </CabinetSelectField>
     </fieldset>
   </Modal>
 )
@@ -102,8 +103,8 @@ TeamCreateModal.propTypes = {
   onChangeNewTeamDescription: PropTypes.func.isRequired,
   newTeamImage: PropTypes.string.isRequired,
   onChangeNewTeamImage: PropTypes.func.isRequired,
-  newTeamOpen: PropTypes.bool.isRequired,
-  onChangeNewTeamOpen: PropTypes.func.isRequired,
+  newTeamJoinPolicy: PropTypes.oneOf(['open', 'request', 'closed']).isRequired,
+  onChangeNewTeamJoinPolicy: PropTypes.func.isRequired,
   onCreateTeam: PropTypes.func.isRequired,
 }
 

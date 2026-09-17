@@ -1,5 +1,6 @@
 import { TEAM_CAR_SKIN_VALUES } from '@helpers/teamCarSkins'
 import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+import { TEAM_JOIN_POLICY_VALUES } from '@helpers/teamJoinPolicy'
 
 const teamsSchema = {
   kind: {
@@ -39,7 +40,12 @@ const teamsSchema = {
   },
   open: {
     type: Boolean,
-    default: false,
+    default: true,
+  },
+  joinPolicy: {
+    type: String,
+    enum: TEAM_JOIN_POLICY_VALUES,
+    default: 'open',
   },
   location: {
     type: String,

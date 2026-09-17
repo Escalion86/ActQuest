@@ -15,6 +15,10 @@ import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import { canOpenRestrictedTeamGamePreview } from '@helpers/cabinetGameVisibility'
 import isUserAdmin from '@helpers/isUserAdmin'
+import {
+  getTeamJoinPolicyLabel,
+  normalizeTeamJoinPolicy,
+} from '@helpers/teamJoinPolicy'
 import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
@@ -69,6 +73,7 @@ const TeamDescriptionModal = ({
   const [ratingDetailsError, setRatingDetailsError] = useState('')
   const selectedTeamId =
     typeof selectedTeam?.id === 'string' ? selectedTeam.id : ''
+  const joinPolicy = normalizeTeamJoinPolicy(selectedTeam?.joinPolicy)
   const selectedGamePreviewId =
     typeof selectedGamePreviewSource?.id === 'string'
       ? selectedGamePreviewSource.id
@@ -241,14 +246,14 @@ const TeamDescriptionModal = ({
                   </p>
                   <span
                     className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                      selectedTeam.open
+                      joinPolicy === 'open'
                         ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-                        : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                        : joinPolicy === 'request'
+                          ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200'
+                          : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                     }`}
                   >
-                    {selectedTeam.open
-                      ? 'Открыта для заявок'
-                      : 'Закрыта для заявок'}
+                    {getTeamJoinPolicyLabel(joinPolicy)}
                   </span>
                 </div>
               </div>
@@ -338,14 +343,14 @@ const TeamDescriptionModal = ({
                   <dd className="mt-1">
                     <span
                       className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                        selectedTeam.open
+                        joinPolicy === 'open'
                           ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-                          : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
+                          : joinPolicy === 'request'
+                            ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200'
+                            : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200'
                       }`}
                     >
-                    {selectedTeam.open
-                      ? 'Открыта для заявок'
-                      : 'Закрыта для заявок'}
+                    {getTeamJoinPolicyLabel(joinPolicy)}
                     </span>
                   </dd>
                 </div>
@@ -569,6 +574,7 @@ TeamDescriptionModal.propTypes = {
     description: PropTypes.string,
     image: PropTypes.string,
     open: PropTypes.bool,
+    joinPolicy: PropTypes.oneOf(['open', 'request', 'closed']),
     location: PropTypes.string,
     membersCount: PropTypes.number,
     gamesCount: PropTypes.number,
