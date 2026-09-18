@@ -5,6 +5,10 @@ import {
 } from '@helpers/cabinetGameVisibility'
 import { buildGameTasksStats } from '@helpers/gameTaskCounts'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
+import {
+  REGISTERED_TEAMS_VISIBILITY,
+  normalizeRegisteredTeamsVisibility,
+} from '@helpers/registeredTeamsVisibility'
 import { toStringId } from '@helpers/idAndDate'
 import { isCaptainRole } from '@helpers/teamRoles'
 import {
@@ -280,6 +284,7 @@ const fetchGamesForCabinet = async ({
       showTasksCountInGame: 1,
       hideResult: 1,
       registrationOpen: 1,
+      registeredTeamsVisibility: 1,
       allowJoinAfterStart: 1,
       recordsVisibility: 1,
       recordsShowNames: 1,
@@ -653,7 +658,7 @@ const fetchGamesForCabinet = async ({
       : null
 
     // Для finished/closed — из result.teams, для остальных — из GamesTeams
-    const teamsCount =
+    const actualTeamsCount =
       gameStatus === 'finished' || gameStatus === 'closed'
         ? Array.isArray(game?.result?.teams)
           ? game.result.teams.length
@@ -661,6 +666,14 @@ const fetchGamesForCabinet = async ({
         : gameId
           ? teamsCountByGameId[gameId] || 0
           : 0
+    const registeredTeamsVisibility = normalizeRegisteredTeamsVisibility(
+      game?.registeredTeamsVisibility,
+    )
+    const teamsCount =
+      canViewRestrictedGameInfo ||
+      registeredTeamsVisibility !== REGISTERED_TEAMS_VISIBILITY.HIDDEN
+        ? actualTeamsCount
+        : 0
 
     return normalizeGameForCabinet({
       ...sanitizeCabinetGameForViewer(game, {

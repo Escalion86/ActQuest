@@ -43,6 +43,10 @@ import {
   validateTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
 import requestApiJson from '@helpers/requestApiJson'
+import {
+  REGISTERED_TEAMS_VISIBILITY,
+  normalizeRegisteredTeamsVisibility,
+} from '@helpers/registeredTeamsVisibility'
 import { resolveGameEntryHrefFromGame } from '@helpers/resolveGameEntryHref'
 import {
   getDuplicateCodeKindsLabel,
@@ -1075,6 +1079,9 @@ const buildUpdatePayload = (game) => {
     showTasksCountInGame: Boolean(game.showTasksCountInGame),
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
+    registeredTeamsVisibility: normalizeRegisteredTeamsVisibility(
+      game.registeredTeamsVisibility,
+    ),
     allowJoinAfterStart: Boolean(game.allowJoinAfterStart),
     recordsVisibility: ['participants', 'public'].includes(
       game.recordsVisibility,
@@ -2948,6 +2955,7 @@ const GamesPage = ({
         showTasks: false,
         showTasksAudience: 'all',
         showTasksCountInGame: false,
+        registeredTeamsVisibility: REGISTERED_TEAMS_VISIBILITY.LIST,
         hideResult: false,
         registrationOpen: true,
         allowJoinAfterStart: false,
@@ -3138,6 +3146,10 @@ const GamesPage = ({
           baseDraft.showTasksCountInGame = Boolean(
             normalizedSource.showTasksCountInGame,
           )
+          baseDraft.registeredTeamsVisibility =
+            normalizeRegisteredTeamsVisibility(
+              normalizedSource.registeredTeamsVisibility,
+            )
           baseDraft.hideResult = Boolean(normalizedSource.hideResult)
           baseDraft.registrationOpen = Boolean(
             normalizedSource.registrationOpen ?? true,
@@ -6611,6 +6623,7 @@ const GamesPage = ({
           : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
+      const canAccessRegisteredTeams = canManageGameStatus(game)
       const canEditThisGame = canOpenGameEditModal(game)
       const canViewTasksEditorThisGame = canViewGameTasksEditor(game)
       const canManageStatusThisGame =
@@ -6636,8 +6649,17 @@ const GamesPage = ({
         : 'inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24'
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
+      const registeredTeamsVisibility = normalizeRegisteredTeamsVisibility(
+        game?.registeredTeamsVisibility,
+      )
+      const canShowRegisteredTeamsCount =
+        canAccessRegisteredTeams ||
+        registeredTeamsVisibility !== REGISTERED_TEAMS_VISIBILITY.HIDDEN
       const canViewGameTeams =
-        typeof game?.status === 'string' && game.status !== 'canceled'
+        typeof game?.status === 'string' &&
+        game.status !== 'canceled' &&
+        (canAccessRegisteredTeams ||
+          registeredTeamsVisibility === REGISTERED_TEAMS_VISIBILITY.LIST)
       const canOpenAgentPanel = isCurrentUserGameAgent(
         game,
         currentUserIdString,
@@ -6823,11 +6845,13 @@ const GamesPage = ({
                           : startDateLabel}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {game?.participationMode === 'player'
-                        ? getNounPlayers(game.teamsCount)
-                        : getNounTeams(game.teamsCount)}
-                    </p>
+                    {canShowRegisteredTeamsCount ? (
+                      <p className="mt-1 text-xs text-slate-400">
+                        {game?.participationMode === 'player'
+                          ? getNounPlayers(game.teamsCount)
+                          : getNounTeams(game.teamsCount)}
+                      </p>
+                    ) : null}
                     {hasParticipation && (
                       <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">
                         {participationSummary}
@@ -7225,6 +7249,7 @@ const GamesPage = ({
           : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
+      const canAccessRegisteredTeams = canManageGameStatus(game)
       const canEditThisGame = canOpenGameEditModal(game)
       const canViewTasksEditorThisGame = canViewGameTasksEditor(game)
       const canManageStatusThisGame =
@@ -7250,8 +7275,17 @@ const GamesPage = ({
         : 'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22'
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
+      const registeredTeamsVisibility = normalizeRegisteredTeamsVisibility(
+        game?.registeredTeamsVisibility,
+      )
+      const canShowRegisteredTeamsCount =
+        canAccessRegisteredTeams ||
+        registeredTeamsVisibility !== REGISTERED_TEAMS_VISIBILITY.HIDDEN
       const canViewGameTeams =
-        typeof game?.status === 'string' && game.status !== 'canceled'
+        typeof game?.status === 'string' &&
+        game.status !== 'canceled' &&
+        (canAccessRegisteredTeams ||
+          registeredTeamsVisibility === REGISTERED_TEAMS_VISIBILITY.LIST)
       const canOpenAgentPanel = isCurrentUserGameAgent(
         game,
         currentUserIdString,
@@ -7411,11 +7445,13 @@ const GamesPage = ({
                   ? `Факт. старт: ${startDateLabel}`
                   : startDateLabel}
               </p>
-              <p className="text-xs text-slate-400">
-                {game?.participationMode === 'player'
-                  ? getNounPlayers(game.teamsCount)
-                  : getNounTeams(game.teamsCount)}
-              </p>
+              {canShowRegisteredTeamsCount ? (
+                <p className="text-xs text-slate-400">
+                  {game?.participationMode === 'player'
+                    ? getNounPlayers(game.teamsCount)
+                    : getNounTeams(game.teamsCount)}
+                </p>
+              ) : null}
               {hasParticipation && (
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300">
                   {participationSummary}
@@ -8936,6 +8972,7 @@ GamesPage.propTypes = {
       showTasks: PropTypes.bool,
       showTasksAudience: PropTypes.oneOf(['all', 'participants']),
       showTasksCountInGame: PropTypes.bool,
+      registeredTeamsVisibility: PropTypes.oneOf(['list', 'count', 'hidden']),
       hideResult: PropTypes.bool,
       registrationOpen: PropTypes.bool,
       allowJoinAfterStart: PropTypes.bool,

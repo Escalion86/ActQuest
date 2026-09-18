@@ -999,6 +999,11 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  registeredTeamsVisibility: {
+    type: String,
+    enum: ['list', 'count', 'hidden'],
+    default: 'list',
+  },
   allowJoinAfterStart: {
     type: Boolean,
     default: false,

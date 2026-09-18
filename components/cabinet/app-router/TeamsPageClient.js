@@ -30,7 +30,11 @@ const CABINET_TEAMS_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAMS_ENTITY_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAM_MEMBERS_API_BASE = '/api/cabinet/teams/members'
 const CABINET_TEAM_REQUESTS_API_BASE = '/api/cabinet/teams/requests'
+const CABINET_TEAM_REQUESTS_COUNT_API =
+  '/api/cabinet/teams/requests/pending-count'
+const TEAM_JOIN_REQUESTS_CHANGED_EVENT = 'aq:team-join-requests-changed'
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/
+const EMPTY_JOIN_REQUEST_COUNTS = Object.freeze({})
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
@@ -267,6 +271,24 @@ const TeamsPage = ({
   const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
   const canUseSelfServiceTeamsActions =
     canUseSelfServiceTeams && !isTeamsLimitReached
+  const joinRequestCountsQuery = useQuery({
+    queryKey: ['team-join-request-counts'],
+    queryFn: async () => {
+      const { json } = await requestApiJson(CABINET_TEAM_REQUESTS_COUNT_API, {
+        fallbackMessage: 'Не удалось загрузить количество заявок',
+      })
+      return json?.data && typeof json.data === 'object'
+        ? json.data
+        : { count: 0, byTeam: {} }
+    },
+    enabled: Boolean(currentUserId),
+    refetchInterval: 60 * 1000,
+  })
+  const pendingJoinRequestsByTeam =
+    joinRequestCountsQuery.data?.byTeam &&
+    typeof joinRequestCountsQuery.data.byTeam === 'object'
+      ? joinRequestCountsQuery.data.byTeam
+      : EMPTY_JOIN_REQUEST_COUNTS
   const joinRequestsQuery = useQuery({
     queryKey: ['team-join-requests', selectedTeamId],
     queryFn: async () => {
@@ -504,6 +526,10 @@ const TeamsPage = ({
     onSettled: () => {
       setJoinRequestActionId(null)
       joinRequestsQuery.refetch()
+      joinRequestCountsQuery.refetch()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(TEAM_JOIN_REQUESTS_CHANGED_EVENT))
+      }
     },
   })
 
@@ -1220,11 +1246,13 @@ const TeamsPage = ({
         gamesCount: team.gamesCount ?? 0,
         ratingBadge: resolveRatingBadge(team.rating),
         joinPolicy: normalizeTeamJoinPolicy(team.joinPolicy),
+        pendingJoinRequestsCount:
+          Number(pendingJoinRequestsByTeam[team.id]) || 0,
         canManage: canManageTeam,
         isCaptain: isCaptainForCurrentUser,
       }
     })
-  }, [currentUserId, isAdmin, visibleTeams])
+  }, [currentUserId, isAdmin, pendingJoinRequestsByTeam, visibleTeams])
 
   const handleTeamCardClick = useCallback((team) => {
     if (!team) {
@@ -1469,7 +1497,8 @@ const TeamsPage = ({
                             >
                               {getTeamJoinPolicyLabel(team.joinPolicy)}
                             </span>
-                            {team.canManage && team.joinPolicy === 'request' ? (
+                            {team.canManage &&
+                            team.pendingJoinRequestsCount > 0 ? (
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -1477,9 +1506,9 @@ const TeamsPage = ({
                                   handleEditTeamFromList(team.id)
                                 }}
                                 className="cursor-pointer rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
-                                title="Открыть заявки на вступление"
+                                title={`${team.pendingJoinRequestsCount} заявок на вступление`}
                               >
-                                Заявки
+                                Заявки: {team.pendingJoinRequestsCount}
                               </button>
                             ) : null}
                             {team.canManage && (

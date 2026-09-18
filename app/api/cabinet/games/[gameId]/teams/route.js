@@ -37,6 +37,7 @@ import {
   normalizeTeamJoinPolicy,
   teamCanBeJoinedById,
 } from '@helpers/teamJoinPolicy'
+import { REGISTERED_TEAMS_VISIBILITY } from '@helpers/registeredTeamsVisibility'
 
 const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
 
@@ -372,7 +373,10 @@ const hasGameManageAccess = ({ identity, game }) => {
       return toStringId(moderator) === identity.userId
     }
 
-    return toStringId(moderator?.id ?? moderator?._id) === identity.userId
+    return (
+      toStringId(moderator?.id ?? moderator?._id ?? moderator) ===
+      identity.userId
+    )
   })
 }
 
@@ -879,6 +883,7 @@ export async function GET(request, { params }) {
   }
 
   try {
+    const session = await getServerSession(authOptions)
     const db = await dbConnectGlobal()
 
     if (!db) {
@@ -889,12 +894,32 @@ export async function GET(request, { params }) {
     const game = await findGameByAnyId(GamesModel, normalizedGameId, {
       _id: 1,
       location: 1,
+      creatorUserId: 1,
+      creatorTelegramId: 1,
+      moderators: 1,
+      registeredTeamsVisibility: 1,
     })
 
     if (!game) {
       return NextResponse.json(
         { success: false, error: 'Игра не найдена' },
         { status: 404 },
+      )
+    }
+
+    const canManageRequestedGame = hasGameManageAccess({
+      identity: resolveSessionIdentity(session),
+      game,
+    })
+    const canViewRegisteredTeams =
+      canManageRequestedGame ||
+      game.registeredTeamsVisibility === REGISTERED_TEAMS_VISIBILITY.LIST ||
+      !game.registeredTeamsVisibility
+
+    if (!canViewRegisteredTeams) {
+      return NextResponse.json(
+        { success: false, error: 'Список записавшихся команд скрыт' },
+        { status: 403 },
       )
     }
 
@@ -929,7 +954,7 @@ export async function GET(request, { params }) {
       : []
     const gameTeamIds = entries.map((entry) => entry.id).filter(Boolean)
     const TransactionsModel = db.model('Transactions')
-    const paymentTotals = gameTeamIds.length
+    const paymentTotals = canManageRequestedGame && gameTeamIds.length
       ? await TransactionsModel.aggregate([
           {
             $match: {
@@ -979,20 +1004,45 @@ export async function GET(request, { params }) {
         })
       : []
 
-    const allTeams = await fetchTeamsForCabinet({
-      db,
-      location: gameLocation,
-      limit: 500,
-      offset: 0,
-    })
+    const allTeams = canManageRequestedGame
+      ? await fetchTeamsForCabinet({
+          db,
+          location: gameLocation,
+          limit: 500,
+          offset: 0,
+        })
+      : []
+
+    const visibleEntries = canManageRequestedGame
+      ? entriesWithPaymentTotals
+      : entriesWithPaymentTotals.map((entry) => ({
+          id: entry.id,
+          teamId: entry.teamId,
+          outOfCompetition: Boolean(entry.outOfCompetition),
+        }))
+    const visibleTeams = canManageRequestedGame
+      ? teams
+      : teams.map((team) => ({
+          id: team.id,
+          name: team.name,
+          description: team.description,
+          image: team.image,
+          kind: team.kind,
+          open: team.open,
+          joinPolicy: team.joinPolicy,
+          membersCount: team.membersCount,
+          rating: team.rating,
+          updatedAt: team.updatedAt,
+        }))
 
     return NextResponse.json(
       {
         success: true,
         data: {
-          entries: entriesWithPaymentTotals,
-          teams,
-          allTeams: Array.isArray(allTeams) ? allTeams : [],
+          entries: visibleEntries,
+          teams: visibleTeams,
+          allTeams:
+            canManageRequestedGame && Array.isArray(allTeams) ? allTeams : [],
         },
       },
       { status: 200 },

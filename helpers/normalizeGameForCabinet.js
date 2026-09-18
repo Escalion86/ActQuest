@@ -10,6 +10,7 @@ import {
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionMode,
 } from './taskDistribution.js'
+import { normalizeRegisteredTeamsVisibility } from './registeredTeamsVisibility.js'
 
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -690,6 +691,9 @@ const normalizeGameForCabinet = (game) => {
     showTasksCountInGame: ensureBoolean(game.showTasksCountInGame, false),
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),
+    registeredTeamsVisibility: normalizeRegisteredTeamsVisibility(
+      game.registeredTeamsVisibility,
+    ),
     allowJoinAfterStart: ensureBoolean(game.allowJoinAfterStart, false),
     recordsVisibility: ['participants', 'public'].includes(
       game.recordsVisibility,

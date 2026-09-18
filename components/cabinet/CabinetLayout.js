@@ -276,9 +276,13 @@ const UNPROCESSED_GAME_ORDERS_COUNT_API =
   '/api/cabinet/admin/game-orders/unprocessed-count'
 const PENDING_GAME_REVIEWS_COUNT_API =
   '/api/cabinet/admin/game-reviews/pending-count'
+const PENDING_TEAM_JOIN_REQUESTS_COUNT_API =
+  '/api/cabinet/teams/requests/pending-count'
 const GAME_ORDERS_CHANGED_EVENT = 'aq:admin-game-orders-changed'
 const GAME_REVIEWS_CHANGED_EVENT = 'aq:admin-game-reviews-changed'
+const TEAM_JOIN_REQUESTS_CHANGED_EVENT = 'aq:team-join-requests-changed'
 const ADMIN_BADGES_REFRESH_MS = 60 * 1000
+const TEAM_BADGE_REFRESH_MS = 60 * 1000
 const THEME_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 const clientSessionDebugLog = (stage, payload = null) => {
   if (!isClientSessionDebugEnabled || typeof window === 'undefined') {
@@ -382,6 +386,8 @@ const CabinetLayout = ({
   const [unprocessedGameOrdersCount, setUnprocessedGameOrdersCount] =
     useState(0)
   const [pendingGameReviewsCount, setPendingGameReviewsCount] = useState(0)
+  const [pendingTeamJoinRequestsCount, setPendingTeamJoinRequestsCount] =
+    useState(0)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
   const [forcedLocationKey, setForcedLocationKey] = useState('')
@@ -721,6 +727,56 @@ const CabinetLayout = ({
       window.removeEventListener(GAME_REVIEWS_CHANGED_EVENT, handleRefresh)
     }
   }, [isAdmin, status])
+
+  useEffect(() => {
+    if (status !== 'authenticated') {
+      setPendingTeamJoinRequestsCount(0)
+      return undefined
+    }
+
+    const controller = new AbortController()
+
+    const loadCount = async () => {
+      try {
+        const response = await fetch(PENDING_TEAM_JOIN_REQUESTS_COUNT_API, {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => null)
+        if (response.ok && payload?.success !== false) {
+          const nextCount = Number(payload?.data?.count)
+          setPendingTeamJoinRequestsCount(
+            Number.isFinite(nextCount) ? Math.max(0, nextCount) : 0,
+          )
+        }
+      } catch (error) {
+        if (error?.name !== 'AbortError') {
+          console.error('Failed to load team join request badge count', error)
+        }
+      }
+    }
+
+    const handleRefresh = () => void loadCount()
+    const refreshInterval = window.setInterval(
+      handleRefresh,
+      TEAM_BADGE_REFRESH_MS,
+    )
+
+    void loadCount()
+    window.addEventListener('focus', handleRefresh)
+    window.addEventListener(TEAM_JOIN_REQUESTS_CHANGED_EVENT, handleRefresh)
+
+    return () => {
+      controller.abort()
+      window.clearInterval(refreshInterval)
+      window.removeEventListener('focus', handleRefresh)
+      window.removeEventListener(
+        TEAM_JOIN_REQUESTS_CHANGED_EVENT,
+        handleRefresh,
+      )
+    }
+  }, [status])
 
   useEffect(() => {
     if (authRedirectTimeoutRef.current) {
@@ -1333,6 +1389,16 @@ const CabinetLayout = ({
                     >
                       {item.label}
                     </span>
+                    {item.id === 'teams' &&
+                    pendingTeamJoinRequestsCount > 0 ? (
+                      <span
+                        className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-amber-500/40 ring-2 ring-amber-300/40 transition-opacity duration-150`}
+                        aria-label={`${pendingTeamJoinRequestsCount} заявок на вступление в команды`}
+                        title={`${pendingTeamJoinRequestsCount} заявок на вступление в ваши команды`}
+                      >
+                        {formatMenuBadgeCount(pendingTeamJoinRequestsCount)}
+                      </span>
+                    ) : null}
                   </Link>
                 )
               })}

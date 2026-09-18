@@ -11,6 +11,10 @@ import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import ModalSection from '@components/modals/ModalSection'
+import {
+  REGISTERED_TEAMS_VISIBILITY,
+  normalizeRegisteredTeamsVisibility,
+} from '@helpers/registeredTeamsVisibility'
 
 import GameBasicInfoSection from './sections/GameBasicInfoSection'
 import GameModeratorsSection from './sections/GameModeratorsSection'
@@ -92,6 +96,63 @@ const GameEditModal = ({
   const isStoryGame = selectedGame?.type === 'story'
   const showTasksAudience =
     selectedGame?.showTasksAudience === 'participants' ? 'participants' : 'all'
+  const registeredTeamsVisibility = normalizeRegisteredTeamsVisibility(
+    selectedGame?.registeredTeamsVisibility,
+  )
+  const renderRegisteredTeamsVisibility = (idPrefix) => {
+    const options = [
+      {
+        value: REGISTERED_TEAMS_VISIBILITY.LIST,
+        label: 'Показывать вместе со списком',
+      },
+      {
+        value: REGISTERED_TEAMS_VISIBILITY.COUNT,
+        label: 'Показывать только количество',
+      },
+      {
+        value: REGISTERED_TEAMS_VISIBILITY.HIDDEN,
+        label: 'Не показывать',
+      },
+    ]
+
+    return (
+      <div className="md:col-span-2">
+        <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-white">
+          Показывать записавшиеся команды
+        </p>
+        <div
+          className="grid gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900/70 sm:grid-cols-3"
+          role="radiogroup"
+          aria-label="Показывать записавшиеся команды"
+        >
+          {options.map((option) => {
+            const isSelected = registeredTeamsVisibility === option.value
+            return (
+              <button
+                key={option.value}
+                id={`${idPrefix}-${option.value}`}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() =>
+                  updateSelectedGame({
+                    registeredTeamsVisibility: option.value,
+                  })
+                }
+                className={`min-h-10 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  isSelected
+                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                    : 'text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
   const renderShowTasksAudienceToggle = (idPrefix) => {
     if (!Boolean(selectedGame?.showTasks)) {
       return null
@@ -235,6 +296,9 @@ const GameEditModal = ({
                 label="Показывать количество заданий на игре"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
+              {renderRegisteredTeamsVisibility(
+                'game-registered-teams-visibility-closed',
+              )}
               <NeonCheckbox
                 id="game-hide-result-closed"
                 checked={!Boolean(selectedGame.hideResult)}
@@ -429,6 +493,9 @@ const GameEditModal = ({
               label="Показывать количество заданий на игре"
               labelClassName="text-sm text-slate-600 dark:text-slate-200"
             />
+            {renderRegisteredTeamsVisibility(
+              'game-registered-teams-visibility',
+            )}
             <NeonCheckbox
               id="game-hide-result"
               checked={!Boolean(selectedGame.hideResult)}
@@ -851,6 +918,7 @@ GameEditModal.propTypes = {
     showTasks: PropTypes.bool,
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
+    registeredTeamsVisibility: PropTypes.oneOf(['list', 'count', 'hidden']),
     allowJoinAfterStart: PropTypes.bool,
     recordsVisibility: PropTypes.oneOf(['disabled', 'participants', 'public']),
     recordsShowNames: PropTypes.bool,

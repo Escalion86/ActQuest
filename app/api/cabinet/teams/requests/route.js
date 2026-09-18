@@ -18,6 +18,7 @@ import {
   TEAM_JOIN_POLICY_OPEN,
   normalizeTeamJoinPolicy,
 } from "@helpers/teamJoinPolicy";
+import { broadcastNotificationToUsers } from "@server/pwaNotifications";
 
 const resolveUserId = (session) =>
   toStringId(
@@ -56,6 +57,67 @@ const canManageTeam = async ({ db, teamId, userId, role }) => {
     .lean();
 
   return Boolean(captain?._id);
+};
+
+const notifyTeamCaptains = async ({ db, team, applicantUserId }) => {
+  try {
+    const captainMemberships = await db
+      .model("TeamsUsers")
+      .find({ teamId: toStringId(team?._id), role: getCaptainRoleQuery() })
+      .select({ userId: 1 })
+      .lean();
+    const captainUserIds = Array.from(
+      new Set(
+        captainMemberships
+          .map((membership) => toStringId(membership?.userId))
+          .filter(Boolean),
+      ),
+    );
+
+    if (captainUserIds.length === 0) return;
+
+    const UsersModel = db.model("Users");
+    const [captains, applicant] = await Promise.all([
+      UsersModel.find({
+        $or: [
+          { _id: { $in: captainUserIds } },
+          { globalUserId: { $in: captainUserIds } },
+        ],
+      })
+        .select({ _id: 1, pushSubscriptions: 1 })
+        .lean(),
+      UsersModel.findOne({
+        $or: [{ _id: applicantUserId }, { globalUserId: applicantUserId }],
+      })
+        .select({ name: 1, username: 1 })
+        .lean(),
+    ]);
+
+    const teamId = toStringId(team?._id);
+    const teamName = team?.name || "Без названия";
+    const applicantName = applicant?.name || applicant?.username || "Игрок";
+    const url = `/cabinet/teams?teamId=${encodeURIComponent(teamId)}&mode=edit`;
+
+    await broadcastNotificationToUsers({
+      db,
+      users: captains,
+      notification: {
+        title: `Новая заявка в команду «${teamName}»`,
+        body: `${applicantName} хочет вступить в команду.`,
+        tag: `team-join-request-${teamId}-${applicantUserId}`,
+        location: team?.location || "global",
+        data: {
+          type: "team_join_request",
+          teamId,
+          applicantUserId,
+          url,
+        },
+        url,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to notify team captains about join request", error);
+  }
 };
 
 export async function GET(request) {
@@ -217,7 +279,7 @@ export async function POST(request) {
     const [team, membershipsCount, existingMembership, existingRequest] =
       await Promise.all([
         TeamsModel.findById(teamId)
-          .select({ _id: 1, name: 1, joinPolicy: 1, kind: 1 })
+          .select({ _id: 1, name: 1, joinPolicy: 1, kind: 1, location: 1 })
           .lean(),
         countRegularTeamMemberships({ TeamsModel, TeamsUsersModel, userId }),
         TeamsUsersModel.findOne({ teamId, userId }).select({ _id: 1 }).lean(),
@@ -315,6 +377,8 @@ export async function POST(request) {
           userId,
           status: "pending",
         });
+
+    await notifyTeamCaptains({ db, team, applicantUserId: userId });
 
     return NextResponse.json(
       {

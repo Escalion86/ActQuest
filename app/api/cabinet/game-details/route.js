@@ -9,6 +9,10 @@ import {
 } from '@helpers/cabinetGameVisibility'
 import { buildGameTasksStats } from '@helpers/gameTaskCounts'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
+import {
+  REGISTERED_TEAMS_VISIBILITY,
+  normalizeRegisteredTeamsVisibility,
+} from '@helpers/registeredTeamsVisibility'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
@@ -169,6 +173,7 @@ export async function GET(request) {
         showTasksCountInGame: 1,
         hideResult: 1,
         registrationOpen: 1,
+        registeredTeamsVisibility: 1,
         allowJoinAfterStart: 1,
         recordsVisibility: 1,
         recordsShowNames: 1,
@@ -209,7 +214,7 @@ export async function GET(request) {
           .lean()
       : []
 
-    const teamsCount = Array.isArray(gameTeams) ? gameTeams.length : 0
+    const actualTeamsCount = Array.isArray(gameTeams) ? gameTeams.length : 0
 
     const canViewRestrictedGameInfo = canViewCabinetGameRestrictedInfo({
       userRole,
@@ -223,6 +228,14 @@ export async function GET(request) {
       allowCreatorFallback:
         canLoadOwnGames && !currentUserIdString && creatorTelegramId !== null,
     })
+    const registeredTeamsVisibility = normalizeRegisteredTeamsVisibility(
+      gameDoc?.registeredTeamsVisibility,
+    )
+    const teamsCount =
+      canViewRestrictedGameInfo ||
+      registeredTeamsVisibility !== REGISTERED_TEAMS_VISIBILITY.HIDDEN
+        ? actualTeamsCount
+        : 0
     let userTeamPlace = null
     if (
       canExposeCabinetGamePlace(gameDoc, { canViewRestrictedGameInfo }) &&
