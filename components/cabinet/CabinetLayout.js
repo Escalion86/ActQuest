@@ -610,7 +610,7 @@ const CabinetLayout = ({
     }
   }
 
-  const redirectToLogin = useCallback(async () => {
+  const redirectToLogin = useCallback(() => {
     if (authRedirectInProgressRef.current) {
       return
     }
@@ -633,7 +633,18 @@ const CabinetLayout = ({
       callbackTarget,
     })
 
-    router.replace(`/cabinet/login${callbackQuery}`)
+    const loginUrl = `/cabinet/login${callbackQuery}`
+
+    // Полная навигация сбрасывает устаревший кэш SessionProvider. После сна
+    // браузера мягкий router.replace мог сохранять status=unauthenticated:
+    // сервер логина видел валидную cookie и возвращал в кабинет, а клиент снова
+    // отправлял на логин, создавая бесконечный цикл до ручного обновления.
+    if (typeof window !== 'undefined') {
+      window.location.replace(loginUrl)
+      return
+    }
+
+    router.replace(loginUrl)
   }, [currentPath, router, status])
 
   useEffect(() => {

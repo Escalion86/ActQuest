@@ -76,6 +76,7 @@ import {
   normalizePrequelStoryEffect,
 } from '@helpers/normalizePrequel'
 import canCreateStoryGame from '@helpers/storyGameAccess'
+import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import { LOCATIONS } from '@server/serverConstants'
 
 const GAME_STATUS_BADGE_STYLES = {
@@ -3787,6 +3788,16 @@ const GamesPage = ({
         return true
       }
 
+      if (
+        canAccessGameAsModerator({
+          userRole,
+          currentUserId: currentUserIdString,
+          game,
+        })
+      ) {
+        return true
+      }
+
       if (canEditOwnGames) {
         if (!currentUserIdString) {
           return false
@@ -3798,25 +3809,9 @@ const GamesPage = ({
         }
       }
 
-      if (!currentUserDbId) {
-        return false
-      }
-
-      const moderators = Array.isArray(game?.moderators) ? game.moderators : []
-
-      return moderators.some((moderator) => {
-        if (!moderator) {
-          return false
-        }
-
-        if (typeof moderator === 'string') {
-          return moderator === currentUserDbId
-        }
-
-        return moderator.id === currentUserDbId
-      })
+      return false
     },
-    [canEditAllGames, canEditOwnGames, currentUserDbId, currentUserIdString],
+    [canEditAllGames, canEditOwnGames, currentUserIdString, userRole],
   )
 
   const canManageGame = useCallback(

@@ -1,5 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   applyGameDraftPatch,
@@ -10,6 +13,12 @@ import {
   isInitialEditorHtmlNormalization,
   normalizeComparableEditorPlainText,
 } from '../components/modals/game-edit/sharedHelpers.js'
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url))
+const taskRichEditorSource = fs.readFileSync(
+  path.join(currentDir, '../components/cabinet/TaskRichEditor.js'),
+  'utf8',
+)
 
 test('keeps game draft clean when patch does not change values', () => {
   const baseline = {
@@ -134,5 +143,19 @@ test('does not treat text edits as initial editor normalization', () => {
       currentRichText: '',
     }),
     false,
+  )
+})
+
+test('suppresses update events only for programmatic rich editor synchronization', () => {
+  assert.match(
+    taskRichEditorSource,
+    /setContent\(normalizedContentValue,\s*\{\s*emitUpdate:\s*false,?\s*\}\)/,
+  )
+})
+
+test('propagates rich editor updates without relying on focus state', () => {
+  assert.doesNotMatch(
+    taskRichEditorSource,
+    /if\s*\(!nextEditor\.isFocused\)\s*return/,
   )
 })

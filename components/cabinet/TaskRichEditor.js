@@ -1682,7 +1682,6 @@ const TaskRichEditor = ({
         },
       },
       onUpdate: ({ editor: nextEditor }) => {
-        if (!nextEditor.isFocused) return
         propagateEditorState(nextEditor)
       },
     },
@@ -1987,7 +1986,9 @@ const TaskRichEditor = ({
     queueMicrotask(() => {
       if (isCancelled || editor.isDestroyed) return
       if (editor.getHTML() === normalizedContentValue) return
-      editor.commands.setContent(normalizedContentValue, false)
+      editor.commands.setContent(normalizedContentValue, {
+        emitUpdate: false,
+      })
     })
 
     return () => {
