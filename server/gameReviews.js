@@ -11,6 +11,23 @@ export const GAME_REVIEW_TAGS = [
   'actors',
 ]
 
+export const GAME_REVIEW_MODERATION_STATUS = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+}
+
+// У старых документов поле могло отсутствовать: такие отзывы ещё никто не
+// проверял, поэтому считаем их ожидающими модерации, а не опубликованными.
+export const isGameReviewPending = (review) =>
+  !review?.moderationStatus ||
+  String(review.moderationStatus).trim().toLowerCase() ===
+    GAME_REVIEW_MODERATION_STATUS.PENDING
+
+export const isGameReviewApproved = (review) =>
+  String(review?.moderationStatus || '').trim().toLowerCase() ===
+  GAME_REVIEW_MODERATION_STATUS.APPROVED
+
 const REVIEW_TEXT_MAX_LENGTH = 1500
 
 export const resolveSessionGameReviewIdentity = (sessionUser) => ({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import isUserAdmin from '@helpers/isUserAdmin'
 import {
   resolveSessionGameReviewIdentity,
   serializePublishedGameReview,
@@ -42,9 +43,29 @@ export async function GET(_request, { params }) {
 
     const GameReviewsModel = db.model('GameReviews')
     const { userId } = resolveSessionGameReviewIdentity(session.user)
+    const isAdminViewer = isUserAdmin({ role: session.user.role })
+    const visibleReviewsFilter = {
+      gameId,
+      $or: [
+        // Для участников публикуются только одобренные отзывы, на показ
+        // которых автор дал согласие.
+        { moderationStatus: 'approved', publicationConsent: true },
+        // Автор должен видеть собственный отзыв и его статус до модерации.
+        ...(userId ? [{ userId }] : []),
+        // Организатору доступна проверка результата модерации в карточке игры
+        // и без согласия автора на публичную публикацию.
+        ...(isAdminViewer ? [{ moderationStatus: 'approved' }] : []),
+      ],
+    }
     const [summaryRows, reviewDocs] = await Promise.all([
       GameReviewsModel.aggregate([
-        { $match: { gameId, isRatingIncluded: { $ne: false } } },
+        {
+          $match: {
+            gameId,
+            moderationStatus: 'approved',
+            isRatingIncluded: { $ne: false },
+          },
+        },
         {
           $group: {
             _id: null,
@@ -54,14 +75,7 @@ export async function GET(_request, { params }) {
           },
         },
       ]),
-      GameReviewsModel.find({
-        gameId,
-        publicationConsent: true,
-        $or: [
-          { moderationStatus: 'approved' },
-          ...(userId ? [{ userId }] : []),
-        ],
-      })
+      GameReviewsModel.find(visibleReviewsFilter)
         .sort({ createdAt: -1 })
         .limit(100)
         .lean(),

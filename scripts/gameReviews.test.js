@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 
 import {
   findGameReviewMembership,
+  isGameReviewApproved,
+  isGameReviewPending,
   normalizeGameReviewInput,
   resolveSessionGameReviewIdentity,
   serializeGameReview,
@@ -171,6 +173,14 @@ test('legacy reviews remain included in rating by default', () => {
   assert.equal(review.ratingExclusionReason, '')
   assert.equal(review.ratingExcludedAt, null)
   assert.equal(review.moderationReason, '')
+})
+
+test('does not treat an unmoderated review as approved', () => {
+  assert.equal(isGameReviewPending({}), true)
+  assert.equal(isGameReviewPending({ moderationStatus: 'pending' }), true)
+  assert.equal(isGameReviewPending({ moderationStatus: 'approved' }), false)
+  assert.equal(isGameReviewApproved({ moderationStatus: 'approved' }), true)
+  assert.equal(isGameReviewApproved({ moderationStatus: 'pending' }), false)
 })
 
 test('notifies city admins for new and resubmitted reviews without duplicate pending alerts', () => {

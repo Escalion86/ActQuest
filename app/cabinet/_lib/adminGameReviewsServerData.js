@@ -7,6 +7,10 @@ export const countPendingGameReviews = async () => {
   }
 
   return db.model('GameReviews').countDocuments({
-    moderationStatus: 'pending',
+    $or: [
+      { moderationStatus: 'pending' },
+      { moderationStatus: { $exists: false } },
+      { moderationStatus: null },
+    ],
   })
 }

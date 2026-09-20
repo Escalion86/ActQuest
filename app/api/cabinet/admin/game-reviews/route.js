@@ -43,7 +43,14 @@ const buildQuery = (request) => {
     .toLowerCase()
 
   if (location && location !== 'all') query.location = location
-  if (MODERATION_STATUSES.has(moderationStatus)) {
+  if (moderationStatus === 'pending') {
+    // Не теряем отзывы, созданные до появления поля moderationStatus.
+    query.$or = [
+      { moderationStatus: 'pending' },
+      { moderationStatus: { $exists: false } },
+      { moderationStatus: null },
+    ]
+  } else if (MODERATION_STATUSES.has(moderationStatus)) {
     query.moderationStatus = moderationStatus
   }
   if (Number.isInteger(rating) && rating >= 1 && rating <= 10) {

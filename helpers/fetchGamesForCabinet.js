@@ -362,6 +362,7 @@ const fetchGamesForCabinet = async ({
           {
             $match: {
               gameId: { $in: loadedGameIds },
+              moderationStatus: 'approved',
               isRatingIncluded: { $ne: false },
             },
           },
