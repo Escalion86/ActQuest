@@ -1,3 +1,4 @@
+import { normalizeTaskTheme } from './taskThemes.js'
 import { ensureDateISOString } from './idAndDate.js'
 import {
   buildDefaultPrequel,
@@ -499,6 +500,11 @@ const normalizeTasks = (tasks = []) => {
     title: ensureString(task?.title, ''),
     task: ensureString(task?.task, ''),
     howToSolve: ensureString(task?.howToSolve, ''),
+    stageKey: task.stageKey || ensureString(task._id ?? task.id, `task-${index}`),
+    variantConfig: task.variantConfig || null,
+    variants: task.variants || [],
+    itemRewards: task.itemRewards || null,
+    outcomeRewards: task.outcomeRewards || null,
     taskRich: ensureString(task?.taskRich, ''),
     taskMedia: normalizeTaskMedia(task?.taskMedia),
     taskBonusForComplite: ensureNumber(task?.taskBonusForComplite, 0),
@@ -646,6 +652,7 @@ const normalizeGameForCabinet = (game) => {
           : [],
     ),
     image: normalizeMediaUrl(game.image),
+    taskTheme: normalizeTaskTheme(game.taskTheme),
     useCustomTaskPublicTitles: ensureBoolean(
       game.useCustomTaskPublicTitles,
       false,
@@ -706,6 +713,7 @@ const normalizeGameForCabinet = (game) => {
     prices: normalizePrices(game.prices),
     finances: normalizeFinances(game.finances),
     tasks: normalizeTasks(game.tasks),
+    classicItems: game.classicItems || [],
     teamsCount: ensureNumber(game.teamsCount, 0),
     adminUnreadMessagesCount: ensureNumber(game.adminUnreadMessagesCount, 0),
     reviewAverageRating: ensureNullableNumber(game.reviewAverageRating),

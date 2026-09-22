@@ -1,5 +1,8 @@
 'use client'
 
+import { normalizeTaskTheme } from '@helpers/taskThemes'
+
+
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -838,6 +841,11 @@ const buildUpdatePayload = (game) => {
         }))
         .filter((media) => media.url !== ''),
       canceled: Boolean(task.canceled),
+      stageKey: task.stageKey || task.mongoId || task.id,
+      variantConfig: task.variantConfig || null,
+      variants: task.variants || [],
+      itemRewards: task.itemRewards || null,
+      outcomeRewards: task.outcomeRewards || null,
       isBonusTask: Boolean(task.isBonusTask),
       agentUserIds: sanitizeStringArray(task.agentUserIds),
     }
@@ -1030,6 +1038,7 @@ const buildUpdatePayload = (game) => {
     },
     prequels: normalizedPrequels,
     image: game.image ? game.image : null,
+    taskTheme: normalizeTaskTheme(game.taskTheme),
     useCustomTaskPublicTitles: Boolean(game.useCustomTaskPublicTitles),
     startingPlace: game.startingPlace ?? '',
     finishingPlace: game.finishingPlace ?? '',
@@ -1095,6 +1104,7 @@ const buildUpdatePayload = (game) => {
     prices,
     finances,
     tasks: tasksWithAllowedAgents,
+    classicItems: game.classicItems || [],
     moderators: Array.from(moderatorsSet),
     agents: agentIds.map((userId) => ({ userId, active: true })),
     agentNotifications: {
@@ -3059,6 +3069,8 @@ const GamesPage = ({
         }
 
         if (createGameCloneOptions.tasks) {
+          baseDraft.taskTheme = normalizeTaskTheme(normalizedSource.taskTheme)
+          baseDraft.classicItems = JSON.parse(JSON.stringify(normalizedSource.classicItems || []))
           baseDraft.tasks = Array.isArray(normalizedSource.tasks)
             ? JSON.parse(JSON.stringify(normalizedSource.tasks))
             : []
@@ -4331,6 +4343,7 @@ const GamesPage = ({
           taskDuration: Number(gameForPreview?.taskDuration) || 3600,
           cluesDuration: Number(gameForPreview?.cluesDuration) || 1200,
           breakDuration: Number(gameForPreview?.breakDuration) || 0,
+          taskTheme: normalizeTaskTheme(gameForPreview?.taskTheme),
           useCustomTaskPublicTitles:
             gameForPreview?.useCustomTaskPublicTitles === true,
         },
@@ -8940,6 +8953,7 @@ GamesPage.propTypes = {
       descriptionRich: PropTypes.string,
       descriptionMedia: PropTypes.arrayOf(taskMediaShape),
       image: PropTypes.string,
+      taskTheme: PropTypes.string,
       useCustomTaskPublicTitles: PropTypes.bool,
       startingPlace: PropTypes.string,
       finishingPlace: PropTypes.string,

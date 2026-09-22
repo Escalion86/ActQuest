@@ -21,7 +21,7 @@ const StoryLogicGraph = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="mt-4 flex min-h-64 items-center justify-center rounded-2xl border border-slate-700 bg-slate-950 text-sm text-slate-400">
+      <div className="mt-4 flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
         Загружаем карту логики…
       </div>
     ),
@@ -221,7 +221,6 @@ const InvestigationFlowEditor = ({
   updateGame,
   disabled,
   onOpenLocations,
-  onOpenItems,
   onOpenEndings,
 }) => {
   const interactions = normalizeArray(game?.storyInteractions)
@@ -456,20 +455,6 @@ const InvestigationFlowEditor = ({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onOpenLocations}
-            className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10"
-          >
-            Локации · {nodes.length}
-          </button>
-          <button
-            type="button"
-            onClick={onOpenItems}
-            className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-500/50 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-500/10"
-          >
-            Предметы · {items.length}
-          </button>
           <button
             type="button"
             onClick={() => setIsCharactersEditorOpen(true)}
@@ -1053,7 +1038,6 @@ InvestigationFlowEditor.propTypes = {
   updateGame: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
   onOpenLocations: PropTypes.func.isRequired,
-  onOpenItems: PropTypes.func.isRequired,
   onOpenEndings: PropTypes.func.isRequired,
 }
 

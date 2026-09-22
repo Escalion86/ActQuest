@@ -833,7 +833,7 @@ export const getStoryValidationErrors = (game) => {
 }
 
 export const getGameValidationErrors = (game) => {
-  const errors = []
+  const errors = validateClassicVariants(game || {})
   const safeGame = game && typeof game === 'object' ? game : {}
 
   if (!safeGame.startingPlace) {
@@ -884,7 +884,7 @@ export const getGameValidationErrors = (game) => {
     return errors
   }
 
-  activeTasks.forEach((task, index) => {
+  activeTasks.flatMap((task) => [task, ...(task.variantConfig?.enabled ? (task.variants || []).map((variant) => variant.content || {}) : [])]).forEach((task, index) => {
     const taskLabel = `Задание ${index + 1}`
 
     if (!task?.title) {
@@ -942,3 +942,4 @@ export const getGameValidationErrors = (game) => {
 const isGameHaveErrors = (game) => getGameValidationErrors(game).length > 0
 
 export default isGameHaveErrors
+import { validateClassicVariants } from './classicVariants.js'

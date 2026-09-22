@@ -165,11 +165,16 @@ const resolveSeasonScopes = (timeline) => {
   return scopes
 }
 
-const buildRatingsForTimeline = (timeline, selector) => {
+const buildRatingsForTimeline = (
+  timeline,
+  selector,
+  { scoreMissedGamesAsZero = false } = {},
+) => {
   const relevantTimeline = timeline.filter((item) => selector(item).size > 0)
   return buildRatingRanksV2(
     collectResults(relevantTimeline, selector),
     relevantTimeline.length,
+    { scoreMissedGamesAsZero },
   )
 }
 
@@ -357,11 +362,16 @@ const updateParticipantsRatings = async ({
       ratings: buildRatingsForTimeline(
         scope.games,
         (item) => item.playersResults,
+        { scoreMissedGamesAsZero: true },
       ),
     })
     teamRatingsBySeason.set(seasonId, {
       ...scope,
-      ratings: buildRatingsForTimeline(scope.games, (item) => item.teamsResults),
+      ratings: buildRatingsForTimeline(
+        scope.games,
+        (item) => item.teamsResults,
+        { scoreMissedGamesAsZero: true },
+      ),
     })
   })
 

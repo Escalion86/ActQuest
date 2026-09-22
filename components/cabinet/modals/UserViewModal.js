@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react'
 import Modal from '@components/Modal'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
-import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
+import PlayedGameCard from '@components/cabinet/cards/PlayedGameCard'
 import NoticeBanner from '@components/NoticeBanner'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
@@ -87,37 +87,26 @@ const UserViewModal = ({
   })
 
   const [selectedTeam, setSelectedTeam] = useState(null)
-  const [userGamesState, setUserGamesState] = useState({
-    isLoading: false,
-    error: null,
-    games: [],
-  })
   const [showAllGames, setShowAllGames] = useState(false)
   const [isGameDetailsModalOpen, setIsGameDetailsModalOpen] = useState(false)
   const [selectedGameDetails, setSelectedGameDetails] = useState(null)
 
-  const loadUserGames = useCallback(async () => {
-    if (!user) {
-      return
-    }
-
-    setUserGamesState((prev) => ({ ...prev, isLoading: true, error: null }))
-
-    try {
-      const params = new URLSearchParams()
-      if (typeof user.id === 'string' && user.id) {
-        params.set('userId', user.id)
-      }
-
+  const {
+    data: userGames = [],
+    isLoading: areUserGamesLoading,
+    error: userGamesError,
+  } = useQuery({
+    queryKey: ['userGames', user?.id],
+    queryFn: async () => {
       const { json } = await requestApiJson(
-        `/api/cabinet/admin/user-games?${params.toString()}`,
+        `/api/cabinet/admin/user-games?userId=${encodeURIComponent(user.id)}`,
         {
           fallbackMessage: 'Не удалось загрузить игры пользователя',
         },
       )
 
       const gamesRaw = Array.isArray(json?.data) ? json.data : []
-      const games = gamesRaw.sort((first, second) => {
+      return gamesRaw.sort((first, second) => {
         const firstTime = first?.dateStart
           ? new Date(first.dateStart).getTime()
           : 0
@@ -126,16 +115,10 @@ const UserViewModal = ({
           : 0
         return secondTime - firstTime
       })
-
-      setUserGamesState((prev) => ({ ...prev, games, isLoading: false }))
-    } catch (err) {
-      setUserGamesState((prev) => ({
-        ...prev,
-        error: err?.message || 'Не удалось загрузить игры',
-        isLoading: false,
-      }))
-    }
-  }, [user])
+    },
+    enabled: isOpen && !!user?.id,
+    staleTime: 1000 * 60 * 5,
+  })
 
   const handleOpenTeam = useCallback(
     (team) => {
@@ -279,61 +262,48 @@ const UserViewModal = ({
             <FormSectionCard className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <h3 className={modalSectionTitleClass}>Игры участия</h3>
-                {userGamesState.games.length > 0 && (
+                {userGames.length > 0 && (
                   <span className="text-xs text-slate-500 dark:text-slate-300">
-                    Всего: {userGamesState.games.length}
+                    Всего: {userGames.length}
                   </span>
                 )}
               </div>
 
-              {userGamesState.isLoading ? (
+              {areUserGamesLoading ? (
                 <p className="text-sm text-slate-500">
                   Загружаем игры пользователя...
                 </p>
-              ) : userGamesState.error ? (
-                <p className="text-sm text-rose-500">{userGamesState.error}</p>
-              ) : userGamesState.games.length > 0 ? (
+              ) : userGamesError ? (
+                <p className="text-sm text-rose-500">{userGamesError.message}</p>
+              ) : userGames.length > 0 ? (
                 <div className="space-y-3">
                   <ul className="space-y-3">
                     {(showAllGames
-                      ? userGamesState.games
-                      : userGamesState.games.slice(0, 5)
+                      ? userGames
+                      : userGames.slice(0, 5)
                     ).map((game) => (
                       <li key={game.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenGameDetails(game)}
-                          className="w-full text-left transition-opacity hover:opacity-80 focus:outline-none"
-                        >
-                          <ParticipationGameCard game={game} />
-                        </button>
+                        <PlayedGameCard
+                          game={game}
+                          onOpen={handleOpenGameDetails}
+                        />
                       </li>
                     ))}
                   </ul>
-                  {!showAllGames && userGamesState.games.length > 5 && (
+                  {!showAllGames && userGames.length > 5 && (
                     <button
                       onClick={() => setShowAllGames(true)}
                       className="w-full py-2 text-xs font-medium text-primary hover:underline dark:text-sky-300"
                     >
-                      Показать остальные {userGamesState.games.length - 5} игр
+                      Показать остальные {userGames.length - 5} игр
                     </button>
                   )}
                 </div>
               ) : (
                 <p className="text-sm text-slate-500">
-                  Загружайте игры, чтобы увидеть историю участия
+                  Игр участия пока нет
                 </p>
               )}
-
-              {userGamesState.games.length === 0 &&
-                !userGamesState.isLoading && (
-                  <button
-                    onClick={loadUserGames}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Загрузить игры
-                  </button>
-                )}
             </FormSectionCard>
 
             <FormSectionCard className="space-y-4">

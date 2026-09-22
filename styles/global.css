@@ -1588,3 +1588,39 @@ html {
     transform: translate3d(0, 0, 0);
   }
 }
+
+/* Оформление задания изолировано от светлой/тёмной темы кабинета. */
+.aq-task-theme {
+  color: var(--aq-task-text);
+  background: var(--aq-task-background);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.aq-task-theme .ProseMirror {
+  color: var(--aq-task-text);
+  background: var(--aq-task-background) !important;
+  border-radius: inherit;
+}
+
+/* Тема задаёт цвета по умолчанию; авторские inline-цвета имеют приоритет. */
+.aq-task-theme .ProseMirror :is(h2, h3, h4, a) {
+  color: var(--aq-task-accent);
+}
+
+.aq-task-theme .ProseMirror :is(blockquote, pre, .aq-frame-box, .aq-audio-message, audio-message) {
+  color: var(--aq-task-text);
+  background: var(--aq-task-surface) !important;
+  border-color: var(--aq-task-border) !important;
+}
+
+.aq-task-theme .ProseMirror :is(.aq-audio-message__title, .aq-audio-message__time) {
+  color: var(--aq-task-text);
+}
+
+.aq-task-theme .ProseMirror a[data-aq-link-variant='button'] {
+  color: var(--aq-task-accent);
+  background: var(--aq-task-surface) !important;
+  border-color: var(--aq-task-border) !important;
+  text-shadow: none !important;
+}

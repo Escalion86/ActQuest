@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
+import { TASK_THEMES, normalizeTaskTheme } from '@helpers/taskThemes'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -8,13 +9,16 @@ import FullscreenImageViewer from '@components/FullscreenImageViewer'
 import NeonCheckbox from '@components/NeonCheckbox'
 
 import TaskItem from './sections/TaskItem'
+import ClassicVariantsEditor from './ClassicVariantsEditor'
+import { hasClassicVariants } from '@helpers/classicVariants'
 import PrequelSection from '@components/modals/game-edit/sections/PrequelSection'
 
 const GameTasksEditModal = ({
+  currentUserRole,
   selectedGame,
   isEditModalOpen: isTasksModalOpen,
   handleCloseEditModal: handleCloseTasksModal,
-  canEditSelectedGame,
+  canEditSelectedGame: canEditGame,
   isGameClosed,
   isSaving,
   location,
@@ -57,6 +61,8 @@ const GameTasksEditModal = ({
   canViewGameMap,
   handleOpenGameMap,
 }) => {
+  const variantsLocked = hasClassicVariants(selectedGame) && ['started', 'finished', 'closed'].includes(selectedGame?.status)
+  const canEditSelectedGame = canEditGame && !variantsLocked
   const [expandedCodeAccordions, setExpandedCodeAccordions] = useState(
     () => new Set(),
   )
@@ -464,6 +470,29 @@ const GameTasksEditModal = ({
         className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
       >
         <ModalSection>
+          <div className="mb-6 space-y-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-white" htmlFor="game-task-theme">
+              Оформление всех заданий
+            </label>
+            <select
+              id="game-task-theme"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+              value={normalizeTaskTheme(selectedGame.taskTheme)}
+              disabled={!canEditSelectedGame || isGameClosed || isSaving}
+              onChange={(event) => updateSelectedGame({ taskTheme: event.target.value })}
+            >
+              {TASK_THEMES.map((theme) => (
+                <option key={theme.id} value={theme.id}>{theme.label}</option>
+              ))}
+            </select>
+            <p className="text-sm text-slate-500 dark:text-slate-300">
+              Единая тема для всех заданий игры, включая новые задания, варианты,
+              подсказки и сообщения после выполнения. Не зависит от темы интерфейса игрока.
+              Авторские цвета текста и выделения сохраняются. Проверьте их сочетание с фоном в предпросмотре.
+            </p>
+          </div>
+          {variantsLocked ? <p className="mb-3 text-sm text-amber-700 dark:text-amber-300">Правила игры с вариантами зафиксированы при запуске. Для новой редакции создайте копию игры.</p> : null}
+          {currentUserRole === 'dev' && <ClassicVariantsEditor game={selectedGame} onChange={updateSelectedGame} agents={selectedGameAgents} disabled={!canEditSelectedGame || isSaving || ['started', 'finished', 'closed'].includes(selectedGame?.status)} />}
           {isGameClosed ? (
             <p className="mb-4 rounded-xl border border-amber-300/70 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200">
               Игра закрыта: задания можно только просматривать. Сохранение
@@ -682,7 +711,9 @@ const GameTasksEditModal = ({
 }
 
 GameTasksEditModal.propTypes = {
+  currentUserRole: PropTypes.string,
   selectedGame: PropTypes.shape({
+    taskTheme: PropTypes.string,
     id: PropTypes.string,
     type: PropTypes.string,
     useCustomTaskPublicTitles: PropTypes.bool,

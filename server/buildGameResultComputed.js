@@ -484,6 +484,7 @@ const buildEmptyTeamResult = (team, game) => {
 }
 
 const buildTeamResult = (team, gameTeam, game) => {
+  game = resolveClassicGame(game, gameTeam)
   if (!gameTeam) {
     return buildEmptyTeamResult(team, game)
   }
@@ -585,6 +586,8 @@ const buildTeamResult = (team, gameTeam, game) => {
     return {
       taskIndex,
       taskTitle: typeof task?.title === 'string' ? task.title : '',
+      variantId: task?.selectedVariantId || null,
+      variantTitle: task?.variantTitle || '',
       isBonusTask,
       canceled: isCanceled,
       status,
@@ -756,6 +759,8 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
     return {
       taskIndex,
       taskTitle: typeof task?.title === 'string' ? task.title : '',
+      variantId: task?.selectedVariantId || null,
+      variantTitle: task?.variantTitle || '',
       accepted,
       canceled: isCanceled,
       taskPoints: baseTaskPoints,
@@ -1316,3 +1321,4 @@ const buildGameResultComputed = async ({ game }) => {
 }
 
 export default buildGameResultComputed
+import { resolveClassicGame } from '../helpers/classicVariants.js'

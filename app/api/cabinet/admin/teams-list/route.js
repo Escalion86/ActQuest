@@ -61,6 +61,7 @@ export async function GET(request) {
       searchQuery,
       visibilityFilter,
       returnMeta: true,
+      includeHiddenGameResults: true,
     })
 
     return NextResponse.json(

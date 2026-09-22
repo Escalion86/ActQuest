@@ -1,3 +1,4 @@
+import { normalizeTaskTheme } from '@helpers/taskThemes'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -66,7 +67,7 @@ const normalizeCodeEntry = (value) => {
   }
 }
 
-const normalizeTaskPreview = (task, index) => {
+const normalizeTaskPreview = (task, index, taskTheme) => {
   const clues = Array.isArray(task?.clues)
     ? task.clues.map((clue) => ({
         clue: normalizeText(clue?.clue),
@@ -96,6 +97,7 @@ const normalizeTaskPreview = (task, index) => {
     id: normalizeText(task?.id) || `task-${index + 1}`,
     title: normalizeText(task?.title),
     task: normalizeText(task?.task),
+    taskTheme: normalizeTaskTheme(taskTheme),
     taskRich: normalizeText(task?.taskRich),
     howToSolve: normalizeText(task?.howToSolve),
     numCodesToCompliteTask:
@@ -885,12 +887,14 @@ export async function GET(request) {
         status: 1,
         type: 1,
         dateStartFact: 1,
+        taskTheme: 1,
         taskDuration: 1,
         cluesDuration: 1,
         breakDuration: 1,
         taskFailurePenalty: 1,
         manyCodesPenalty: 1,
         tasks: 1,
+        classicItems: 1,
         prequel: 1,
         prequels: 1,
         moderators: 1,
@@ -945,8 +949,9 @@ export async function GET(request) {
     if (normalizedGameStatus === 'started') {
       const statusCheckedAt = new Date()
       gameTeams = await Promise.all(
-        gameTeams.map((gameTeam) =>
-          syncGameTeamProgressForStatus({
+        gameTeams.map((gameTeam) => hasClassicVariants(game)
+          ? (gameTeam.startTime?.some(Boolean) ? processClassicVariants({ game, gameTeam, gamesTeamsModel: GamesTeamsModel, now: statusCheckedAt }).then((result) => result.gameTeam) : Promise.resolve(gameTeam))
+          : syncGameTeamProgressForStatus({
             game,
             gameTeam,
             gamesTeamsModel: GamesTeamsModel,
@@ -1067,7 +1072,9 @@ export async function GET(request) {
 
     const now = new Date()
 
+    const sourceGame = game
     const teamsStatus = gameTeams.map((gt) => {
+      const game = resolveClassicGame(sourceGame, gt)
       const teamId = toStringId(gt.teamId)
       const team = teamsById[teamId]
       const activeTaskStep = Number.isInteger(gt.activeNum) ? gt.activeNum : 0
@@ -1575,6 +1582,12 @@ export async function GET(request) {
       return {
         teamId,
         gameTeamId: toStringId(gt?._id),
+        classicInventory: classicPublicInventory(sourceGame, gt),
+        classicStages: gt.classicProgress?.stages || [],
+        classicHistory: (gt.classicProgress?.history || []).map((event) => ({ ...event, items: (event.items || []).map((item) => ({ ...item, title: sourceGame.classicItems?.find((entry) => entry.id === item.itemId)?.title || '' })) })),
+        selectedTaskPreview: game.tasks?.[Number(gt.activeNum || 0)] ? normalizeTaskPreview(game.tasks[Number(gt.activeNum || 0)], Number(gt.activeNum || 0), game.taskTheme) : null,
+        selectedVariantTitle: game.tasks?.[Number(gt.activeNum || 0)]?.variantTitle || '',
+        isChoosingVariant: Boolean(sourceGame.tasks?.[Number(gt.activeNum || 0)]?.variantConfig?.enabled && !game.tasks?.[Number(gt.activeNum || 0)]?.selectedVariantId && !gt.taskFailures?.some((entry) => entry.taskIndex === Number(gt.activeNum || 0))),
         teamName: team?.name ?? 'Без названия',
         unreadTeamMessagesCount: Number(unreadMessagesByTeamId[teamId] || 0),
         members: teamMembersByTeamId.get(teamId) || [],
@@ -1684,7 +1697,7 @@ export async function GET(request) {
       ? game.tasks.map((t) => t?.title ?? '')
       : []
     const tasksPreview = Array.isArray(game.tasks)
-      ? game.tasks.map((task, index) => normalizeTaskPreview(task, index))
+      ? game.tasks.map((task, index) => normalizeTaskPreview(task, index, game.taskTheme))
       : []
 
     return NextResponse.json(
@@ -1716,3 +1729,5 @@ export async function GET(request) {
     )
   }
 }
+import { hasClassicVariants, resolveClassicGame, classicPublicInventory } from '@helpers/classicVariants'
+import processClassicVariants from '@server/processClassicVariants'

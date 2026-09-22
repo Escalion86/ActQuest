@@ -115,14 +115,24 @@ const normalizeGames = (games = []) => {
   }
 
   return games
-    .map((game, index) => ({
-      id: ensureString(game?._id ?? game?.id, `game-${index}`),
-      name: ensureString(game?.name, ''),
-      status: ensureString(game?.status, ''),
-      location: ensureString(game?.location, ''),
-      dateStart: ensureDateISOString(game?.dateStart),
-      hidden: ensureBoolean(game?.hidden, false),
-    }))
+    .map((game, index) => {
+      const place = Number(game?.teamPlace ?? game?.place)
+
+      return {
+        id: ensureString(game?._id ?? game?.id, `game-${index}`),
+        name: ensureString(game?.name, ''),
+        status: ensureString(game?.status, ''),
+        location: ensureString(game?.location, ''),
+        image: ensureString(game?.image, ''),
+        dateStart: ensureDateISOString(game?.dateStart),
+        hidden: ensureBoolean(game?.hidden, false),
+        place: Number.isFinite(place) && place > 0 ? place : null,
+        isResultPublished:
+          typeof game?.isResultPublished === 'boolean'
+            ? game.isResultPublished
+            : true,
+      }
+    })
     .sort((a, b) => {
       const dateA = a.dateStart ? new Date(a.dateStart).getTime() : 0
       const dateB = b.dateStart ? new Date(b.dateStart).getTime() : 0

@@ -102,6 +102,7 @@ const fetchTeamsForCabinet = async ({
   limit = null,
   returnMeta = false,
   includePersonal = false,
+  includeHiddenGameResults = false,
 }) => {
   if (!db) {
     return returnMeta ? { teams: [], hasMore: false } : []
@@ -307,7 +308,10 @@ const fetchTeamsForCabinet = async ({
           status: 1,
           location: 1,
           dateStart: 1,
+          image: 1,
           hidden: 1,
+          hideResult: 1,
+          'result.teamsPlaces': 1,
         })
         .lean()
     : []
@@ -335,7 +339,24 @@ const fetchTeamsForCabinet = async ({
       acc[teamId] = []
     }
 
-    acc[teamId].push(game)
+    const rawPlaces =
+      game?.result?.teamsPlaces instanceof Map
+        ? game.result.teamsPlaces
+        : game?.result?.teamsPlaces || {}
+    const rawPlace =
+      rawPlaces instanceof Map ? rawPlaces.get(teamId) : rawPlaces[teamId]
+    const numericPlace = Number(rawPlace)
+    const isResultPublished =
+      includeHiddenGameResults || !Boolean(game?.hideResult)
+
+    acc[teamId].push({
+      ...game,
+      teamPlace:
+        isResultPublished && Number.isFinite(numericPlace) && numericPlace > 0
+          ? numericPlace
+          : null,
+      isResultPublished,
+    })
 
     return acc
   }, {})

@@ -232,7 +232,7 @@ const notifyAllTeamsPassedEvents = async ({ db, game }) => {
 
   await Promise.all(
     tasks.map(async (task, taskIndex) => {
-      const agentUserIds = getTaskAgentIds(task).filter((agentId) =>
+      const agentUserIds = [...new Set([task, ...(task.variantConfig?.enabled ? (task.variants || []).map((variant) => variant.content) : [])].flatMap(getTaskAgentIds))].filter((agentId) =>
         activeAgentIds.has(agentId),
       )
       if (agentUserIds.length === 0) return
@@ -274,6 +274,8 @@ export const notifyAgentsForGameTeamProgress = async ({
   team,
 }) => {
   if (!db || !game || !gameTeam) return
+  const originalGame = game
+  game = resolveClassicGame(game, gameTeam)
   if (game?.runtimeMode === 'test') return
 
   try {
@@ -303,7 +305,7 @@ export const notifyAgentsForGameTeamProgress = async ({
       ),
     )
 
-    await notifyAllTeamsPassedEvents({ db, game })
+    await notifyAllTeamsPassedEvents({ db, game: originalGame })
   } catch (error) {
     console.error('Failed to notify game agents', {
       error,
@@ -312,3 +314,4 @@ export const notifyAgentsForGameTeamProgress = async ({
     })
   }
 }
+import { resolveClassicGame } from '@helpers/classicVariants'

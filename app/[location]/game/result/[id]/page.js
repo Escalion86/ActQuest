@@ -245,6 +245,7 @@ const Time = ({ start, seconds, duration, forceFinish = false }) => {
 }
 
 const TimeResult = ({
+  variantTitle = '',
   start,
   delay,
   timeResult,
@@ -341,6 +342,7 @@ const TimeResult = ({
         ) : null}
         <span>{isBonusTask ? '---' : toHHMMSS(timeResult)}</span>
       </div>
+      {variantTitle ? <span className="max-w-full truncate px-1 text-[10px] font-normal" title={variantTitle}>{variantTitle}</span> : null}
       {hasAnyAdjustment && (
         <div
           ref={tooltipContainerRef}
@@ -1684,6 +1686,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     return (
                       <TimeResult
                         key={'team' + i + 'task' + index}
+                        variantTitle={gameTeamsWithTeams[i]?.computedTeam?.taskResults?.[index]?.variantTitle || ''}
                         start={start}
                         delay={delay}
                         timeResult={timeResult}
@@ -2398,3 +2401,4 @@ export default ResultPage
 //     fallback: true,
 //   }
 // }
+TimeResult.propTypes = { variantTitle: PropTypes.string }

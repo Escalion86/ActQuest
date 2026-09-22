@@ -646,41 +646,35 @@ const StoryEditorPageClient = ({ session: _session }) => {
   )
 
   const addNode = useCallback(() => {
-    updateGame((prev) => {
-      const nextNode = buildNode(normalizeArray(prev.storyNodes).length)
-      setSelectedNodeId(nextNode.id)
-      setEditingNodeId(nextNode.id)
-      setIsLocationsEditorOpen(false)
-      return {
-        ...prev,
-        storyNodes: [...normalizeArray(prev.storyNodes), nextNode],
-      }
-    })
-  }, [updateGame])
+    const nextNode = buildNode(nodes.length)
+    updateGame((prev) => ({
+      ...prev,
+      storyNodes: [...normalizeArray(prev.storyNodes), nextNode],
+    }))
+    setSelectedNodeId(nextNode.id)
+    setEditingNodeId(nextNode.id)
+    setIsLocationsEditorOpen(false)
+  }, [nodes.length, updateGame])
 
   const addItem = useCallback(() => {
-    updateGame((prev) => {
-      const nextItem = buildItem(normalizeArray(prev.storyItems).length)
-      setSelectedItemId(nextItem.id)
-      setEditingItemId(nextItem.id)
-      setIsItemsEditorOpen(false)
-      return {
-        ...prev,
-        storyItems: [...normalizeArray(prev.storyItems), nextItem],
-      }
-    })
-  }, [updateGame])
+    const nextItem = buildItem(items.length)
+    updateGame((prev) => ({
+      ...prev,
+      storyItems: [...normalizeArray(prev.storyItems), nextItem],
+    }))
+    setSelectedItemId(nextItem.id)
+    setEditingItemId(nextItem.id)
+    setIsItemsEditorOpen(false)
+  }, [items.length, updateGame])
 
   const addEnding = useCallback(() => {
-    updateGame((prev) => {
-      const nextEnding = buildEnding(normalizeArray(prev.storyEndings).length)
-      setSelectedEndingId(nextEnding.id)
-      return {
-        ...prev,
-        storyEndings: [...normalizeArray(prev.storyEndings), nextEnding],
-      }
-    })
-  }, [updateGame])
+    const nextEnding = buildEnding(endings.length)
+    updateGame((prev) => ({
+      ...prev,
+      storyEndings: [...normalizeArray(prev.storyEndings), nextEnding],
+    }))
+    setSelectedEndingId(nextEnding.id)
+  }, [endings.length, updateGame])
 
   const removeNode = useCallback(
     (nodeId) => {
@@ -1099,6 +1093,30 @@ const StoryEditorPageClient = ({ session: _session }) => {
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={addNode}
+              disabled={!game || loading || saving || isScenarioLocked}
+              className="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Добавить локацию
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsLocationsEditorOpen(true)}
+              disabled={!game || loading}
+              className="rounded-xl border border-cyan-300 bg-white px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50 disabled:opacity-60 dark:border-cyan-500/50 dark:bg-slate-900 dark:text-cyan-200 dark:hover:bg-cyan-500/10"
+            >
+              Локации · {nodes.length}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsItemsEditorOpen(true)}
+              disabled={!game || loading}
+              className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-500/50 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+            >
+              Предметы · {items.length}
+            </button>
             {game?.storyConfig?.experienceMode !== 'investigation' ? (
               <>
                 <button
@@ -1158,6 +1176,43 @@ const StoryEditorPageClient = ({ session: _session }) => {
           </div>
         ) : null}
 
+        {game && !loading ? (
+          <details
+            key={gameId}
+            open={nodes.length === 0 ? true : undefined}
+            className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80"
+          >
+            <summary className="cursor-pointer font-semibold text-slate-900 dark:text-slate-100">
+              {nodes.length === 0 ? 'Начните с первой локации' : 'Как настроить сценарий'}
+            </summary>
+            <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              <p>
+                Локация — место или сцена сюжета с описанием и заданиями для команды.
+                Кнопка «Добавить локацию» сверху сразу открывает её редактор.
+                Все созданные сцены доступны в разделе «Локации».
+              </p>
+              <ol className="list-decimal space-y-2 pl-5">
+                <li>Добавьте локации: укажите название и описание, которое увидят игроки.</li>
+                {game.storyConfig?.experienceMode === 'investigation' ? (
+                  <>
+                    <li>В «Настройках» выберите стартовую локацию расследования и задайте лимит игрового времени.</li>
+                    <li>Добавьте взаимодействия в нужных локациях: вопросы, осмотры и анализ. Укажите условия доступности и результат каждого действия.</li>
+                    <li>Настройте концовки и финальное обвинение в справочниках расследования.</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Отметьте локацию «Доступна с начала игры». У первой созданной локации этот параметр уже включён.</li>
+                    <li>Внутри локации добавьте код ответа или действие. Отметьте «Завершает локацию», если это решение задания.</li>
+                    <li>Откройте «Связи», чтобы задать условия открытия следующих локаций, и «Концовки», чтобы настроить завершение игры.</li>
+                  </>
+                )}
+                <li>Закройте окно редактирования и нажмите «Сохранить сценарий». Если появятся ошибки проверки, исправьте их перед запуском.</li>
+              </ol>
+              <p>Предметы, медиа и дополнительные условия добавляйте по мере необходимости.</p>
+            </div>
+          </details>
+        ) : null}
+
         {game?.storyConfig?.experienceMode === 'investigation' ? (
           <InvestigationFlowEditor
             game={game}
@@ -1165,7 +1220,6 @@ const StoryEditorPageClient = ({ session: _session }) => {
             updateGame={updateGame}
             disabled={isScenarioLocked}
             onOpenLocations={() => setIsLocationsEditorOpen(true)}
-            onOpenItems={() => setIsItemsEditorOpen(true)}
             onOpenEndings={() => setIsEndingsEditorOpen(true)}
           />
         ) : null}
@@ -1598,14 +1652,17 @@ const StoryEditorPageClient = ({ session: _session }) => {
                 onClick={() => setEditingNodeId('')}
                 className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
-                Готово
+                Вернуться к сценарию
               </button>
             </>
           }
         >
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Входы локации задаются линиями на схеме. Здесь выбирается правило,
-            сколько входов должно быть включено.
+            Укажите название и описание сцены для игроков.
+            {game.storyConfig?.experienceMode === 'investigation'
+              ? ' Вопросы, осмотры и другие задания добавляются через взаимодействия в редакторе расследования.'
+              : ' Ниже добавьте коды ответов или действия команды. Условия открытия локации настраиваются через «Связи».'}
+            {' '}Изменения попадут в игру после нажатия «Сохранить сценарий» на основном экране.
           </p>
 
           <div className="grid gap-5">
@@ -1614,6 +1671,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
                   Основное
                 </h3>
                 <input
+                  aria-label="Название локации"
                   value={editingNode.title || ''}
                   onChange={(event) =>
                     updateNode(editingNode.id, (node) => ({
@@ -1624,6 +1682,25 @@ const StoryEditorPageClient = ({ session: _session }) => {
                   placeholder="Название"
                   className={fieldClassName}
                 />
+                <TaskRichEditor
+                  value={editingNode.descriptionRich || ''}
+                  directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/description/editor`}
+                  contentMaxHeight="360px"
+                  disabled={isScenarioLocked}
+                  placeholder="Что видят игроки в этой локации и что им предстоит сделать?"
+                  onChange={({ html, media }) =>
+                    updateNode(editingNode.id, (node) => ({
+                      ...node,
+                      descriptionRich: typeof html === 'string' ? html : '',
+                      media: mergeStoryEditorMedia(node.media, media),
+                    }))
+                  }
+                />
+                <details className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Обложка, аудио и видео (необязательно)
+                  </summary>
+                  <div className="mt-3 grid gap-3">
                 <ImagesInput
                   label="Изображение локации"
                   images={editingNodeCoverImage ? [editingNodeCoverImage] : []}
@@ -1639,19 +1716,6 @@ const StoryEditorPageClient = ({ session: _session }) => {
                   maxImages={1}
                   previewShape="square"
                   uploadLabel="Загрузить обложку"
-                />
-                <TaskRichEditor
-                  value={editingNode.descriptionRich || ''}
-                  directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/description/editor`}
-                  contentMaxHeight="none"
-                  placeholder="Описание локации. Можно использовать форматирование, картинки и аудио."
-                  onChange={({ html, media }) =>
-                    updateNode(editingNode.id, (node) => ({
-                      ...node,
-                      descriptionRich: typeof html === 'string' ? html : '',
-                      media: mergeStoryEditorMedia(node.media, media),
-                    }))
-                  }
                 />
                 <StoryAudioEditor
                   media={editingNode.media}
@@ -1671,6 +1735,13 @@ const StoryEditorPageClient = ({ session: _session }) => {
                   disabled={isScenarioLocked}
                   label="Видеофайлы локации"
                 />
+                  </div>
+                </details>
+                <details className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Доступность, баллы и координаты
+                  </summary>
+                  <div className="mt-3 grid gap-3">
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <input
@@ -1686,7 +1757,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
                         }))
                       }
                     />
-                    Стартовая
+                    Доступна с начала игры
                   </label>
                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <input
@@ -1705,7 +1776,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     Скрыта до открытия
                   </label>
                   <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-                    Баллы
+                    Баллы за завершение
                     <input
                       type="number"
                       value={editingNode.scoring?.scoreForComplete || 0}
@@ -1722,7 +1793,9 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     />
                   </label>
                   <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-                    Открывается когда
+                    {game.storyConfig?.experienceMode === 'investigation'
+                      ? 'Правило выполнения условий открытия'
+                      : 'Условия открытия из раздела «Связи»'}
                     <select
                       value={normalizeInputMode(
                         editingNode.visibility?.requiredInputMode,
@@ -1738,16 +1811,16 @@ const StoryEditorPageClient = ({ session: _session }) => {
                       }
                       className={fieldClassName}
                     >
-                      <option value="all">Все входы включены</option>
-                      <option value="any">Любой вход включен</option>
-                      <option value="count">Заданное количество</option>
+                      <option value="all">Выполнены все условия</option>
+                      <option value="any">Выполнено хотя бы одно условие</option>
+                      <option value="count">Выполнено заданное число условий</option>
                     </select>
                   </label>
                 </div>
                 {normalizeInputMode(editingNode.visibility?.requiredInputMode) ===
                 'count' ? (
                   <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300 md:max-w-xs">
-                    Количество включенных входов
+                    Сколько условий должно выполниться
                     <input
                       type="number"
                       min="1"
@@ -1802,6 +1875,8 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     </label>
                   ))}
                 </div>
+                  </div>
+                </details>
               </section>
 
               <section className="grid gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">

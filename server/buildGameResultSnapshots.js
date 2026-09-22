@@ -1,4 +1,6 @@
 import { toStringId } from '@helpers/idAndDate'
+import { hasClassicVariants } from '@helpers/classicVariants'
+import { runClassicVariants } from '@server/classicVariantsEngine'
 
 const buildGameResultSnapshots = async ({ db, gameId }) => {
   const normalizedGameId = toStringId(gameId)
@@ -12,7 +14,13 @@ const buildGameResultSnapshots = async ({ db, gameId }) => {
   const Teams = db.model('Teams')
   const TeamsUsers = db.model('TeamsUsers')
 
-  const gameTeams = await GamesTeams.find({ gameId: normalizedGameId }).lean()
+  let gameTeams = await GamesTeams.find({ gameId: normalizedGameId }).lean()
+  const game = await db.model('Games').findById(normalizedGameId).lean()
+  if (hasClassicVariants(game) && game.dateEndFact) {
+    gameTeams = gameTeams.map((gameTeam) => gameTeam.startTime?.some(Boolean)
+      ? runClassicVariants({ game: { ...game, status: 'started' }, gameTeam, now: new Date(game.dateEndFact) }).gameTeam
+      : gameTeam)
+  }
   const teamIds = Array.from(
     new Set(gameTeams.map((item) => toStringId(item?.teamId)).filter(Boolean)),
   )

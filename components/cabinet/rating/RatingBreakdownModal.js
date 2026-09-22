@@ -3,10 +3,22 @@
 import PropTypes from 'prop-types'
 import { useState } from 'react'
 
+import GamePlaceBadge from '@components/cabinet/GamePlaceBadge'
 import Modal from '@components/Modal'
 
 const formatScore = (value) =>
   Number.isFinite(value) ? value.toFixed(2).replace('.', ',') : '—'
+
+const formatGamesCount = (rating) => {
+  const playedGames = Number.isFinite(rating?.playedGames)
+    ? rating.playedGames
+    : 0
+  const totalGames = Number.isFinite(rating?.totalGames)
+    ? Math.max(rating.totalGames, playedGames)
+    : playedGames
+
+  return `${playedGames} / ${totalGames}`
+}
 
 const ratingDateFormatter = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
@@ -35,6 +47,7 @@ const RatingBreakdownModal = ({ item, type, initialPeriodId, onClose }) => {
   const breakdown = rating?.breakdown || []
   const isTeam = type === 'teams'
   const entityLabel = isTeam ? 'команды' : 'игрока'
+  const isSeasonRating = selectedPeriod?.id !== 'all'
 
   return (
     <Modal
@@ -70,7 +83,7 @@ const RatingBreakdownModal = ({ item, type, initialPeriodId, onClose }) => {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-slate-100 p-3 dark:bg-white/5">
               <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Место
@@ -92,15 +105,7 @@ const RatingBreakdownModal = ({ item, type, initialPeriodId, onClose }) => {
                 Игры
               </p>
               <p className="mt-1 font-bold text-slate-900 dark:text-white">
-                {rating.playedGames}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-100 p-3 dark:bg-white/5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Победы
-              </p>
-              <p className="mt-1 font-bold text-slate-900 dark:text-white">
-                {rating.wins}
+                {formatGamesCount(rating)}
               </p>
             </div>
           </div>
@@ -120,10 +125,12 @@ const RatingBreakdownModal = ({ item, type, initialPeriodId, onClose }) => {
                       <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                         {game.gameName}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {formatRatingDate(game.dateStart)} · {game.place}-е место
-                        из {game.participantsCount}
-                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span>{formatRatingDate(game.dateStart)}</span>
+                        <span aria-hidden="true">·</span>
+                        <GamePlaceBadge place={game.place} />
+                        <span>из {game.participantsCount}</span>
+                      </div>
                       {!isTeam && game.teamName ? (
                         <p className="mt-1 text-xs text-cyan-700 dark:text-cyan-300">
                           Команда: {game.teamName}
@@ -153,8 +160,11 @@ const RatingBreakdownModal = ({ item, type, initialPeriodId, onClose }) => {
               ? 'За первое место начисляется 100 очков, за последнее — 0.'
               : 'Игрок получает очки за место своей команды: первое место даёт 100 очков, последнее — 0.'}{' '}
             Балл за остальные места зависит от количества команд. Итоговый
-            рейтинг — среднее арифметическое очков за показанные игры. Победа
-            означает первое место.
+            рейтинг — среднее арифметическое очков{' '}
+            {isSeasonRating
+              ? 'за все рейтинговые этапы сезона; за пропущенный этап начисляется 0.'
+              : 'за показанные игры.'}{' '}
+            Победа означает первое место.
           </div>
         </div>
       ) : null}
@@ -170,7 +180,7 @@ RatingBreakdownModal.propTypes = {
       rank: PropTypes.number,
       finalScore: PropTypes.number,
       playedGames: PropTypes.number.isRequired,
-      wins: PropTypes.number,
+      totalGames: PropTypes.number,
       breakdown: PropTypes.arrayOf(
         PropTypes.shape({
           gameId: PropTypes.string.isRequired,

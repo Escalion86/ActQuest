@@ -274,6 +274,7 @@ const GameModals = ({
 
       {gameForEdit ? (
         <GameTasksEditModal
+          currentUserRole={currentUserRole}
           selectedGame={gameForEdit}
           isEditModalOpen={isTasksModalOpen}
           handleCloseEditModal={handleCloseTasksModal}

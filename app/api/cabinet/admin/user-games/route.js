@@ -55,6 +55,7 @@ export async function GET(request) {
         status: 1,
         location: 1,
         dateStart: 1,
+        image: 1,
         result: 1,
       })
       .sort({ dateStart: -1, _id: -1 })
@@ -74,6 +75,7 @@ export async function GET(request) {
         status: typeof game?.status === 'string' ? game.status : '',
         location: typeof game?.location === 'string' ? game.location : '',
         dateStart: game?.dateStart ? new Date(game.dateStart).toISOString() : null,
+        image: typeof game?.image === 'string' ? game.image : '',
         teams,
         place,
       }

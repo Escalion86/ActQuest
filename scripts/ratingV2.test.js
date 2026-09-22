@@ -62,3 +62,41 @@ test('сортирует по очкам, затем играм, победам 
   assert.equal(ranks.get('lower').rank, 5)
   assert.equal(ranks.get('same-a').rank, ranks.get('same-b').rank)
 })
+
+test('в сезонном рейтинге считает пропущенные игры как ноль очков', () => {
+  const contactZoo = [
+    { gameId: '1', place: 2, participantsCount: 12, startedAt: 1 },
+    { gameId: '2', place: 1, participantsCount: 11, startedAt: 2 },
+    { gameId: '3', place: 2, participantsCount: 14, startedAt: 3 },
+  ]
+  const starTrek = [
+    { gameId: '1', place: 1, participantsCount: 12, startedAt: 1 },
+    { gameId: '2', place: 3, participantsCount: 11, startedAt: 2 },
+    { gameId: '3', place: 1, participantsCount: 14, startedAt: 3 },
+    { gameId: '4', place: 2, participantsCount: 9, startedAt: 4 },
+  ]
+  const results = new Map([
+    ['contact-zoo', contactZoo],
+    ['star-trek', starTrek],
+  ])
+  const allTimeRanks = buildRatingRanksV2(results, 4)
+  const ranks = buildRatingRanksV2(
+    results,
+    4,
+    { scoreMissedGamesAsZero: true },
+  )
+
+  assert.equal(allTimeRanks.get('contact-zoo').rank, 1)
+  assert.equal(allTimeRanks.get('star-trek').rank, 2)
+  assert.equal(ranks.get('star-trek').rank, 1)
+  assert.equal(ranks.get('contact-zoo').rank, 2)
+  assert.equal(ranks.get('star-trek').finalScore, 91.875)
+  assert.ok(
+    Math.abs(ranks.get('contact-zoo').finalScore - 70.8041958041958) <
+      1e-9,
+  )
+  assert.ok(
+    Math.abs(ranks.get('contact-zoo').averageScore - 94.4055944055944) <
+      1e-9,
+  )
+})

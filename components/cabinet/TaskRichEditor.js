@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
+import TaskThemeSurface from '@components/game/TaskThemeSurface'
 import {
   EditorContent,
   NodeViewWrapper,
@@ -1540,6 +1541,7 @@ const TaskRichEditor = ({
   disabled,
   hideToolbar,
   compactReadOnly,
+  taskTheme,
   placeholder,
   contentMaxHeight,
   aiInitialGame,
@@ -3327,7 +3329,13 @@ const TaskRichEditor = ({
           onMouseMove={handleLinkButtonPointerMove}
           onMouseLeave={scheduleLinkButtonMenuClose}
         >
-          <EditorContent editor={editor} />
+          {taskTheme ? (
+            <TaskThemeSurface theme={taskTheme}>
+              <EditorContent editor={editor} />
+            </TaskThemeSurface>
+          ) : (
+            <EditorContent editor={editor} />
+          )}
 
           {isEditorEmptySafe(editor) && placeholder ? (
             <p className="absolute text-sm pointer-events-none left-5 top-4 text-slate-400 dark:text-slate-500">
@@ -4420,6 +4428,7 @@ const areAiInitialGamesEqual = (left, right) => {
 }
 
 const areTaskRichEditorPropsEqual = (prevProps, nextProps) =>
+  prevProps.taskTheme === nextProps.taskTheme &&
   (prevProps.value || '') === (nextProps.value || '') &&
   (prevProps.directory || '') === (nextProps.directory || '') &&
   Boolean(prevProps.disabled) === Boolean(nextProps.disabled) &&
@@ -4436,6 +4445,7 @@ TaskRichEditor.propTypes = {
   disabled: PropTypes.bool,
   hideToolbar: PropTypes.bool,
   compactReadOnly: PropTypes.bool,
+  taskTheme: PropTypes.string,
   placeholder: PropTypes.string,
   contentMaxHeight: PropTypes.string,
   aiInitialGame: PropTypes.shape({

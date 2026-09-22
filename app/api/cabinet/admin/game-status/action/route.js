@@ -264,6 +264,8 @@ export async function POST(request) {
         status: 1,
         location: 1,
         tasks: 1,
+        classicItems: 1,
+        type: 1,
         taskDuration: 1,
         breakDuration: 1,
         moderators: 1,
@@ -317,6 +319,17 @@ export async function POST(request) {
       gameId: normalizeStringId(game?._id ?? gameId),
       game,
     })
+
+    if (hasClassicVariants(game)) {
+      const processed = await processClassicVariants({ game, gameTeam, gamesTeamsModel: GamesTeams,
+        action: action === 'apply_code' ? null : action, message: action === 'apply_code' ? code : null,
+        isCaptain: true, isAdmin: true, actorId: currentUserId,
+      })
+      if (processed.result.statusCode >= 400) return NextResponse.json({ success: false, error: processed.result.message }, { status: processed.result.statusCode })
+      const afterHistoryState = await fetchGameHistoryState({ db, gameId })
+      await recordGameHistoryEntry({ db, gameId, location: game.location, actionType: 'game_updated', entityScope: 'game_teams', actor: buildHistoryActorFromSession(session), beforeState: beforeHistoryState, afterState: afterHistoryState, snapshot: null, context: { summary: processed.result.message } })
+      return NextResponse.json({ success: true, message: processed.result.message })
+    }
 
     if (action === 'apply_code') {
       const processResult = await webGameProcess({
@@ -486,3 +499,5 @@ export async function POST(request) {
     )
   }
 }
+import { hasClassicVariants } from '@helpers/classicVariants'
+import processClassicVariants from '@server/processClassicVariants'

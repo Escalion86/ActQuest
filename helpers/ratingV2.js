@@ -37,7 +37,11 @@ export const calculateRatingGameScore = ({ place, participantsCount }) => {
   )
 }
 
-export const buildRatingMetricsV2 = ({ results = [], totalGames = 0 }) => {
+export const buildRatingMetricsV2 = ({
+  results = [],
+  totalGames = 0,
+  scoreMissedGamesAsZero = false,
+}) => {
   const normalizedResults = Array.isArray(results)
     ? results
         .map((result) => {
@@ -84,6 +88,11 @@ export const buildRatingMetricsV2 = ({ results = [], totalGames = 0 }) => {
     ? playedGames / normalizedTotalGames
     : null
   const latestResult = normalizedResults.at(-1) || null
+  const finalScore = scoreMissedGamesAsZero
+    ? normalizedTotalGames
+      ? scores.reduce((sum, score) => sum + score, 0) / normalizedTotalGames
+      : null
+    : averageScore
 
   return {
     version: RATING_VERSION,
@@ -100,9 +109,9 @@ export const buildRatingMetricsV2 = ({ results = [], totalGames = 0 }) => {
     averageScore,
     stdDevScore,
     latestScore: latestResult?.score ?? null,
-    finalScore: averageScore,
+    finalScore,
     isEligible:
-      playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(averageScore),
+      playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(finalScore),
   }
 }
 
@@ -133,12 +142,20 @@ const hasSameRankMetrics = (first, second) =>
   first?.wins === second?.wins &&
   isSameNumber(first?.latestScore, second?.latestScore)
 
-export const buildRatingRanksV2 = (rawMetricsByKey, totalGames) => {
+export const buildRatingRanksV2 = (
+  rawMetricsByKey,
+  totalGames,
+  { scoreMissedGamesAsZero = false } = {},
+) => {
   const metricsByKey =
     rawMetricsByKey instanceof Map ? rawMetricsByKey : new Map()
   const rows = Array.from(metricsByKey.entries()).map(([key, results]) => ({
     key,
-    ...buildRatingMetricsV2({ results, totalGames }),
+    ...buildRatingMetricsV2({
+      results,
+      totalGames,
+      scoreMissedGamesAsZero,
+    }),
   }))
   const eligibleRows = rows
     .filter((row) => row.isEligible)
@@ -174,4 +191,3 @@ export const buildRatingRanksV2 = (rawMetricsByKey, totalGames) => {
 }
 
 export { RATING_MIN_PLAYED_GAMES, RATING_VERSION }
-

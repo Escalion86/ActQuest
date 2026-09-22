@@ -13,8 +13,16 @@ const MIN_RATING_GAMES = 3
 const formatScore = (value) =>
   Number.isFinite(value) ? value.toFixed(2).replace('.', ',') : '—'
 
-const formatAttendance = (value) =>
-  Number.isFinite(value) ? `${Math.round(value * 100)}%` : '—'
+const formatGamesCount = (rating) => {
+  const playedGames = Number.isFinite(rating?.playedGames)
+    ? rating.playedGames
+    : 0
+  const totalGames = Number.isFinite(rating?.totalGames)
+    ? Math.max(rating.totalGames, playedGames)
+    : playedGames
+
+  return `${playedGames} / ${totalGames}`
+}
 
 const RatingRow = ({ item, type, onSelect }) => {
   const rating = item.rating
@@ -69,7 +77,7 @@ const RatingRow = ({ item, type, onSelect }) => {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center sm:min-w-64">
+        <div className="grid grid-cols-2 gap-2 text-center sm:min-w-64">
           <div className="rounded-xl bg-slate-50 px-2 py-2 dark:bg-slate-800/80">
             <p className="text-[10px] uppercase tracking-wide text-slate-400">
               Очки
@@ -83,15 +91,7 @@ const RatingRow = ({ item, type, onSelect }) => {
               Игры
             </p>
             <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
-              {rating.playedGames}
-            </p>
-          </div>
-          <div className="rounded-xl bg-slate-50 px-2 py-2 dark:bg-slate-800/80">
-            <p className="text-[10px] uppercase tracking-wide text-slate-400">
-              Участие
-            </p>
-            <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
-              {formatAttendance(rating.attendance)}
+              {formatGamesCount(rating)}
             </p>
           </div>
         </div>
@@ -259,9 +259,11 @@ const RatingPageClient = ({
               таблицы — примерно 50.
             </p>
             <p>
-              Рейтинг — среднее число этих очков. Пропуски не уменьшают балл и
-              показываются только как участие. При равенстве выше участник с
-              большим числом игр, затем побед и лучшим последним результатом.
+              {selectedSeasonId
+                ? 'В сезоне рейтинг считается по всем закрытым рейтинговым этапам: пропущенный этап даёт 0 очков.'
+                : 'За всё время рейтинг считается как среднее по сыгранным играм; пропуски показываются только как участие.'}{' '}
+              При равенстве выше участник с большим числом игр, затем побед и
+              лучшим последним результатом.
             </p>
           </div>
         </details>

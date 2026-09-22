@@ -38,6 +38,7 @@ const normalizeTaskMeta = (value) => {
 }
 
 const TaskDisplayWithClues = ({
+  taskTheme = 'cyberpunk-dark',
   taskHtml,
   taskText,
   clues,
@@ -65,6 +66,7 @@ const TaskDisplayWithClues = ({
   return (
     <>
       <RichTaskContentView
+        taskTheme={taskTheme}
         html={String(taskHtml || '')}
         text={String(taskText || '')}
         className={taskClassName}
@@ -81,6 +83,7 @@ const TaskDisplayWithClues = ({
             >
               <h3 className={clueTitleClassName}>{clue.label}:</h3>
               <RichTaskContentView
+                taskTheme={taskTheme}
                 html={clue.html}
                 text={clue.text}
                 className={clueContentClassName}
@@ -125,6 +128,7 @@ const TaskDisplayWithClues = ({
 }
 
 TaskDisplayWithClues.propTypes = {
+  taskTheme: PropTypes.string,
   taskHtml: PropTypes.string,
   taskText: PropTypes.string,
   clues: PropTypes.arrayOf(

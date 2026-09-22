@@ -1,3 +1,4 @@
+import { normalizeTaskTheme } from '@helpers/taskThemes'
 import { memo, useState, useRef, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import dynamic from 'next/dynamic'
@@ -505,9 +506,9 @@ const TaskItem = ({
               labelClassName={fieldLabelClassName}
               inputClassName={fieldInputClassName}
             />
-            <div className="space-y-2">
-              <p className={fieldLabelClassName}>Агенты задания</p>
-              {selectedGameAgents.length > 0 ? (
+            {selectedGameAgents.length > 0 ? (
+              <div className="space-y-2">
+                <p className={fieldLabelClassName}>Агенты задания</p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {selectedGameAgents.map((agent) => {
                     const checked = (
@@ -544,12 +545,8 @@ const TaskItem = ({
                     )
                   })}
                 </div>
-              ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Сначала добавьте агентов в настройках игры.
-                </p>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -557,6 +554,7 @@ const TaskItem = ({
               {withRequiredMark('Описание задания')}
             </p>
             <TaskRichEditor
+              taskTheme={normalizeTaskTheme(selectedGame?.taskTheme)}
               value={task.taskRich || task.task || ''}
               directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/editor`}
               contentMaxHeight="none"
@@ -797,6 +795,7 @@ const TaskItem = ({
                     </summary>
                     <div className="px-2 pb-2 mt-2 space-y-2">
                       <TaskRichEditor
+                        taskTheme={normalizeTaskTheme(selectedGame?.taskTheme)}
                         value={clue.clueRich || clue.clue || ''}
                         directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
                         contentMaxHeight="none"
@@ -938,6 +937,7 @@ const TaskItem = ({
           <div className="space-y-2">
             <p className={fieldLabelClassName}>Сообщение после выполнения</p>
             <TaskRichEditor
+              taskTheme={normalizeTaskTheme(selectedGame?.taskTheme)}
               value={task.postMessageRich || task.postMessage || ''}
               directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/post-message/editor`}
               contentMaxHeight="none"
@@ -1797,6 +1797,7 @@ TaskItem.propTypes = {
   canEditSelectedGame: PropTypes.bool.isRequired,
   isSaving: PropTypes.bool.isRequired,
   selectedGame: PropTypes.shape({
+    taskTheme: PropTypes.string,
     id: PropTypes.string,
     name: PropTypes.string,
     type: PropTypes.string,

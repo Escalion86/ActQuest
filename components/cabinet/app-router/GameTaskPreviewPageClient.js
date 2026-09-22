@@ -1,5 +1,8 @@
 'use client'
 
+import { TASK_THEMES, normalizeTaskTheme } from '@helpers/taskThemes'
+
+
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
@@ -125,6 +128,7 @@ const fetchTaskPreviewData = async ({ gameId, draftKey, taskIndex }) => {
 
     return {
       game: {
+        taskTheme: normalizeTaskTheme(parsed?.game?.taskTheme),
         id: String(parsed?.game?.id || ''),
         name: String(parsed?.game?.name || ''),
         type: parsed?.game?.type === 'photo' ? 'photo' : 'classic',
@@ -361,7 +365,9 @@ export default function GameTaskPreviewPageClient() {
 
         <p className="mb-3 text-xs text-slate-500 dark:text-slate-300">
           Предпросмотр в пользовательском формате. Таймер и ввод кода на этой
-          странице отключены.
+          странице отключены. Тема:{' '}
+          {TASK_THEMES.find((theme) => theme.id === normalizeTaskTheme(data?.game?.taskTheme))?.label}.
+          {' '}Авторские цвета текста сохранены.
         </p>
         <section className="rounded-3xl bg-white p-6 shadow-lg dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
           <div className="flex items-center justify-between gap-3">
@@ -378,6 +384,7 @@ export default function GameTaskPreviewPageClient() {
           </div>
           <div className="mt-4">
             <TaskDisplayWithClues
+              taskTheme={normalizeTaskTheme(data?.game?.taskTheme)}
               taskHtml={selectedTaskHtml}
               taskText={selectedTaskText}
               clues={selectedClues}
@@ -413,6 +420,7 @@ export default function GameTaskPreviewPageClient() {
             </h3>
             <div className="mt-4">
               <RichTaskContentView
+                taskTheme={normalizeTaskTheme(data?.game?.taskTheme)}
                 html={postMessageHtml}
                 text=""
                 className="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"

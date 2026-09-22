@@ -63,6 +63,7 @@ export async function GET(request) {
       sortBy: 'registration_desc',
       limit: 1,
       offset: 0,
+      includeHiddenGameResults: isUserAdmin({ role }),
     })
 
     const team = Array.isArray(teams) && teams.length > 0 ? teams[0] : null

@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose'
+import { DEFAULT_TASK_THEME, normalizeTaskTheme } from '@helpers/taskThemes'
 import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
 import gamesTeamsSchema from './gamesTeamsSchema'
 import teamsSchema from './teamsSchema'
@@ -489,6 +490,10 @@ const PrequelConfigSchema = new Schema(
 )
 
 const gamesSchema = {
+  classicItems: {
+    type: [{ id: String, title: String, description: String, image: String, kind: { type: String, enum: ['unique', 'stackable'] } }],
+    default: [],
+  },
   name: {
     type: String,
     required: [true, 'Введите название игры'],
@@ -597,6 +602,7 @@ const gamesSchema = {
     type: String,
     default: null,
   },
+  taskTheme: { type: String, default: DEFAULT_TASK_THEME, set: normalizeTaskTheme },
   useCustomTaskPublicTitles: {
     type: Boolean,
     default: false,
@@ -604,6 +610,11 @@ const gamesSchema = {
   tasks: {
     type: [
       {
+        variantConfig: { type: Schema.Types.Mixed, default: null },
+        stageKey: { type: String, default: '' },
+        variants: { type: [Schema.Types.Mixed], default: [] },
+        itemRewards: { type: Schema.Types.Mixed, default: null },
+        outcomeRewards: { type: Schema.Types.Mixed, default: null },
         publicTitle: {
           type: String,
           default: '',

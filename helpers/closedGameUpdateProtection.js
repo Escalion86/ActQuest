@@ -1,3 +1,4 @@
+import { normalizeTaskTheme } from './taskThemes.js'
 // Защита закрытой игры от изменения заданий и игровых настроек.
 // Закрытая игра считается завершённой: её задания и игровые параметры нельзя
 // менять, чтобы не искажать результаты. Смена статуса (reopen), видимость
@@ -18,6 +19,7 @@ const CLOSED_GAME_IMMUTABLE_FIELD_LABELS = {
   allowCaptainForceClue: 'капитанское действие «открыть подсказку»',
   allowCaptainFailTask: 'капитанское действие «слить задание»',
   allowCaptainFinishBreak: 'капитанское действие «завершить перерыв»',
+  taskTheme: 'оформление заданий',
   useCustomTaskPublicTitles: 'произвольные публичные названия заданий',
   individualStart: 'индивидуальный старт',
   startingPlace: 'место старта',
@@ -248,7 +250,9 @@ const resolveClosedGameUpdateViolation = ({ updateData, existingGame }) => {
       : updateData[field]
     const isEqual = isStructuredField
       ? JSON.stringify(nextValue) === JSON.stringify(prevValue)
-      : areClosedGameScalarValuesEqual(nextValue, prevValue)
+      : field === 'taskTheme'
+        ? normalizeTaskTheme(nextValue) === normalizeTaskTheme(prevValue)
+        : areClosedGameScalarValuesEqual(nextValue, prevValue)
 
     if (!isEqual) {
       return label

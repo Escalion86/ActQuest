@@ -1,6 +1,10 @@
+import { normalizeTaskTheme } from '@helpers/taskThemes'
 import fetchGame from '@server/fetchGame'
 import fetchTeam from '@server/fetchTeam'
 import webGameProcess from '@server/webGameProcess'
+import processClassicVariants from '@server/processClassicVariants'
+import getLocationTimeZone from '@helpers/locationTimeZone'
+import { hasClassicVariants, resolveClassicGame, classicStageId, classicPublicChoices, classicPublicInventory, getClassicStageProgress } from '@helpers/classicVariants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import taskText from 'telegram/func/taskText'
 import sanitize from '@helpers/sanitize'
@@ -156,6 +160,7 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex, game) => {
   )
 
   return {
+    taskTheme: normalizeTaskTheme(game?.taskTheme),
     taskIndex: safeTaskIndex,
     publicTitle:
       ['classic', 'photo'].includes(game?.type) &&
@@ -966,6 +971,7 @@ const computeTaskHtml = async ({
   isGameStarted,
   isGameFinished,
   gamesTeamsModel,
+  skipAutomaticProgress = false,
 }) => {
   const tasks = Array.isArray(game.tasks) ? game.tasks : []
   const tasksCount = tasks.length
@@ -1189,7 +1195,7 @@ const computeTaskHtml = async ({
 
   let effectiveGameTeam = gameTeam
 
-  for (let guard = 0; guard < tasksCount + 1; guard += 1) {
+  for (let guard = 0; !skipAutomaticProgress && guard < tasksCount + 1; guard += 1) {
     const previousActiveNum = Number.isInteger(effectiveGameTeam?.activeNum)
       ? effectiveGameTeam.activeNum
       : 0
@@ -1255,6 +1261,7 @@ const computeTaskHtml = async ({
   let taskDisplayMeta = null
   let taskState = 'idle'
   let postCompletionMessage = null
+  const postCompletionTheme = normalizeTaskTheme(game?.taskTheme)
 
   const hasCompletedAllTasks = tasksCount > 0 && activeNumRaw >= tasksCount
 
@@ -1476,7 +1483,7 @@ const computeTaskHtml = async ({
     taskDisplayTaskHtml,
     taskDisplayTaskText,
     taskDisplayClues,
-    taskDisplayMeta,
+    taskDisplayMeta: { ...taskDisplayMeta, postCompletionTheme },
     taskState,
     processResult,
     effectiveGameTeam,
@@ -1493,6 +1500,8 @@ const getTeamGameTaskState = async ({
   message,
   action,
   testRunId,
+  stageId,
+  variantId,
 }) => {
   if (!location || !gameId || !teamId) {
     return buildError(GAME_TASK_ERRORS.INVALID_PARAMS)
@@ -1630,8 +1639,19 @@ const getTeamGameTaskState = async ({
     }
 
     let processResult = null
+    const variantGame = hasClassicVariants(game) ? game : null
+    if (variantGame) {
+      const processed = await processClassicVariants({
+        game, gameTeam, gamesTeamsModel, action, message, stageId, variantId,
+        isCaptain, actorId: userId ? String(userId) : null,
+        dynamicTimeCode: new Intl.DateTimeFormat('ru-RU', { timeZone: getLocationTimeZone(location), hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace(':', ''),
+      })
+      gameTeam = processed.gameTeam
+      processResult = processed.result
+      game = resolveClassicGame(game, gameTeam)
+    }
 
-    try {
+    if (!variantGame) try {
       const captainActionHandler =
         action === 'finishBreak'
           ? finishBreakForCaptain
@@ -1728,7 +1748,7 @@ const getTeamGameTaskState = async ({
       }
     }
 
-    const {
+    let {
       taskHtml,
       taskDisplayHtml,
       taskDisplayText,
@@ -1747,12 +1767,36 @@ const getTeamGameTaskState = async ({
       isGameStarted,
       isGameFinished,
       gamesTeamsModel,
+      skipAutomaticProgress: Boolean(variantGame),
     })
+
+    let variantData = {}
+    if (variantGame) {
+      const index = Number(gameTeam.activeNum || 0)
+      const stage = variantGame.tasks[index]
+      const progress = stage ? getClassicStageProgress(gameTeam, stage, index) : null
+      const choosing = taskState === 'active' && stage?.variantConfig?.enabled && !progress?.selectedVariantId
+      variantData = {
+        stageId: stage ? classicStageId(stage, index) : null,
+        selectedVariantId: progress?.selectedVariantId || null,
+        variantChoices: choosing ? classicPublicChoices(variantGame, gameTeam, index) : [],
+        inventory: classicPublicInventory(variantGame, gameTeam),
+        canSelectVariant: choosing && isCaptain,
+      }
+      if (choosing) {
+        taskState = 'choosing_variant'
+        taskDisplayHtml = ''; taskDisplayText = ''; taskDisplayTaskHtml = ''; taskDisplayTaskText = ''; taskDisplayClues = []
+        const duration = Number(game.taskDuration ?? 3600)
+        const target = new Date(gameTeam.startTime[index]).getTime() + duration * 1000
+        taskHtml = `<b>Выберите путь для задания ${index + 1}.</b>${duration > 0 ? `<br /><span data-task-countdown="task" data-refresh-on-complete="true" data-target="${target}"></span>` : ''}`
+      }
+      taskDisplayMeta = { ...(taskDisplayMeta || {}), classic: variantData }
+    }
 
     if (!isTestRun) {
       await notifyAgentsForGameTeamProgress({
         db,
-        game,
+        game: variantGame || game,
         gameTeam: effectiveGameTeam || gameTeam,
         team,
       })
@@ -1784,12 +1828,13 @@ const getTeamGameTaskState = async ({
             ? safeSerialize(taskDisplayMeta)
             : null,
         taskState,
+        ...variantData,
         gameTeamId: String(gameTeam._id),
-        captainActions: buildCaptainActionsForState({
+        captainActions: { ...buildCaptainActionsForState({
           game,
           gameTeam: effectiveGameTeam || gameTeam,
           isCaptain,
-        }),
+        }), ...(taskState === 'choosing_variant' ? { canForceClue: false, canSelectVariant: isCaptain, canFailTask: isCaptain && game.allowCaptainFailTask !== false } : {}) },
         postCompletionMessage:
           typeof postCompletionMessage === 'string'
             ? postCompletionMessage

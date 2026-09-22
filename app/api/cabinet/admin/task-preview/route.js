@@ -1,3 +1,4 @@
+import { normalizeTaskTheme } from '@helpers/taskThemes'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -104,6 +105,7 @@ export async function GET(request) {
         taskDuration: 1,
         cluesDuration: 1,
         breakDuration: 1,
+        taskTheme: 1,
         useCustomTaskPublicTitles: 1,
         tasks: 1,
         moderators: 1,
@@ -173,6 +175,7 @@ export async function GET(request) {
         success: true,
         data: {
           game: {
+            taskTheme: normalizeTaskTheme(game.taskTheme),
             id: toStringId(game._id),
             name: normalizeString(game.name),
             type: game.type === 'photo' ? 'photo' : 'classic',

@@ -1,3 +1,4 @@
+import { normalizeTaskTheme } from '@helpers/taskThemes'
 import CRUD from '@server/CRUD'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
@@ -46,6 +47,7 @@ const buildResetPayload = ({
   taskFailures: [],
   ...(clearTimeAddings ? { timeAddings: [] } : {}),
   storyProgress: null,
+  classicProgress: null,
   ...(clearPrequelProgress
     ? { prequelProgress: null, prequelProgresses: [] }
     : {}),
@@ -132,6 +134,10 @@ const stripHtmlToPlainText = (value) =>
 const sanitizeTasksRichContent = (tasks = []) =>
   (Array.isArray(tasks) ? tasks : []).map((task) => ({
     ...task,
+    variants: (Array.isArray(task?.variants) ? task.variants : []).map((variant) => ({
+      ...variant,
+      content: sanitizeTasksRichContent([{ ...variant.content, variants: [] }])[0],
+    })),
     howToSolve:
       typeof task?.howToSolve === 'string' ? task.howToSolve.trim() : '',
     taskRich:
@@ -707,6 +713,9 @@ const execute = (request, params) =>
           updateData: { ...updatePayload, status: resolvedStatus },
         })
 
+        if (Object.prototype.hasOwnProperty.call(updateData, 'taskTheme')) {
+          updateData.taskTheme = normalizeTaskTheme(updateData.taskTheme)
+        }
         if (Object.prototype.hasOwnProperty.call(updateData, 'individualStart')) {
           updateData.individualStart = Boolean(updateData.individualStart)
           if (existingGame?.type === 'story') {
@@ -992,6 +1001,17 @@ const execute = (request, params) =>
           }
         }
 
+        const classicErrors = validateClassicVariants({ ...existingGame.toObject(), ...updateData })
+        if (classicErrors.length) return res.status(400).json({ success: false, error: classicErrors.join(' ') })
+        if (['started', 'finished', 'closed'].includes(existingGame.status) && (hasClassicVariants(existingGame) || hasClassicVariants({ ...existingGame.toObject(), ...updateData })) && !shouldReset) {
+          const fields = ['tasks', 'classicItems', 'type', 'taskDuration', 'breakDuration', 'cluesDuration', 'taskDistributionMode']
+          const before = normalizeGameForCabinet(existingGame.toObject())
+          const after = normalizeGameForCabinet(new Games({ ...existingGame.toObject(), ...updateData }).toObject())
+          // Отмена этапа — оперативное действие, остальные правила неизменяемы.
+          const withoutCancellation = (value) => JSON.stringify(value, (key, entry) => key === 'canceled' ? undefined : entry)
+          const changed = fields.some((key) => Object.prototype.hasOwnProperty.call(updateData, key) && withoutCancellation(after[key]) !== withoutCancellation(before[key]))
+          if (changed) return res.status(409).json({ success: false, error: 'Правила игры с вариантами нельзя менять после запуска. Создайте копию игры.' })
+        }
         if (shouldReset) {
           const GamesTeams = db.model('GamesTeams')
           const existingGameTeams = await GamesTeams.find({ gameId: id })
@@ -1232,3 +1252,5 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   return execute(request, params)
 }
+import { validateClassicVariants, hasClassicVariants } from '@helpers/classicVariants'
+import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'

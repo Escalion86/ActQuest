@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
+import { canCreateTeamForRole } from '@helpers/teamBanAccess'
 
 const ESCALIONCLOUD_API_URL =
   process.env.ESCALIONCLOUD_API_URL || 'https://cloud.escalion.ru/api'
@@ -73,20 +74,55 @@ const resolveSessionIdentity = (sessionUser) => ({
 
 const canUploadPlayerPhoto = async ({ directory, identity }) => {
   const segments = directory.split('/')
-  if (
-    segments.length !== 4 ||
-    segments[0] !== ESCALIONCLOUD_PROJECT ||
-    segments[1] !== 'game-photo-answers' ||
-    !segments[2] ||
-    !segments[3]
-  ) {
+  if (segments[0] !== ESCALIONCLOUD_PROJECT) {
     return false
   }
 
-  const [, , gameId, teamId] = segments
+  const isTeamAvatarDirectory =
+    segments.length === 3 &&
+    segments[1] === 'teams' &&
+    Boolean(segments[2])
+
+  if (isTeamAvatarDirectory && segments[2] === 'draft') {
+    return canCreateTeamForRole(identity.role)
+  }
+
+  const isGamePhotoAnswerDirectory =
+    segments.length === 4 &&
+    segments[1] === 'game-photo-answers' &&
+    Boolean(segments[2]) &&
+    Boolean(segments[3])
+
+  if (!isTeamAvatarDirectory && !isGamePhotoAnswerDirectory) {
+    return false
+  }
+
   const db = await dbConnectGlobal()
   if (!db) return false
 
+  if (isTeamAvatarDirectory) {
+    const teamId = segments[2]
+    const [team, teamUsers] = await Promise.all([
+      db.model('Teams').findById(teamId).select({ kind: 1 }).lean(),
+      db
+        .model('TeamsUsers')
+        .find({ teamId })
+        .select({ userId: 1, userTelegramId: 1, role: 1 })
+        .lean(),
+    ])
+
+    if (!team?._id || team.kind === 'personal') {
+      return false
+    }
+
+    return resolveTeamMembershipForIdentity({
+      teamUsers,
+      userId: identity.userId,
+      telegramId: identity.telegramId,
+    }).isCaptain
+  }
+
+  const [, , gameId, teamId] = segments
   const [game, gameTeam, teamUsers] = await Promise.all([
     db
       .model('Games')

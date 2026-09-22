@@ -39,6 +39,7 @@ const buildGameStartProgressUpdate = ({
     timeAddings: removeCluePenalties(timeAddings),
     forcedClues: startImmediately ? new Array(gameTasksCount).fill(0) : [],
     storyProgress,
+    classicProgress: null,
   }
 }
 

@@ -67,6 +67,10 @@ requireText('app/api/escalioncloud/route.js', [
   'getServerSession(authOptions)',
   'canUploadPlayerPhoto',
   'resolveTeamMembershipForIdentity',
+  "segments[1] === 'teams'",
+  "segments[2] === 'draft'",
+  'canCreateTeamForRole(identity.role)',
+  '}).isCaptain',
   'MAX_REQUEST_BYTES',
 ])
 requireText('app/api/escalioncloud/files/route.js', [

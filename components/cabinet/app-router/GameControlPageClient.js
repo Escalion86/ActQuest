@@ -1033,10 +1033,10 @@ export default function GameControlPageClient({ session: _session }) {
     const activeTaskIndex = Number.isInteger(selectedTeam?.activeTaskIndex)
       ? selectedTeam.activeTaskIndex
       : -1
-    const currentTask =
+    const currentTask = selectedTeam?.isChoosingVariant ? null : selectedTeam?.selectedTaskPreview || (
       activeTaskIndex >= 0 && activeTaskIndex < allTasks.length
         ? allTasks[activeTaskIndex]
-        : null
+        : null)
     return {
       id: String(data?.gameId || ''),
       name: selectedTeam?.teamName
@@ -1790,6 +1790,9 @@ export default function GameControlPageClient({ session: _session }) {
                         <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                           {team.teamName}
                         </h3>
+                        {team.isChoosingVariant ? <span className="text-sm text-amber-600">Выбирает путь</span> : team.selectedVariantTitle ? <span className="text-sm text-cyan-700 dark:text-cyan-300">{team.selectedVariantTitle}</span> : null}
+                        {team.classicInventory?.length > 0 ? <span className="text-xs text-slate-500">{team.classicInventory.map((item) => `${item.title} ×${item.quantity}`).join(', ')}</span> : null}
+                        {team.classicHistory?.length > 0 ? <details className="text-xs"><summary className="cursor-pointer">История пути</summary><ul className="max-h-48 overflow-auto">{team.classicHistory.map((event) => <li key={event.key} className="py-1">{event.type === 'variant_selected' ? `${event.title || 'Путь'}: ${event.reason || ''}` : event.type === 'stage_finished' ? `Исход: ${{ completed: 'выполнено', timeout: 'таймаут', captain_failed: 'провал' }[event.outcome] || event.outcome}` : 'Выданы предметы'}{event.items?.length ? ` (${event.items.map((item) => `${item.title || item.itemId} ×${item.quantity}`).join(', ')})` : ''}</li>)}</ul></details> : null}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-600/50 dark:bg-slate-700/50 dark:text-slate-300">

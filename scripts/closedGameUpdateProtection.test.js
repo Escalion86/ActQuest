@@ -190,6 +190,20 @@ test('изменение текста задания отклоняется', ()
   assert.equal(violation, 'задания')
 })
 
+test('явная тёмная тема совместима со старым заданием без темы', () => {
+  const existingGame = buildExistingGame()
+  const updateData = buildUpdateData(existingGame)
+  updateData.taskTheme = 'cyberpunk-dark'
+  assert.equal(resolveClosedGameUpdateViolation({ updateData, existingGame }), null)
+})
+
+test('изменение оформления закрытого задания отклоняется', () => {
+  const existingGame = buildExistingGame()
+  const updateData = buildUpdateData(existingGame)
+  updateData.taskTheme = 'cyberpunk-light'
+  assert.equal(resolveClosedGameUpdateViolation({ updateData, existingGame }), 'оформление заданий')
+})
+
 test('добавление задания отклоняется', () => {
   const existingGame = buildExistingGame()
   const updateData = buildUpdateData(existingGame)

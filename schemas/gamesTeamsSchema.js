@@ -1,6 +1,7 @@
 import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
 
 const gamesTeamsSchema = {
+  classicProgress: { type: Object, default: null },
   teamId: {
     type: String,
     required: [true, 'Необходимо выбрать команду'],

@@ -9,6 +9,7 @@ import {
   resolveTeamBreakState,
 } from '@helpers/agentGameStatus'
 import { getAvailableStoryNodes } from '@server/storyEngine'
+import { resolveClassicGame } from '@helpers/classicVariants'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) return ''
@@ -161,6 +162,7 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
       dateStart: 1,
       dateStartFact: 1,
       tasks: 1,
+      classicItems: 1,
       type: 1,
       storyNodes: 1,
       agents: 1,
@@ -212,7 +214,11 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
     : []
   const teamsById = new Map(teams.map((team) => [toStringId(team?._id), team]))
 
+  const originalGame = game
   const teamStatuses = gameTeams.map((gameTeam) => {
+    const game = resolveClassicGame(originalGame, gameTeam)
+    const tasks = game.tasks || []
+    const assignedTaskIndexes = getAssignedTaskIndexes({ game, userId: normalizedUserId, role })
     const teamId = toStringId(gameTeam?.teamId)
     const breakState = storyGame
       ? { isTeamOnBreak: false, breakTimeLeftSeconds: 0 }

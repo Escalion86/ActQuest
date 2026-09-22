@@ -5,8 +5,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
-import GamePlaceBadge from '@components/cabinet/GamePlaceBadge'
 import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
+import PlayedGameCard from '@components/cabinet/cards/PlayedGameCard'
 import RatingBreakdownModal from '@components/cabinet/rating/RatingBreakdownModal'
 import GameReviewModal from '@components/location-game/GameReviewModal'
 import Modal from '@components/Modal'
@@ -688,70 +688,11 @@ const CabinetDashboard = ({
               </h3>
               {latestPlayedGame ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => setIsPlayedGamePreviewOpen(true)}
-                    className="mt-4 w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
-                  >
-                    <div className="flex min-w-0 items-start justify-between gap-3">
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900/70">
-                          {latestPlayedGame.image ? (
-                            <img
-                              src={latestPlayedGame.image}
-                              alt={latestPlayedGame.gameName}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-500 dark:text-slate-300">
-                              Нет фото
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="aq-modal-item-title truncate text-sm font-semibold">
-                            {latestPlayedGame.gameName}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                            {latestPlayedGame.dateLabel}
-                          </p>
-                          {latestPlayedGame.teamName ? (
-                            <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
-                              {latestPlayedGame.teamName}
-                            </p>
-                          ) : null}
-                          {latestPlayedGame.reviewsCount > 0 &&
-                          latestPlayedGame.reviewAverageRating ? (
-                            <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-200">
-                              {latestPlayedGame.reviewAverageRating} ★
-                              {latestPlayedGame.reviewAverageDifficultyRating ? (
-                                <>
-                                  {' '}·{' '}
-                                  {latestPlayedGame.reviewAverageDifficultyRating} ◈
-                                </>
-                              ) : null}{' '}
-                              -{' '}
-                              {getReviewCountLabel(
-                                latestPlayedGame.reviewsCount,
-                              )}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                      {latestPlayedGame.isResultPublished && latestPlayedGame.place ? (
-                        <GamePlaceBadge
-                          place={latestPlayedGame.place}
-                          label={`${latestPlayedGame.place} место`}
-                        />
-                      ) : (
-                        <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                          {latestPlayedGame.isResultPublished
-                            ? 'Без места'
-                            : 'Результаты скрыты'}
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                  <PlayedGameCard
+                    game={latestPlayedGame}
+                    onOpen={() => setIsPlayedGamePreviewOpen(true)}
+                    className="mt-4"
+                  />
                   <button
                     type="button"
                     onClick={() =>

@@ -101,6 +101,7 @@ const sanitizeCabinetGameForViewer = (
 
   return {
     ...game,
+    classicItems: [],
     clueEarlyAccessMode: undefined,
     clueEarlyPenalty: undefined,
     clueEarlyAccessFrom: undefined,

@@ -1471,6 +1471,7 @@ function GameTeamPage({
           teamId,
           testRunId: testRunId || undefined,
           message: trimmedAnswer,
+          stageId: currentTaskDisplayMeta?.classic?.stageId,
         }),
       })
 
@@ -2176,11 +2177,11 @@ function GameTeamPage({
   const shouldShowLastMessage =
     displayedResultMessages.length > 0 && !isStoryGame && !isGameCompletion
   const shouldShowAnswerForm =
-    !isStoryGame && !isGameCompletion && !isBreakState
+    !isStoryGame && !isGameCompletion && !isBreakState && currentTaskState !== 'choosing_variant'
   const shouldShowGameCompletedBlock = !isStoryGame && isGameCompletion
   const shouldShowCurrentTaskBlock =
     Boolean(
-      resolvedTaskHtml || resolvedTaskText || visibleTaskClues.length > 0,
+      resolvedTaskHtml || resolvedTaskText || visibleTaskClues.length > 0 || currentTaskState === 'choosing_variant',
     ) &&
     !shouldShowGameCompletedBlock &&
     !isStoryGame
@@ -2610,6 +2611,7 @@ function GameTeamPage({
                 {!isPostCompletionMessageCollapsed ? (
                   <div className="mt-4">
                     <RichTaskContentView
+                      taskTheme={currentTaskDisplayMeta?.postCompletionTheme || 'cyberpunk-dark'}
                       html={postCompletionMessageHtml}
                       text=""
                       className="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
@@ -2683,6 +2685,7 @@ function GameTeamPage({
                 {!isPostCompletionMessageCollapsed ? (
                   <div className="mt-4">
                     <RichTaskContentView
+                      taskTheme={currentTaskDisplayMeta?.postCompletionTheme || 'cyberpunk-dark'}
                       html={postCompletionMessageHtml}
                       text=""
                       className="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
@@ -2823,7 +2826,9 @@ function GameTeamPage({
                     dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
                   />
                 </div>
+                <ClassicVariantChoice key={currentTaskDisplayMeta?.classic?.stageId} data={currentTaskDisplayMeta?.classic} location={location} gameId={gameId} teamId={teamId} testRunId={testRunId} onUpdate={updateTaskData} />
                 <TaskDisplayWithClues
+                  taskTheme={currentTaskDisplayMeta?.taskTheme}
                   taskHtml={resolvedTaskHtml}
                   taskText={resolvedTaskText}
                   clues={visibleTaskClues}
@@ -3330,6 +3335,8 @@ GameTeamPage.propTypes = {
     }),
   ),
   taskDisplayMeta: PropTypes.shape({
+    taskTheme: PropTypes.string,
+    postCompletionTheme: PropTypes.string,
     publicTitle: PropTypes.string,
     isBonusTask: PropTypes.bool,
     mainCodesCount: PropTypes.number,
@@ -3337,7 +3344,7 @@ GameTeamPage.propTypes = {
     bonusCodesCount: PropTypes.number,
     penaltyCodesCount: PropTypes.number,
   }),
-  taskState: PropTypes.oneOf(['idle', 'active', 'break', 'completed']),
+  taskState: PropTypes.oneOf(['idle', 'active', 'choosing_variant', 'break', 'completed']),
   captainActions: PropTypes.shape({
     canFinishBreak: PropTypes.bool,
     canForceClue: PropTypes.bool,
@@ -3377,3 +3384,4 @@ GameTeamPage.defaultProps = {
 }
 
 export default GameTeamPage
+import ClassicVariantChoice from '@components/location-game/ClassicVariantChoice'

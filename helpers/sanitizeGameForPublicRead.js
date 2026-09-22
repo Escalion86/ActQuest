@@ -42,6 +42,11 @@ const sanitizeGameForPublicRead = (game) => {
   const isFinished = normalizedStatus === 'finished' || normalizedStatus === 'closed'
   const tasks = (Array.isArray(source.tasks) ? source.tasks : []).map((task) => ({
     ...task,
+    variants: [],
+    variantConfig: null,
+    itemRewards: null,
+    outcomeRewards: null,
+    ...(!isFinished && task?.variantConfig?.enabled ? { task: '', taskRich: '', taskMedia: [], images: [], coordinates: null } : {}),
     codesCount: Array.isArray(task?.codes) ? task.codes.length : 0,
     codes: [],
     codePhotos: [],
@@ -89,6 +94,7 @@ const sanitizeGameForPublicRead = (game) => {
 
   return {
     ...source,
+    classicItems: [],
     tasks,
     storyNodes,
     storyCharacters: [],

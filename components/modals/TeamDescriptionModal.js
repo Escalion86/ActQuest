@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CopyableId from '@components/cabinet/CopyableId'
-import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
+import PlayedGameCard from '@components/cabinet/cards/PlayedGameCard'
 import TeamMemberCard from '@components/cabinet/cards/TeamMemberCard'
 import UserViewModal from '@components/cabinet/modals/UserViewModal'
 import RatingBreakdownModal from '@components/cabinet/rating/RatingBreakdownModal'
@@ -461,10 +461,9 @@ const TeamDescriptionModal = ({
                     <li
                       key={`${game.id || 'game'}-${game.location || ''}-${gameIndex}`}
                     >
-                      <ParticipationGameCard
+                      <PlayedGameCard
                         game={game}
-                        onOpen={() => handleOpenGameCard(game)}
-                        showTeam={false}
+                        onOpen={handleOpenGameCard}
                         footerText={
                           game.hidden ? 'Игра скрыта из публичного списка' : ''
                         }
@@ -619,7 +618,10 @@ TeamDescriptionModal.propTypes = {
         name: PropTypes.string,
         status: PropTypes.string,
         dateStart: PropTypes.string,
+        image: PropTypes.string,
         hidden: PropTypes.bool,
+        place: PropTypes.number,
+        isResultPublished: PropTypes.bool,
       }),
     ),
   }),

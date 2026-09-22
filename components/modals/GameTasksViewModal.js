@@ -1,3 +1,4 @@
+import { normalizeTaskTheme } from '@helpers/taskThemes'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 
@@ -387,6 +388,7 @@ const GameTasksViewModal = ({
                       <ModalSectionTitle>Описание задания</ModalSectionTitle>
                       <div className="mt-2">
                         <RichTaskContentView
+                          taskTheme={normalizeTaskTheme(selectedGame?.taskTheme)}
                           html={task?.taskRich}
                           text={task?.task}
                           className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
@@ -409,6 +411,7 @@ const GameTasksViewModal = ({
                             </p>
                             <div className="mt-1">
                               <RichTaskContentView
+                                taskTheme={normalizeTaskTheme(selectedGame?.taskTheme)}
                                 html={clue?.clueRich}
                                 text={clue?.clue}
                                 className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
@@ -433,6 +436,7 @@ const GameTasksViewModal = ({
                               </ModalSectionTitle>
                               <div className="mt-1">
                                 <RichTaskContentView
+                                  taskTheme={normalizeTaskTheme(selectedGame?.taskTheme)}
                                   text={task.howToSolve}
                                   className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
                                   textClassName="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
@@ -474,6 +478,7 @@ GameTasksViewModal.propTypes = {
   canViewCodePhotos: PropTypes.bool,
   showAllTaskDetails: PropTypes.bool,
   selectedGame: PropTypes.shape({
+    taskTheme: PropTypes.string,
     id: PropTypes.string,
     name: PropTypes.string,
     type: PropTypes.string,

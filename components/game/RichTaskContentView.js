@@ -29,6 +29,7 @@ const trimEdgeEmptyParagraphs = (value) => {
 }
 
 const RichTaskContentView = ({
+  taskTheme,
   html,
   text,
   className,
@@ -112,6 +113,7 @@ const RichTaskContentView = ({
       className={`aq-rich-task-content-view ${className || textClassName || ''}`}
     >
       <TaskRichEditor
+        taskTheme={taskTheme}
         value={trimEdgeEmptyParagraphs(
           (typeof html === 'string' && html.trim()) ||
             (typeof text === 'string' ? text : ''),
@@ -140,6 +142,7 @@ const RichTaskContentView = ({
 }
 
 RichTaskContentView.propTypes = {
+  taskTheme: PropTypes.string,
   html: PropTypes.string,
   text: PropTypes.string,
   className: PropTypes.string,

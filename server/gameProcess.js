@@ -14,6 +14,7 @@ import secondsToTime from 'telegram/func/secondsToTime'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import { isCaptainRole } from '@helpers/teamRoles'
 import getLocationTimeZone from '@helpers/locationTimeZone'
+import { hasClassicVariants } from '@helpers/classicVariants'
 
 const timeToCodeStr = (locationKey) => {
   const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -99,6 +100,7 @@ async function gameProcess({ telegramId, userId, jsonCommand, location, db }) {
 
   const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
+  if (hasClassicVariants(game)) return { message: 'Игра с вариантами заданий проходит на сайте. Откройте экран своей команды в ActQuest.' }
 
   const GamesTeams = db.model('GamesTeams')
   const TeamsUsers = db.model('TeamsUsers')

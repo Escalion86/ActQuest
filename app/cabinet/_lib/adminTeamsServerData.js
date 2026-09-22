@@ -18,6 +18,7 @@ export const loadCabinetAppAdminTeams = async ({
       offset,
       limit,
       returnMeta: true,
+      includeHiddenGameResults: true,
     })
 
     const teams = Array.isArray(result)

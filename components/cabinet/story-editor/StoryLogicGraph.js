@@ -43,7 +43,7 @@ const LOGIC_ROW_STEP = NODE_SIZES.interaction.height + LOGIC_ROW_GAP
 
 const getNodeSize = (node) => NODE_SIZES[node?.type] || NODE_SIZES.interaction
 
-const GRAPH_CONTROLS_CLASS_NAME = '!overflow-hidden !rounded-xl !border !border-slate-700 !bg-slate-950/90 !shadow-xl [&>button]:!h-9 [&>button]:!w-9 [&>button]:!border-0 [&>button]:!border-b [&>button]:!border-slate-800 [&>button]:!bg-slate-950 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-800 [&>button:hover]:!text-cyan-200 [&>button>svg]:!fill-current [&>button:last-child]:!border-b-0'
+const GRAPH_CONTROLS_CLASS_NAME = '!overflow-hidden !rounded-xl !border !border-slate-300 dark:!border-slate-700 !bg-white/90 dark:!bg-slate-950/90 !shadow-xl [&>button]:!h-9 [&>button]:!w-9 [&>button]:!border-0 [&>button]:!border-b [&>button]:!border-slate-200 dark:[&>button]:!border-slate-800 [&>button]:!bg-white dark:[&>button]:!bg-slate-950 [&>button]:!text-slate-700 dark:[&>button]:!text-slate-300 [&>button:hover]:!bg-slate-100 dark:[&>button:hover]:!bg-slate-800 [&>button:hover]:!text-cyan-800 dark:[&>button:hover]:!text-cyan-200 [&>button>svg]:!fill-current [&>button:last-child]:!border-b-0'
 
 const EDGE_TONES = {
   interaction: { color: '#f59e0b', dash: '7 6' },
@@ -59,11 +59,11 @@ const EDGE_TONES = {
 }
 
 const CHIP_TONES = {
-  condition: 'border-amber-400/40 bg-amber-400/10 text-amber-100',
-  item: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-100',
-  evidence: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-100',
-  unlock: 'border-violet-400/40 bg-violet-400/10 text-violet-100',
-  ending: 'border-rose-400/40 bg-rose-400/10 text-rose-100',
+  condition: 'border-amber-400/40 bg-amber-400/10 text-amber-800 dark:text-amber-100',
+  item: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-800 dark:text-emerald-100',
+  evidence: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-800 dark:text-cyan-100',
+  unlock: 'border-violet-400/40 bg-violet-400/10 text-violet-800 dark:text-violet-100',
+  ending: 'border-rose-400/40 bg-rose-400/10 text-rose-800 dark:text-rose-100',
 }
 
 const SearchIcon = () => (
@@ -87,26 +87,26 @@ const InteractionNode = memo(({ data }) => {
 
   return (
     <article
-      className={`h-full rounded-xl border bg-slate-950/95 p-3 shadow-lg transition ${
+      className={`h-full rounded-xl border bg-white/95 dark:bg-slate-950/95 p-3 shadow-lg transition ${
         data.active
           ? 'border-cyan-400 ring-2 ring-cyan-400/20'
           : data.matched
             ? 'border-violet-400 ring-2 ring-violet-400/20'
-            : 'border-slate-700'
+            : 'border-slate-300 dark:border-slate-700'
       } ${data.dimmed ? 'opacity-35' : 'opacity-100'}`}
     >
-      <Handle type="target" position={Position.Left} className="!h-3 !w-3 !border-2 !border-slate-950 !bg-amber-400" />
-      <Handle type="source" position={Position.Right} className="!h-3 !w-3 !border-2 !border-slate-950 !bg-cyan-400" />
+      <Handle type="target" position={Position.Left} className="!h-3 !w-3 !border-2 !border-white dark:!border-slate-950 !bg-amber-400" />
+      <Handle type="source" position={Position.Right} className="!h-3 !w-3 !border-2 !border-white dark:!border-slate-950 !bg-cyan-400" />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold leading-5 text-slate-50" title={data.title}>{data.title}</p>
-          {data.subtitle ? <p className="mt-1 truncate text-[11px] text-slate-400" title={data.subtitle}>{data.subtitle}</p> : null}
+          <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-slate-50" title={data.title}>{data.title}</p>
+          {data.subtitle ? <p className="mt-1 truncate text-[11px] text-slate-600 dark:text-slate-400" title={data.subtitle}>{data.subtitle}</p> : null}
         </div>
-        <span className="shrink-0 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-semibold text-slate-300">
+        <span className="shrink-0 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
           {data.kindLabel} · {data.timeCostMinutes} мин
         </span>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-800 pt-2">
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 dark:border-slate-800 pt-2">
         <ReferenceColumn
           title="Требует"
           empty="Без условий"
@@ -141,12 +141,12 @@ const ReferenceColumn = ({ title, empty, entries, overflow, onSelect }) => (
             event.stopPropagation()
             onSelect(entry.refKey)
           }}
-          className={`block w-full truncate rounded-md border px-1.5 py-1 text-left text-[10px] leading-3 transition hover:brightness-125 ${CHIP_TONES[entry.tone] || CHIP_TONES.unlock}`}
+          className={`block w-full truncate rounded-md border px-1.5 py-1 text-left text-[10px] leading-3 transition hover:brightness-95 dark:hover:brightness-125 ${CHIP_TONES[entry.tone] || CHIP_TONES.unlock}`}
           title={entry.label}
         >
           {entry.label}
         </button>
-      )) : <p className="text-[10px] leading-4 text-slate-600">{empty}</p>}
+      )) : <p className="text-[10px] leading-4 text-slate-500 dark:text-slate-400">{empty}</p>}
       {overflow > 0 ? <p className="text-[9px] text-slate-500">ещё {overflow}</p> : null}
     </div>
   </div>
@@ -161,9 +161,9 @@ ReferenceColumn.propTypes = {
 }
 
 const LocationGroupNode = memo(({ data }) => (
-  <section className={`h-full rounded-2xl border bg-slate-950/45 ${data.active ? 'border-cyan-400/80' : 'border-slate-700/80'}`}>
-    <div className="flex h-11 items-center justify-between gap-3 border-b border-slate-700/80 px-4">
-      <p className="truncate text-xs font-bold uppercase tracking-[0.12em] text-slate-200" title={data.title}>{data.title}</p>
+  <section className={`h-full rounded-2xl border bg-slate-100/60 dark:bg-slate-950/45 ${data.active ? 'border-cyan-400/80' : 'border-slate-300 dark:border-slate-700/80'}`}>
+    <div className="flex h-11 items-center justify-between gap-3 border-b border-slate-300 dark:border-slate-700/80 px-4">
+      <p className="truncate text-xs font-bold uppercase tracking-[0.12em] text-slate-800 dark:text-slate-200" title={data.title}>{data.title}</p>
       <span className="text-[10px] text-slate-500">
         {data.startVisible ? 'стартовая · ' : ''}{data.interactionCount} действий
       </span>
@@ -183,13 +183,13 @@ const EntityNode = memo(({ data }) => {
         ? 'border-violet-400/60'
         : 'border-cyan-400/50'
   return (
-    <article className={`h-full rounded-xl border bg-slate-950/95 p-4 shadow-lg transition ${data.active ? `${tone} ring-2 ring-cyan-400/20` : 'border-slate-700'} ${data.dimmed ? 'opacity-35' : ''}`}>
-      <Handle type="target" position={Position.Left} className="!h-3 !w-3 !border-2 !border-slate-950 !bg-amber-400" />
-      <Handle type="source" position={Position.Right} className="!h-3 !w-3 !border-2 !border-slate-950 !bg-cyan-400" />
-      <p className="truncate text-sm font-semibold text-slate-50" title={data.title}>{data.title}</p>
-      {data.subtitle ? <p className="mt-2 truncate text-[11px] leading-4 text-slate-400" title={data.subtitle}>{data.subtitle}</p> : null}
+    <article className={`h-full rounded-xl border bg-white/95 dark:bg-slate-950/95 p-4 shadow-lg transition ${data.active ? `${tone} ring-2 ring-cyan-400/20` : 'border-slate-300 dark:border-slate-700'} ${data.dimmed ? 'opacity-35' : ''}`}>
+      <Handle type="target" position={Position.Left} className="!h-3 !w-3 !border-2 !border-white dark:!border-slate-950 !bg-amber-400" />
+      <Handle type="source" position={Position.Right} className="!h-3 !w-3 !border-2 !border-white dark:!border-slate-950 !bg-cyan-400" />
+      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50" title={data.title}>{data.title}</p>
+      {data.subtitle ? <p className="mt-2 truncate text-[11px] leading-4 text-slate-600 dark:text-slate-400" title={data.subtitle}>{data.subtitle}</p> : null}
       {Number.isFinite(data.interactionCount) ? (
-        <p className="mt-3 text-[10px] uppercase tracking-wide text-cyan-300">{data.interactionCount} действий</p>
+        <p className="mt-3 text-[10px] uppercase tracking-wide text-cyan-800 dark:text-cyan-300">{data.interactionCount} действий</p>
       ) : null}
     </article>
   )
@@ -464,7 +464,7 @@ const StoryLogicGraphInner = ({
       animated: active,
       label: active ? edge.label : undefined,
       labelStyle: { fill: tone.color, fontSize: 10, fontWeight: 700 },
-      labelBgStyle: { fill: '#020617', fillOpacity: 0.92 },
+      labelBgStyle: { fill: 'var(--story-graph-label-bg)', fillOpacity: 0.95 },
       labelBgPadding: [5, 3],
       labelBgBorderRadius: 5,
       markerEnd: { type: MarkerType.ArrowClosed, color: tone.color, width: 16, height: 16 },
@@ -511,9 +511,9 @@ const StoryLogicGraphInner = ({
   }, [graph.nodes, neighborhood.nodeIds, referenceNodeIds, selectedId, selectedReferenceKey])
 
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-[#050915] text-slate-100 shadow-2xl shadow-slate-950/20">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-[#080d1b] px-3 py-3">
-        <div className="flex rounded-xl border border-slate-700 bg-slate-950/70 p-1" aria-label="Режим карты">
+    <div className="[--story-graph-label-bg:#ffffff] [--story-graph-grid:#cbd5e1] dark:[--story-graph-label-bg:#020617] dark:[--story-graph-grid:#26324a] mt-4 overflow-hidden rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#050915] text-slate-900 dark:text-slate-100 shadow-2xl shadow-slate-950/20">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080d1b] px-3 py-3">
+        <div className="flex rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/70 p-1" aria-label="Режим карты">
           {MODE_OPTIONS.map((option) => (
             <button
               key={option.id}
@@ -523,7 +523,7 @@ const StoryLogicGraphInner = ({
                 setSelectedReferenceKey('')
                 setSelectedId('')
               }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${mode === option.id ? 'bg-cyan-400 text-slate-950' : 'text-slate-400 hover:text-white'}`}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${mode === option.id ? 'bg-cyan-400 text-slate-950' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               {option.label}
             </button>
@@ -531,21 +531,22 @@ const StoryLogicGraphInner = ({
         </div>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           {mode === 'logic' ? (
-            <label className="flex min-w-[190px] max-w-sm flex-1 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-slate-400">
+            <label className="flex min-w-[190px] max-w-sm flex-1 items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/70 px-3 py-2 text-slate-600 dark:text-slate-400">
               <SearchIcon />
               <span className="sr-only">Поиск по логике сценария</span>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Действие, предмет, улика…"
-                className="min-w-0 flex-1 bg-transparent text-xs text-slate-100 outline-none placeholder:text-slate-600"
+                className="min-w-0 flex-1 bg-transparent text-xs text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-600"
               />
             </label>
           ) : null}
           <button
             type="button"
             onClick={() => setLayoutVersion((current) => current + 1)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-cyan-400/60 hover:text-white"
+            aria-label="Автоматически разместить элементы карты"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 transition hover:border-cyan-400/60 hover:text-slate-900 dark:hover:text-white"
           >
             <LayoutIcon />
             <span className="hidden sm:inline">Разместить</span>
@@ -555,9 +556,9 @@ const StoryLogicGraphInner = ({
 
       <div className={`hidden min-h-[680px] xl:grid ${showInspector ? 'xl:grid-cols-[230px_minmax(0,1fr)_300px]' : 'xl:grid-cols-[230px_minmax(0,1fr)]'}`}>
         <GraphOutline groups={outlineGroups} selectedId={selectedId} onSelect={selectNode} />
-        <div className="relative min-w-0 border-x border-slate-800">
+        <div className="relative min-w-0 border-x border-slate-200 dark:border-slate-800">
           {isLayoutPending ? (
-            <div className="absolute inset-x-0 top-3 z-20 mx-auto w-fit rounded-full border border-cyan-400/30 bg-slate-950/90 px-3 py-1.5 text-[10px] font-semibold text-cyan-200">
+            <div className="absolute inset-x-0 top-3 z-20 mx-auto w-fit rounded-full border border-cyan-400/30 bg-white/90 dark:bg-slate-950/90 px-3 py-1.5 text-[10px] font-semibold text-cyan-800 dark:text-cyan-200">
               Выстраиваем причинные связи…
             </div>
           ) : null}
@@ -581,7 +582,7 @@ const StoryLogicGraphInner = ({
             fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
             proOptions={{ hideAttribution: true }}
           >
-            <Background color="#26324a" gap={24} size={1} />
+            <Background color="var(--story-graph-grid)" gap={24} size={1} />
             <Controls
               showInteractive={false}
               position="bottom-left"
@@ -608,7 +609,7 @@ const StoryLogicGraphInner = ({
       </div>
 
       <div className="xl:hidden">
-        <div className="border-b border-slate-800 px-3 py-3 text-xs text-slate-400">
+        <div className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 text-xs text-slate-600 dark:text-slate-400">
           На узком экране показана выбранная причинная цепочка. Для полного полотна разверните устройство горизонтально или откройте редактор на широком экране.
         </div>
         <div className="grid gap-3 p-3 md:grid-cols-[minmax(0,1fr)_280px]">
@@ -618,13 +619,13 @@ const StoryLogicGraphInner = ({
                 key={node.id}
                 type="button"
                 onClick={() => selectNode(node.id)}
-                className={`relative w-full rounded-xl border p-3 text-left ${node.id === selectedId ? 'border-cyan-400 bg-cyan-400/10' : 'border-slate-700 bg-slate-950/70'}`}
+                className={`relative w-full rounded-xl border p-3 text-left ${node.id === selectedId ? 'border-cyan-400 bg-cyan-400/10' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/70'}`}
               >
                 {index > 0 ? <span className="absolute -top-3 left-6 h-3 border-l border-cyan-400/50" /> : null}
-                <p className="text-sm font-semibold text-slate-100">{node.title}</p>
-                <p className="mt-1 text-xs text-slate-400">{node.locationTitle || node.subtitle || node.type}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{node.title}</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{node.locationTitle || node.subtitle || node.type}</p>
               </button>
-            )) : <p className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">Ничего не найдено.</p>}
+            )) : <p className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center text-sm text-slate-500">Ничего не найдено.</p>}
           </div>
           <GraphInspector
             mode={mode}
@@ -661,12 +662,12 @@ StoryLogicGraphInner.propTypes = {
 StoryLogicGraphInner.defaultProps = { selectedInteractionId: '' }
 
 const GraphOutline = ({ groups, selectedId, onSelect }) => (
-  <aside className="max-h-[680px] overflow-y-auto bg-[#080d1b] p-3">
+  <aside className="max-h-[680px] overflow-y-auto bg-white dark:bg-[#080d1b] p-3">
     <p className="px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Структура сценария</p>
     <div className="mt-3 space-y-4">
       {groups.map((group) => (
         <section key={group.id}>
-          <p className="truncate px-2 text-xs font-semibold text-slate-300">{group.title}</p>
+          <p className="truncate px-2 text-xs font-semibold text-slate-700 dark:text-slate-300">{group.title}</p>
           <div className="mt-1 space-y-0.5">
             {group.nodes.filter((node) => node.type !== 'location-group').map((node) => (
               <button
@@ -674,7 +675,7 @@ const GraphOutline = ({ groups, selectedId, onSelect }) => (
                 type="button"
                 onClick={() => onSelect(node.id)}
                 title={node.title}
-                className={`block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] transition ${node.id === selectedId ? 'bg-cyan-400/15 text-cyan-200' : 'text-slate-500 hover:bg-slate-800 hover:text-slate-200'}`}
+                className={`block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] transition ${node.id === selectedId ? 'bg-cyan-400/15 text-cyan-800 dark:text-cyan-200' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'}`}
               >
                 {node.title}
               </button>
@@ -707,21 +708,21 @@ const GraphInspector = ({
   onReferenceSelect,
   compact,
 }) => (
-  <aside className={`${compact ? 'rounded-xl border border-slate-800' : 'max-h-[680px] overflow-y-auto'} bg-[#080d1b] p-4`}>
+  <aside className={`${compact ? 'rounded-xl border border-slate-200 dark:border-slate-800' : 'max-h-[680px] overflow-y-auto'} bg-white dark:bg-[#080d1b] p-4`}>
     <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Инспектор</p>
     {node ? (
       <div className="mt-3">
-        <p className="text-base font-semibold leading-6 text-slate-50">{node.title}</p>
-        {node.locationTitle ? <p className="mt-1 text-xs text-cyan-300">{node.locationTitle}</p> : null}
-        {node.subtitle ? <p className="mt-2 text-xs leading-5 text-slate-400">{node.subtitle}</p> : null}
+        <p className="text-base font-semibold leading-6 text-slate-900 dark:text-slate-50">{node.title}</p>
+        {node.locationTitle ? <p className="mt-1 text-xs text-cyan-800 dark:text-cyan-300">{node.locationTitle}</p> : null}
+        {node.subtitle ? <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-400">{node.subtitle}</p> : null}
         {node.type === 'interaction' ? (
           <>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">
-                <p className="text-slate-500">Тип</p><p className="mt-1 text-slate-200">{node.kindLabel}</p>
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-2">
+                <p className="text-slate-500">Тип</p><p className="mt-1 text-slate-800 dark:text-slate-200">{node.kindLabel}</p>
               </div>
-              <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-2">
-                <p className="text-slate-500">Стоимость</p><p className="mt-1 text-slate-200">{node.timeCostMinutes} мин.</p>
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-2">
+                <p className="text-slate-500">Стоимость</p><p className="mt-1 text-slate-800 dark:text-slate-200">{node.timeCostMinutes} мин.</p>
               </div>
             </div>
             <InspectorReferences title="Условия" entries={node.required} onSelect={onReferenceSelect} />
@@ -732,27 +733,27 @@ const GraphInspector = ({
           </>
         ) : null}
         {mode === 'locations' ? (
-          <button type="button" onClick={onOpenLocations} className="mt-4 w-full rounded-xl border border-cyan-400/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-400/10">Открыть редактор локаций</button>
+          <button type="button" onClick={onOpenLocations} className="mt-4 w-full rounded-xl border border-cyan-400/40 px-4 py-2.5 text-xs font-bold text-cyan-800 dark:text-cyan-200 hover:bg-cyan-400/10">Открыть редактор локаций</button>
         ) : null}
         {mode === 'finals' && ['accusation', 'outcome'].includes(node.type) ? (
-          <button type="button" onClick={() => onOpenAccusation(node.type === 'outcome' ? node.id : '')} className="mt-4 w-full rounded-xl border border-violet-400/40 px-4 py-2.5 text-xs font-bold text-violet-200 hover:bg-violet-400/10">Редактировать финальное обвинение и исходы</button>
+          <button type="button" onClick={() => onOpenAccusation(node.type === 'outcome' ? node.id : '')} className="mt-4 w-full rounded-xl border border-violet-400/40 px-4 py-2.5 text-xs font-bold text-violet-800 dark:text-violet-200 hover:bg-violet-400/10">Редактировать финальное обвинение и исходы</button>
         ) : null}
         {mode === 'finals' && node.type === 'ending' ? (
-          <button type="button" onClick={onOpenEndings} className="mt-4 w-full rounded-xl border border-rose-400/40 px-4 py-2.5 text-xs font-bold text-rose-200 hover:bg-rose-400/10">Открыть редактор концовок</button>
+          <button type="button" onClick={onOpenEndings} className="mt-4 w-full rounded-xl border border-rose-400/40 px-4 py-2.5 text-xs font-bold text-rose-800 dark:text-rose-200 hover:bg-rose-400/10">Открыть редактор концовок</button>
         ) : null}
       </div>
     ) : (
       <p className="mt-3 text-xs leading-5 text-slate-500">Выберите блок на карте или в структуре слева.</p>
     )}
     {selectedReferenceKey ? (
-      <div className="mt-4 rounded-xl border border-violet-400/30 bg-violet-400/10 p-3 text-xs text-violet-100">
+      <div className="mt-4 rounded-xl border border-violet-400/30 bg-violet-400/10 p-3 text-xs text-violet-800 dark:text-violet-100">
         Показана связь «{selectedReferenceLabel}» · {referenceNodeCount} действий
       </div>
     ) : null}
     {diagnostics.length > 0 ? (
       <details className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3">
-        <summary className="cursor-pointer text-xs font-semibold text-rose-200">Ошибки ссылок · {diagnostics.length}</summary>
-        <ul className="mt-2 space-y-2 text-[11px] leading-4 text-rose-100/80">
+        <summary className="cursor-pointer text-xs font-semibold text-rose-800 dark:text-rose-200">Ошибки ссылок · {diagnostics.length}</summary>
+        <ul className="mt-2 space-y-2 text-[11px] leading-4 text-rose-800 dark:text-rose-100/80">
           {diagnostics.slice(0, 8).map((diagnostic) => <li key={`${diagnostic.interactionId}:${diagnostic.message}`}>{diagnostic.message}</li>)}
         </ul>
       </details>
@@ -781,10 +782,10 @@ const InspectorReferences = ({ title, entries, onSelect }) => (
     <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{title}</p>
     <div className="mt-2 space-y-1.5">
       {entries.length > 0 ? entries.map((entry) => (
-        <button key={entry.refKey} type="button" onClick={() => onSelect(entry.refKey)} className={`block w-full rounded-lg border px-2 py-1.5 text-left text-[11px] leading-4 transition hover:brightness-125 ${CHIP_TONES[entry.tone] || CHIP_TONES.unlock}`}>
+        <button key={entry.refKey} type="button" onClick={() => onSelect(entry.refKey)} className={`block w-full rounded-lg border px-2 py-1.5 text-left text-[11px] leading-4 transition hover:brightness-95 dark:hover:brightness-125 ${CHIP_TONES[entry.tone] || CHIP_TONES.unlock}`}>
           {entry.label}
         </button>
-      )) : <p className="text-xs text-slate-600">Нет</p>}
+      )) : <p className="text-xs text-slate-500 dark:text-slate-400">Нет</p>}
     </div>
   </section>
 )
@@ -796,12 +797,12 @@ InspectorReferences.propTypes = {
 }
 
 const GraphLegend = () => (
-  <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex flex-wrap justify-end gap-x-3 gap-y-1 rounded-lg border border-slate-700 bg-slate-950/90 px-3 py-2 text-[9px] font-semibold text-slate-400">
-    <span className="text-amber-300">— условие</span>
-    <span className="text-emerald-300">— предмет</span>
-    <span className="text-cyan-300">— улика / переход</span>
-    <span className="text-violet-300">— открытие</span>
-    <span className="text-rose-300">— финал</span>
+  <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex flex-wrap justify-end gap-x-3 gap-y-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-950/90 px-3 py-2 text-[9px] font-semibold text-slate-600 dark:text-slate-400">
+    <span className="text-amber-800 dark:text-amber-300">— условие</span>
+    <span className="text-emerald-800 dark:text-emerald-300">— предмет</span>
+    <span className="text-cyan-800 dark:text-cyan-300">— улика / переход</span>
+    <span className="text-violet-800 dark:text-violet-300">— открытие</span>
+    <span className="text-rose-800 dark:text-rose-300">— финал</span>
   </div>
 )
 
