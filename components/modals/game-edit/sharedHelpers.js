@@ -52,8 +52,13 @@ export const isInitialEditorHtmlNormalization = ({
   )
 }
 
-export const hasMeaningfulRichMarkup = (value) =>
-  /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
+export const hasMeaningfulRichMarkup = (value) => {
+  const html = String(value || '')
+  return (
+    /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(html) ||
+    /<(?:p|div|span)\b[^>]*\s(?:style|class)\s*=/i.test(html)
+  )
+}
 
 export const normalizeComparableRichText = (richValue, plainValue) => {
   const rich = typeof richValue === 'string' ? richValue.trim() : ''

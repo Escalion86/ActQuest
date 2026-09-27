@@ -2000,7 +2000,8 @@ const TaskRichEditor = ({
 
   useEffect(() => {
     if (!editor) return
-    editor.setEditable(!disabled)
+    // Смена режима не меняет содержимое и не должна помечать задание изменённым.
+    editor.setEditable(!disabled, false)
   }, [editor, disabled])
 
   useEffect(() => {

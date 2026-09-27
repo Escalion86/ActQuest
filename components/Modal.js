@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { createPortal } from 'react-dom'
 
@@ -15,15 +15,20 @@ const Modal = ({
   dialogClassName,
   bodyClassName,
 }) => {
+  const dialogRef = useRef(null)
+
   useEffect(() => {
     if (!isOpen) {
       return undefined
     }
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        onClose?.()
-      }
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      // Escape закрывает только верхнее окно, сохраняя открытым его редактор.
+      const dialogs = document.querySelectorAll('[data-aq-modal-dialog]')
+      if (dialogs[dialogs.length - 1] !== dialogRef.current) return
+      event.preventDefault()
+      onClose?.()
     }
 
     document.addEventListener('keydown', handleKeyDown)
@@ -82,6 +87,8 @@ const Modal = ({
         aria-hidden="true"
       />
       <div
+        ref={dialogRef}
+        data-aq-modal-dialog="true"
         role="dialog"
         aria-modal="true"
         aria-label={title}

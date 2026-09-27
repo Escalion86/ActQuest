@@ -3,7 +3,7 @@
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -1350,6 +1350,20 @@ const GamesPage = ({
   const [statusProgressMessage, setStatusProgressMessage] = useState('')
   const [editingGame, setEditingGame] = useState(null)
   const [editingBaselineGame, setEditingBaselineGame] = useState(null)
+  const [taskEditorDraft, setTaskEditorDraft] = useState(null)
+  const taskEditorDraftRef = useRef(null)
+  const beginTaskEditing = useCallback(() => {
+    const draft = cloneGameDraft(editingGame)
+    taskEditorDraftRef.current = draft
+    setTaskEditorDraft(draft)
+  }, [editingGame])
+  const cancelTaskEditing = useCallback(() => {
+    taskEditorDraftRef.current = null
+    setTaskEditorDraft(null)
+  }, [])
+  useEffect(() => {
+    if (!isTasksModalOpen) cancelTaskEditing()
+  }, [isTasksModalOpen, cancelTaskEditing])
   const [toastEvent, setToastEvent] = useState(null)
   const [testingGameId, setTestingGameId] = useState('')
   const setFeedback = useCallback((feedback) => {
@@ -3735,11 +3749,21 @@ const GamesPage = ({
   }, [currentUserDbId, selectedGame])
 
   const isDirty = useMemo(() => {
-    if (!editingGame || !editingBaselineGame) {
+    if (!(taskEditorDraft ?? editingGame) || !editingBaselineGame) {
       return false
     }
-    return !areGameDraftsEqual(editingGame, editingBaselineGame)
-  }, [editingBaselineGame, editingGame])
+    return !areGameDraftsEqual(taskEditorDraft ?? editingGame, editingBaselineGame)
+  }, [editingBaselineGame, editingGame, taskEditorDraft])
+
+  const dirtyTaskIds = useMemo(() => {
+    if (!(taskEditorDraft ?? editingGame) || !editingBaselineGame) return []
+    const savedTasks = new Map(
+      (editingBaselineGame.tasks ?? []).map((task) => [task.id, task]),
+    )
+    return ((taskEditorDraft ?? editingGame).tasks ?? [])
+      .filter((task) => !areGameDraftsEqual(task, savedTasks.get(task.id)))
+      .map((task) => task.id)
+  }, [editingBaselineGame, editingGame, taskEditorDraft])
 
   const canEditSelectedGame = useMemo(() => {
     const gameForPermissions =
@@ -3907,6 +3931,15 @@ const GamesPage = ({
         ? canEditSelectedGameTasks
         : canEditSelectedGame
       if (!canEditActiveDraft || !editingGame) {
+        return
+      }
+
+      if (taskEditorDraftRef.current) {
+        const prevGame = taskEditorDraftRef.current
+        const patch = typeof updater === 'function' ? updater(prevGame) : updater
+        const { nextGame } = applyGameDraftPatch({ prevGame, baselineGame: editingBaselineGame, patch })
+        taskEditorDraftRef.current = nextGame
+        setTaskEditorDraft(nextGame)
         return
       }
 
@@ -4088,7 +4121,8 @@ const GamesPage = ({
 
   const handleSaveChanges = useCallback(async (options = {}) => {
     const keepTasksModalOpen = options?.keepTasksModalOpen === true
-    const gameToSave = editingGame ?? selectedGame
+    const sourceGame = taskEditorDraftRef.current ?? editingGame ?? selectedGame
+    const gameToSave = sourceGame && options?.prequelPatch ? { ...sourceGame, ...options.prequelPatch } : sourceGame
     if (!gameToSave || !canEditSelectedGame) return
 
     const isGameStarted =
@@ -4194,6 +4228,10 @@ const GamesPage = ({
       if (keepTasksModalOpen) {
         const persistedDraft = cloneGameDraft(normalizedGame)
         setEditingGame(persistedDraft)
+        if (taskEditorDraftRef.current) {
+          taskEditorDraftRef.current = cloneGameDraft(normalizedGame)
+          setTaskEditorDraft(taskEditorDraftRef.current)
+        }
         setEditingBaselineGame(cloneGameDraft(normalizedGame))
       } else {
         setEditingGame(null)
@@ -4552,6 +4590,7 @@ const GamesPage = ({
       }
     })
     setExpandedTaskIds((prev) => [...prev, newTask.id])
+    return newTask.id
   }, [canEditSelectedGame, updateSelectedGame])
 
   const handleRemoveTask = useCallback(
@@ -6391,13 +6430,14 @@ const GamesPage = ({
     isSaving,
   ])
 
-  const handleTasksModalPrimaryAction = useCallback(() => {
+  const handleTasksModalPrimaryAction = useCallback((patch) => {
     if (isSaving) {
       return
     }
 
-    if (isDirty && canEditSelectedGameTasks) {
-      void handleSaveChanges({ keepTasksModalOpen: true })
+    const prequelPatch = Array.isArray(patch?.prequels) ? patch : undefined
+    if ((isDirty || prequelPatch) && canEditSelectedGameTasks) {
+      return handleSaveChanges({ keepTasksModalOpen: true, prequelPatch })
     } else {
       handleCloseTasksModal()
     }
@@ -8535,7 +8575,9 @@ const GamesPage = ({
             <div className="space-y-6">
               <GameModals
                 selectedGame={selectedGame}
-                editGame={editingGame}
+                editGame={taskEditorDraft ?? editingGame}
+                beginTaskEditing={beginTaskEditing}
+                cancelTaskEditing={cancelTaskEditing}
                 isEditModalOpen={isEditModalOpen}
                 handleCloseEditModal={handleCloseEditModal}
                 isTasksModalOpen={isTasksModalOpen}
@@ -8546,6 +8588,7 @@ const GamesPage = ({
                 isSaving={isSaving}
                 location={selectedGameApiLocation}
                 isDirty={isDirty}
+                dirtyTaskIds={dirtyTaskIds}
                 handleModalPrimaryAction={handleModalPrimaryAction}
                 handleTasksModalPrimaryAction={handleTasksModalPrimaryAction}
                 handleResetChanges={handleResetChanges}

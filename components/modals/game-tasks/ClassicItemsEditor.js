@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { classicItemUsage } from '@helpers/classicVariantEditor'
 
 const inputClass = 'w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white'
 const iconButtonClass = 'inline-flex h-10 w-10 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/50'
@@ -17,7 +18,7 @@ function ItemCard({ item, children }) {
 }
 ItemCard.propTypes = { item: PropTypes.object.isRequired, children: PropTypes.node }
 
-export default function ClassicItemsEditor({ items, onChange, disabled }) {
+export default function ClassicItemsEditor({ items, onChange, disabled, tasks = [] }) {
   const [draft, setDraft] = useState(null)
   const isExisting = draft && items.some((item) => item.id === draft.id)
   const close = () => setDraft(null)
@@ -32,12 +33,20 @@ export default function ClassicItemsEditor({ items, onChange, disabled }) {
       <p className="font-medium">Предметы ({items.length})</p>
       <button type="button" disabled={disabled} className="aq-modal-btn aq-modal-btn-secondary" onClick={() => setDraft({ id: crypto.randomUUID(), title: '', description: '', kind: 'stackable' })}>Создать предмет</button>
     </div>
-    {items.length ? <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => <ItemCard key={item.id} item={item}>
+    {items.length ? <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => {
+      const usage = classicItemUsage(tasks, item.id)
+      const used = usage.grants.length > 0 || usage.uses.length > 0
+      return <ItemCard key={item.id} item={item}>
+      <div className="mt-3 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+        <p>Где выдаётся: {usage.grants.join('; ') || 'пока нигде'}</p>
+        <p>Где используется: {usage.uses.join('; ') || 'пока нигде'}</p>
+      </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" disabled={disabled} className={iconButtonClass} title="Редактировать" aria-label={`Редактировать предмет ${item.title}`} onClick={() => setDraft({ ...item, description: item.description || '' })}><FontAwesomeIcon icon={faPen} aria-hidden="true" /></button>
-        <button type="button" disabled={disabled} className={iconButtonClass} title="Удалить" aria-label={`Удалить предмет ${item.title}`} onClick={() => onChange(items.filter((entry) => entry.id !== item.id))}><FontAwesomeIcon icon={faTrash} aria-hidden="true" /></button>
+        <button type="button" disabled={disabled || used} className={iconButtonClass} title={used ? 'Сначала уберите предмет из наград и условий' : 'Удалить'} aria-label={`Удалить предмет ${item.title}`} onClick={() => onChange(items.filter((entry) => entry.id !== item.id))}><FontAwesomeIcon icon={faTrash} aria-hidden="true" /></button>
       </div>
-    </ItemCard>)}</div> : <p className="text-sm text-slate-500">Добавьте предмет — например, жетон или ключ. Его можно выдавать за коды и использовать при выборе пути.</p>}
+      {used && <p className="mt-2 text-xs text-slate-500">Для удаления сначала уберите предмет из перечисленных наград и условий.</p>}
+    </ItemCard>})}</div> : <p className="text-sm text-slate-500">Добавьте предмет — например, жетон или ключ. Его можно выдавать за коды и использовать при выборе пути.</p>}
     <div onKeyDown={(event) => {
       // Escape закрывает только редактор предмета, сохраняя окно заданий.
       if (draft && event.key === 'Escape') { event.stopPropagation(); close() }
@@ -59,4 +68,4 @@ export default function ClassicItemsEditor({ items, onChange, disabled }) {
     </div>
   </section>
 }
-ClassicItemsEditor.propTypes = { items: PropTypes.array.isRequired, onChange: PropTypes.func.isRequired, disabled: PropTypes.bool }
+ClassicItemsEditor.propTypes = { items: PropTypes.array.isRequired, onChange: PropTypes.func.isRequired, disabled: PropTypes.bool, tasks: PropTypes.array }

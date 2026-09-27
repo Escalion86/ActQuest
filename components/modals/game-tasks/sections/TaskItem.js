@@ -107,6 +107,7 @@ const TaskItem = ({
   handleRemoveBonusCode,
   handleReorderTask,
   handleSaveAndOpenTaskPreview,
+  disableTaskPreview = false,
   handleRemoveTask,
   handleTaskHandlePointerDown,
   handleTaskHandlePointerMove,
@@ -122,6 +123,13 @@ const TaskItem = ({
   setExpandedClueAccordions,
   selectedCodePhoto,
   setSelectedCodePhoto,
+  contentOnly = false,
+  opensDialog = false,
+  hideDeleteAction = false,
+  isAlternative = false,
+  hideStageFlags = false,
+  expandedContent,
+  renderCodeReward,
 }) => {
   const canDragTask = canEditSelectedGame && !isSaving && !isTaskOrderLocked
   const isDragOver = dragOverTaskId === task.id
@@ -196,8 +204,8 @@ const TaskItem = ({
   return (
     <div
       key={task.id}
-      data-task-dnd-id={String(task.id)}
-      className={`overflow-hidden rounded-2xl border bg-white transition dark:bg-slate-900/70 ${
+      data-task-dnd-id={contentOnly ? undefined : String(task.id)}
+      className={contentOnly ? 'min-w-0' : `overflow-hidden rounded-2xl border bg-white transition dark:bg-slate-900/70 ${
         isDraggingCurrent
           ? 'border-cyan-500/80 opacity-85 ring-2 ring-cyan-400/30 dark:border-cyan-400 dark:ring-cyan-300/30'
           : ''
@@ -207,10 +215,12 @@ const TaskItem = ({
           : 'border-slate-200 dark:border-slate-700'
       }`}
       onDragEnd={() => {
+        if (contentOnly) return
         setDraggedTaskId(null)
         setDragOverTaskId(null)
       }}
       onDragOver={(event) => {
+        if (contentOnly) return
         if (!draggedTaskId || draggedTaskId === task.id || isTaskOrderLocked) {
           return
         }
@@ -219,11 +229,13 @@ const TaskItem = ({
         setDragOverTaskId(task.id)
       }}
       onDragLeave={() => {
+        if (contentOnly) return
         if (dragOverTaskId === task.id) {
           setDragOverTaskId(null)
         }
       }}
       onDrop={(event) => {
+        if (contentOnly) return
         event.preventDefault()
         const sourceTaskId =
           draggedTaskId ||
@@ -241,7 +253,7 @@ const TaskItem = ({
         handleReorderTask(sourceIndex, targetIndex)
       }}
     >
-      <div className="flex items-stretch w-full bg-slate-50 dark:bg-slate-800/70">
+      {!contentOnly && <div className="flex items-stretch w-full bg-slate-50 dark:bg-slate-800/70">
         <button
           type="button"
           draggable={canDragTask}
@@ -315,6 +327,9 @@ const TaskItem = ({
         <button
           type="button"
           onClick={() => toggleTaskExpansion(task.id)}
+          aria-haspopup={opensDialog ? 'dialog' : undefined}
+          data-task-open-id={opensDialog ? task.id : undefined}
+          title={opensDialog ? 'Открыть задание' : undefined}
           className={`relative flex items-center justify-between flex-1 min-w-0 gap-3 px-4 py-3 overflow-hidden text-sm font-semibold text-left transition dark:text-white ${
             task.canceled
               ? 'bg-rose-50/80 text-rose-800 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/15'
@@ -369,6 +384,7 @@ const TaskItem = ({
                 <span>
                   Подсказок: {Array.isArray(task.clues) ? task.clues.length : 0}
                 </span>
+                {task.variantConfig?.enabled && <span>· Вариантов: {(task.variants?.length || 0) + 1}</span>}
                 {hasPostTaskMessage ? (
                   <>
                     <span>·</span>
@@ -408,9 +424,9 @@ const TaskItem = ({
             {hasTaskValidationErrors ? (
               <TaskWarningIcon title="В задании есть незаполненные обязательные поля" />
             ) : null}
-            <span
+            {!opensDialog && (<span
               className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition-transform duration-200 dark:border-slate-600 dark:bg-slate-900/80 dark:text-slate-200 ${
-                isExpanded ? 'rotate-180' : 'rotate-0'
+                opensDialog ? '-rotate-90' : isExpanded ? 'rotate-180' : 'rotate-0'
               }`}
               aria-hidden="true"
             >
@@ -424,29 +440,30 @@ const TaskItem = ({
                   strokeLinejoin="round"
                 />
               </svg>
-            </span>
+            </span>)}
           </div>
         </button>
-      </div>
+      </div>}
 
-      {isExpanded && (
+      {isExpanded && (expandedContent || (
         /* В read-only режиме (закрытая игра / нет прав) поля блокируются
            явным disabled на каждом контроле — обёртка fieldset не
            используется, чтобы не блокировать медиа-элементы
            (аудио, видео, просмотр изображений). */
-        <div className="px-3 py-4 space-y-5 sm:px-4 sm:py-5">
+        <div className={contentOnly ? 'space-y-5' : 'px-3 py-4 space-y-5 sm:px-4 sm:py-5'}>
           <div className="space-y-4">
-            <div className="flex justify-end">
+            {!isAlternative && <div className="flex justify-end">
               <CabinetButton
                 type="button"
                 variant="secondary"
                 onClick={() => handleSaveAndOpenTaskPreview(index)}
-                disabled={!canEditSelectedGame || isSaving}
+                disabled={!canEditSelectedGame || isSaving || disableTaskPreview}
+                title={disableTaskPreview ? 'Сначала сохраните изменения задания' : undefined}
               >
                 Сохранить и открыть предпросмотр
               </CabinetButton>
-            </div>
-            <div className="flex flex-col gap-2 md:items-start">
+            </div>}
+            {!isAlternative && !hideStageFlags && <div className="flex items-center gap-4">
               <NeonCheckbox
                 id={`task-is-bonus-${task.id}`}
                 checked={Boolean(task.isBonusTask)}
@@ -475,8 +492,8 @@ const TaskItem = ({
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
                 disabled={!canEditSelectedGame || isSaving}
               />
-            </div>
-            {useCustomTaskPublicTitles ? (
+            </div>}
+            {useCustomTaskPublicTitles && !isAlternative ? (
               <CabinetInputField
                 id={`task-public-title-${task.id}`}
                 label="Публичное название"
@@ -1075,6 +1092,7 @@ const TaskItem = ({
                         key={`${task.id}-code-${codeIndex}`}
                         open={isExpanded}
                         onToggle={(event) => {
+                          if (event.target !== event.currentTarget) return
                           const isOpen = Boolean(event.currentTarget?.open)
                           setExpandedCodeAccordions((prev) => {
                             const next = new Set(prev)
@@ -1164,6 +1182,7 @@ const TaskItem = ({
                             Удалить
                           </CabinetButton>
                         </div>
+                        {renderCodeReward?.('main', codeValue)}
                         {canViewCodePhotos && (
                           <div className="mt-2">
                             <ImagesInput
@@ -1381,6 +1400,7 @@ const TaskItem = ({
                         key={penalty.id}
                         open={isExpanded}
                         onToggle={(event) => {
+                          if (event.target !== event.currentTarget) return
                           const isOpen = Boolean(event.currentTarget?.open)
                           setExpandedCodeAccordions((prev) => {
                             const next = new Set(prev)
@@ -1444,6 +1464,7 @@ const TaskItem = ({
                           <CabinetDurationField
                             id={`task-penalty-value-${penalty.id}`}
                             label="Штраф"
+                            disabled={!canEditSelectedGame || isSaving}
                             valueSeconds={penalty.penalty ?? 0}
                             onChangeSeconds={(nextSeconds) =>
                               handlePenaltyCodeChange(
@@ -1475,6 +1496,7 @@ const TaskItem = ({
                           labelClassName={compactLabelClassName}
                           inputClassName={compactInputClassName}
                         />
+                        {renderCodeReward?.('penalty', penalty.code)}
                         {canViewCodePhotos && (
                           <div className="mt-2">
                             <ImagesInput
@@ -1565,6 +1587,7 @@ const TaskItem = ({
                         key={bonus.id}
                         open={isExpanded}
                         onToggle={(event) => {
+                          if (event.target !== event.currentTarget) return
                           const isOpen = Boolean(event.currentTarget?.open)
                           setExpandedCodeAccordions((prev) => {
                             const next = new Set(prev)
@@ -1628,6 +1651,7 @@ const TaskItem = ({
                           <CabinetDurationField
                             id={`task-bonus-value-${bonus.id}`}
                             label="Бонус"
+                            disabled={!canEditSelectedGame || isSaving}
                             valueSeconds={bonus.bonus ?? 0}
                             onChangeSeconds={(nextSeconds) =>
                               handleBonusCodeChange(
@@ -1659,6 +1683,7 @@ const TaskItem = ({
                           labelClassName={compactLabelClassName}
                           inputClassName={compactInputClassName}
                         />
+                        {renderCodeReward?.('bonus', bonus.code)}
                         {canViewCodePhotos && (
                           <div className="mt-2">
                             <ImagesInput
@@ -1734,7 +1759,7 @@ const TaskItem = ({
           )}
 
           {/* Delete task */}
-          <div className="flex justify-end">
+          {!hideDeleteAction && <div className="flex justify-end">
             <CabinetButton
               onClick={() => {
                 if (
@@ -1755,16 +1780,25 @@ const TaskItem = ({
             >
               Удалить задание
             </CabinetButton>
-          </div>
+          </div>}
         </div>
-      )}
+      ))}
     </div>
   )
 }
 
 TaskItem.propTypes = {
+  contentOnly: PropTypes.bool,
+  opensDialog: PropTypes.bool,
+  hideDeleteAction: PropTypes.bool,
+  isAlternative: PropTypes.bool,
+  hideStageFlags: PropTypes.bool,
+  expandedContent: PropTypes.node,
+  renderCodeReward: PropTypes.func,
   task: PropTypes.shape({
     id: PropTypes.string.isRequired,
+    variantConfig: PropTypes.object,
+    variants: PropTypes.array,
     publicTitle: PropTypes.string,
     title: PropTypes.string,
     task: PropTypes.string,
@@ -1846,6 +1880,7 @@ TaskItem.propTypes = {
   handleRemoveBonusCode: PropTypes.func.isRequired,
   handleReorderTask: PropTypes.func.isRequired,
   handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
+  disableTaskPreview: PropTypes.bool,
   handleRemoveTask: PropTypes.func.isRequired,
   handleTaskHandlePointerDown: PropTypes.func.isRequired,
   handleTaskHandlePointerMove: PropTypes.func.isRequired,

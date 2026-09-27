@@ -1,153 +1,118 @@
-import ClassicItemsEditor from './ClassicItemsEditor'
-import { normalizeTaskTheme } from '@helpers/taskThemes'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import Modal from '@components/Modal'
 import PropTypes from 'prop-types'
-import dynamic from 'next/dynamic'
-import { classicStageId, validateClassicVariants, getClassicVariantChoices } from '@helpers/classicVariants'
+import { classicStageId } from '@helpers/classicVariants'
+import { copyClassicContent, describeClassicCondition } from '@helpers/classicVariantEditor'
+import Quantities, { classicInputClass as inputClass, classicButtonClass as buttonClass } from './ClassicItemQuantities'
+import ClassicVariantSimulation from './ClassicVariantSimulation'
+import { Field, outcomes, categories, codesFor } from './ClassicVariantFields'
 
-const RichEditor = dynamic(() => import('@components/cabinet/TaskRichEditor'), { ssr: false })
-const inputClass = 'w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white'
-const buttonClass = 'rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50 dark:border-slate-600'
-const id = () => crypto.randomUUID()
-const outcomes = { completed: 'Выполнено', timeout: 'Время истекло', captain_failed: 'Слито капитаном' }
-const categories = { main: 'Основной', bonus: 'Бонусный', penalty: 'Штрафной' }
-const codesFor = (content, category) => category === 'main' ? content.codes || [] : (content[category === 'bonus' ? 'bonusCodes' : 'penaltyCodes'] || []).map((entry) => entry.code)
-
-function Field({ label, children }) { return <label className="block space-y-1 text-sm"><span>{label}</span>{children}</label> }
-Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node }
-function Quantities({ value = [], items, onChange }) {
-  return <div className="space-y-2">{value.map((entry, i) => <div className="flex gap-2" key={i}>
-    <select aria-label="Предмет" className={inputClass} value={entry.itemId} onChange={(e) => onChange(value.map((v, n) => n === i ? { ...v, itemId: e.target.value, quantity: items.find((item) => item.id === e.target.value)?.kind === 'unique' ? 1 : v.quantity } : v))}><option value="">Выберите предмет</option>{items.map((item) => <option key={item.id} value={item.id}>{item.title || 'Без названия'}</option>)}</select>
-    {items.find((item) => item.id === entry.itemId)?.kind !== 'unique' && <input aria-label="Количество" className={`${inputClass} max-w-24`} type="number" min="1" step="1" value={entry.quantity} onChange={(e) => onChange(value.map((v, n) => n === i ? { ...v, quantity: Number(e.target.value) } : v))} />}
-    <button type="button" className={buttonClass} onClick={() => onChange(value.filter((_, n) => n !== i))}>Убрать</button>
-  </div>)}<button type="button" className={buttonClass} disabled={!items.length} onClick={() => onChange([...value, { itemId: items[0]?.id || '', quantity: 1 }])}>Добавить предмет</button></div>
-}
-Quantities.propTypes = { value: PropTypes.array, items: PropTypes.array.isRequired, onChange: PropTypes.func.isRequired }
-
-function Rewards({ content, items, onChange, outcomesOnly = false }) {
-  const rewards = content || {}
-  return <div className="space-y-3">{Object.entries(outcomes).map(([key, label]) => <details key={key}><summary>Выдать предметы: {label}</summary><Quantities items={items} value={rewards[key]} onChange={(value) => onChange({ ...rewards, [key]: value })} /></details>)}
-    {!outcomesOnly && <p className="text-xs text-slate-500">Награды за конкретные коды настраиваются ниже.</p>}
-  </div>
-}
-Rewards.propTypes = { content: PropTypes.object, items: PropTypes.array.isRequired, onChange: PropTypes.func.isRequired, outcomesOnly: PropTypes.bool }
-
-export default function ClassicVariantsEditor({ game, onChange, disabled, agents = [] }) {
-  const [stageIndex, setStageIndex] = useState(0)
-  const [variantId, setVariantId] = useState('default')
-  const [simulation, setSimulation] = useState([])
-  const [simulationStages, setSimulationStages] = useState({})
-  const items = game.classicItems || []
-  const tasks = game.tasks || []
-  const task = tasks[stageIndex]
-  const variants = task?.variants || []
-  const variant = task?.variantConfig?.enabled ? variants.find((entry) => entry.id === variantId) : null
-  const content = variant?.content || task
-  const updateTask = (patch) => onChange((previous) => ({ ...previous, tasks: previous.tasks.map((entry, i) => i === stageIndex ? { ...entry, stageKey: classicStageId(entry, i), ...patch } : entry) }))
-  const updateVariant = (patch) => updateTask({ variants: variants.map((entry) => entry.id === variantId ? { ...entry, ...patch } : entry) })
-  const updateContent = (patch) => variant ? updateVariant({ content: { ...content, ...patch } }) : updateTask(patch)
-  const updateItems = (next) => {
-    const uniqueIds = new Set(next.filter((item) => item.kind === 'unique').map((item) => item.id))
-    // При смене типа предмета обновляем уже настроенные награды, расход и условия.
-    const normalizeQuantities = (value) => {
-      if (Array.isArray(value)) return value.map(normalizeQuantities)
-      if (!value || typeof value !== 'object') return value
-      const normalized = Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, normalizeQuantities(entry)]))
-      if (uniqueIds.has(normalized.itemId) && 'quantity' in normalized) normalized.quantity = 1
-      return normalized
-    }
-    onChange((previous) => ({ ...previous, classicItems: next, tasks: normalizeQuantities(previous.tasks) }))
-    setSimulation((previous) => normalizeQuantities(previous))
+export default function ClassicVariantsEditor({ game, stageIndex, variantId, onSelectVariant, onChange, disabled }) {
+  const [adding, setAdding] = useState(false)
+  const addButtonRef = useRef(null)
+  const closeAddVariant = () => {
+    setAdding(false)
+    addButtonRef.current?.focus()
   }
-  const errors = validateClassicVariants(game)
-  const updateRule = (index, patch) => updateVariant({ conditions: { ...variant.conditions, rules: (variant.conditions?.rules || []).map((rule, i) => i === index ? { ...rule, ...patch } : rule) } })
-  if (game.type !== 'classic') return null
-  return <details className="my-4 rounded-xl border border-cyan-300 p-4 dark:border-cyan-800">
-    <summary className="cursor-pointer font-semibold">Варианты этапов и предметы</summary>
-    <fieldset disabled={disabled} className="mt-4 space-y-5">
-      <p className="text-sm">Один этап — одно задание для команды. Альтернативы зависят от предыдущих исходов и инвентаря. Для этой механики нужен линейный порядок этапов.</p>
-      <ClassicItemsEditor items={items} onChange={updateItems} disabled={disabled} />
-      {task && <>
-        <Field label="Этап"><select className={inputClass} value={stageIndex} onChange={(e) => { setStageIndex(Number(e.target.value)); setVariantId('default') }}>{tasks.map((entry, i) => <option key={entry.id || i} value={i}>{i + 1}. {entry.title}</option>)}</select></Field>
-        <label className="flex gap-2"><input type="checkbox" checked={Boolean(task.variantConfig?.enabled)} onChange={(e) => updateTask({ variantConfig: { mode: 'auto', offerDefaultAlways: false, ...task.variantConfig, enabled: e.target.checked } })} />Несколько вариантов этапа</label>
-        {task.variantConfig?.enabled && <>
-          <Field label="Назначение варианта"><select className={inputClass} value={task.variantConfig.mode} onChange={(e) => updateTask({ variantConfig: { ...task.variantConfig, mode: e.target.value } })}><option value="auto">Автоматически по порядку приоритета</option><option value="captain">Выбирает капитан</option></select></Field>
-          <label className="flex gap-2"><input type="checkbox" checked={Boolean(task.variantConfig.offerDefaultAlways)} onChange={(e) => updateTask({ variantConfig: { ...task.variantConfig, offerDefaultAlways: e.target.checked } })} />Предлагать запасной путь всегда при ручном выборе</label>
-          <Field label="Редактируемый вариант"><select className={inputClass} value={variantId} onChange={(e) => setVariantId(e.target.value)}><option value="default">Запасной путь</option>{variants.map((v, i) => <option key={v.id} value={v.id}>{i + 1}. {v.title}</option>)}</select></Field>
-          <button type="button" className={buttonClass} onClick={() => {
-            const variant = { id: id(), title: `Путь ${variants.length + 1}`, description: '', conditions: { mode: 'all', rules: [] }, consumeItems: [], content: { task: '', taskRich: '', codes: [], clues: [], bonusCodes: [], penaltyCodes: [] } }
-            updateTask({ variants: [...variants, variant] }); setVariantId(variant.id)
-          }}>Добавить альтернативу</button>
-          <Field label="Название на экране выбора"><input className={inputClass} value={variant ? variant.title : task.variantConfig.title || ''} placeholder="Обычный путь" onChange={(e) => variant ? updateVariant({ title: e.target.value }) : updateTask({ variantConfig: { ...task.variantConfig, title: e.target.value } })} /></Field>
-          <Field label="Краткое описание выбора"><textarea className={inputClass} value={(variant || task.variantConfig).description || ''} onChange={(e) => variant ? updateVariant({ description: e.target.value }) : updateTask({ variantConfig: { ...task.variantConfig, description: e.target.value } })} /></Field>
-          {variant && <>
-            <div className="flex gap-2"><button type="button" className={buttonClass} disabled={variants[0]?.id === variantId} onClick={() => { const next = [...variants]; const i = next.findIndex((v) => v.id === variantId); [next[i - 1], next[i]] = [next[i], next[i - 1]]; updateTask({ variants: next }) }}>Повысить приоритет</button><button type="button" className={buttonClass} onClick={() => { updateTask({ variants: variants.filter((v) => v.id !== variantId) }); setVariantId('default') }}>Удалить вариант</button></div>
-            <Field label="Условия доступности"><select className={inputClass} value={variant.conditions?.mode || 'all'} onChange={(e) => updateVariant({ conditions: { ...variant.conditions, mode: e.target.value } })}><option value="all">Выполнены все условия</option><option value="any">Выполнено хотя бы одно</option></select></Field>
-            {(variant.conditions?.rules || []).map((rule, i) => {
-              const previous = tasks.find((entry, n) => classicStageId(entry, n) === rule.stageId)
-              const source = rule.variantId && rule.variantId !== 'default' ? previous?.variants?.find((v) => v.id === rule.variantId)?.content : previous
-              return <div key={i} className="space-y-2 rounded-lg border p-3">
-                <select aria-label="Тип условия" className={inputClass} value={rule.type} onChange={(e) => updateRule(i, { type: e.target.value })}><option value="item">Количество предмета</option><option value="code">Ранее введённый код</option><option value="outcome">Исход этапа</option></select>
-                {rule.type === 'item' ? <Quantities value={[{ itemId: rule.itemId || '', quantity: rule.quantity || 1 }]} items={items} onChange={(next) => next[0] && updateRule(i, next[0])} /> : <>
-                  <select aria-label="Предыдущий этап" className={inputClass} value={rule.stageId || ''} onChange={(e) => updateRule(i, { stageId: e.target.value, variantId: 'default', code: '' })}><option value="">Выберите предыдущий этап</option>{tasks.slice(0, stageIndex).map((entry, n) => <option key={n} value={classicStageId(entry, n)}>{n + 1}. {entry.title}</option>)}</select>
-                  <select aria-label="Исходный вариант" className={inputClass} value={rule.variantId ?? 'default'} onChange={(e) => updateRule(i, { variantId: e.target.value, code: '' })}><option value="default">Запасной / обычное задание</option>{rule.type === 'outcome' && <option value="">Любой вариант, включая отсутствие выбора</option>}{(previous?.variants || []).map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}</select>
-                  {rule.type === 'outcome' ? <select aria-label="Исход" className={inputClass} value={rule.outcome || ''} onChange={(e) => updateRule(i, { outcome: e.target.value })}><option value="">Выберите исход</option>{Object.entries(outcomes).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select> : <>
-                    <select aria-label="Категория кода" className={inputClass} value={rule.category || 'main'} onChange={(e) => updateRule(i, { category: e.target.value, code: '' })}>{Object.entries(categories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
-                    <select aria-label="Код" className={inputClass} value={rule.code || ''} onChange={(e) => updateRule(i, { code: e.target.value })}><option value="">Выберите код</option>{codesFor(source || {}, rule.category || 'main').map((code) => <option key={code} value={code}>{code}</option>)}</select>
-                  </>}
+  const task = game.tasks[stageIndex]
+  const items = game.classicItems || []
+  const variants = task.variants || []
+  const enabled = Boolean(task.variantConfig?.enabled)
+  const variant = enabled ? variants.find((entry) => entry.id === variantId) : null
+  const updateTask = (patch, item) => {
+    if (disabled) return
+    onChange((previous) => ({ ...previous,
+      ...(item ? { classicItems: [...(previous.classicItems || []), item] } : {}),
+      tasks: previous.tasks.map((entry) => entry.id === task.id ? { ...entry, stageKey: classicStageId(entry, stageIndex), ...(typeof patch === 'function' ? patch(entry) : patch) } : entry),
+    }))
+  }
+  const updateVariant = (patch, item) => updateTask((current) => ({ variants: current.variants.map((entry) => entry.id === variantId ? { ...entry, ...(typeof patch === 'function' ? patch(entry) : patch) } : entry) }), item)
+  const updateConfig = (patch) => updateTask((current) => ({ variantConfig: { mode: 'auto', offerDefaultAlways: false, ...current.variantConfig, ...patch } }))
+  const updateRule = (index, patch, item) => updateVariant((current) => ({ conditions: { ...current.conditions, rules: current.conditions.rules.map((rule, i) => i === index ? { ...rule, ...patch } : rule) } }), item)
+  const addVariant = (copy) => {
+    if (disabled) return
+    const next = { id: crypto.randomUUID(), title: `Вариант ${variants.length + 1}`, description: '', conditions: { mode: 'all', rules: [] }, consumeItems: [], content: copy ? copyClassicContent(task) : { title: '', task: '', taskRich: '', codes: [], clues: [], bonusCodes: [], penaltyCodes: [] } }
+    updateTask((current) => ({ variantConfig: { mode: 'auto', offerDefaultAlways: false, ...current.variantConfig, enabled: true }, variants: [...(current.variants || []), next] }))
+    onSelectVariant(next.id); closeAddVariant()
+  }
+  return <section aria-label={`Варианты этапа ${stageIndex + 1}`} className="space-y-4 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-3 dark:border-cyan-800 dark:bg-cyan-950/15 sm:p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h3 className="font-semibold">Варианты задания</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Команда проходит один вариант этого этапа.</p></div>
+      <button ref={addButtonRef} type="button" aria-haspopup="dialog" className={buttonClass} disabled={disabled} onClick={() => setAdding(true)}>Добавить вариант задания</button>
+    </div>
+    <Modal
+      isOpen={adding}
+      title="С чего начать новый вариант?"
+      onClose={closeAddVariant}
+      dialogClassName="md:!max-w-xl"
+      footer={<button type="button" className={buttonClass} onClick={closeAddVariant}>Отмена</button>}
+    >
+      <div className="grid gap-3">
+        <button autoFocus type="button" disabled={disabled} className={`${buttonClass} text-left`} onClick={() => addVariant(true)}>
+          Скопировать основное задание
+        </button>
+        <button type="button" disabled={disabled} className={`${buttonClass} text-left`} onClick={() => addVariant(false)}>
+          Создать пустое
+        </button>
+      </div>
+    </Modal>
+    {!enabled && <p className="text-sm text-slate-600 dark:text-slate-300">Сейчас все команды получают основное задание.{variants.length > 0 && <> Сохранено альтернатив: {variants.length}.</>}</p>}
+    {enabled && <>
+      <Field label="Кто выбирает задание?"><select className={inputClass} disabled={disabled} value={task.variantConfig.mode || 'auto'} onChange={(event) => updateConfig({ mode: event.target.value })}><option value="auto">Автоматически по условиям</option><option value="captain">Капитан команды</option></select></Field>
+      <p className="text-sm text-slate-600 dark:text-slate-300">{task.variantConfig.mode === 'captain' ? 'Капитан увидит доступные варианты. Если доступен только один, он назначится автоматически. Время на выбор входит во время этапа.' : 'Назначится первая подходящая альтернатива сверху. Если ни одна не подходит — основное задание.'}</p>
+      {task.variantConfig.mode === 'captain' && <label className="flex items-start gap-2 text-sm"><input type="checkbox" disabled={disabled} checked={Boolean(task.variantConfig.offerDefaultAlways)} onChange={(event) => updateConfig({ offerDefaultAlways: event.target.checked })} />Также разрешить основное задание, чтобы команда могла сохранить предметы</label>}
+      <div className="grid gap-2 sm:grid-cols-2" aria-label="Редактируемый вариант">
+        {[{ id: 'default', title: task.variantConfig.title || 'Основное задание' }, ...variants].map((entry, i) => <button key={entry.id} type="button" aria-pressed={variantId === entry.id} onClick={() => onSelectVariant(entry.id)} className={`min-w-0 rounded-xl border p-3 text-left ${variantId === entry.id ? 'border-cyan-500 bg-cyan-100 dark:bg-cyan-900/40' : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
+          <span className="block break-words font-semibold">{i ? `${i}. ` : ''}{entry.title || 'Без названия'}</span>
+          <span className="mt-1 block text-xs text-slate-600 dark:text-slate-300">{i ? (entry.conditions?.rules?.length ? entry.conditions.rules.map((rule) => describeClassicCondition(rule, game)).join(entry.conditions.mode === 'any' ? ' ИЛИ ' : ' И ') : 'Без условий') : 'Без условий и расхода; используется, если альтернативы недоступны'}</span>
+          {entry.consumeItems?.length > 0 && <span className="mt-1 block text-xs">Расход: {entry.consumeItems.map((cost) => `${items.find((item) => item.id === cost.itemId)?.title || 'Удалённый предмет'} ×${cost.quantity}`).join(', ')}</span>}
+        </button>)}
+      </div>
+      <fieldset disabled={disabled} className="min-w-0 space-y-4">
+        <Field label="Название варианта"><input className={inputClass} value={variant ? variant.title : task.variantConfig.title || ''} placeholder="Основное задание" onChange={(event) => variant ? updateVariant({ title: event.target.value }) : updateConfig({ title: event.target.value })} /></Field>
+        {task.variantConfig.mode === 'captain' && <Field label="Описание для капитана перед выбором"><textarea className={inputClass} value={(variant || task.variantConfig).description || ''} onChange={(event) => variant ? updateVariant({ description: event.target.value }) : updateConfig({ description: event.target.value })} /></Field>}
+        {(!variant || variants.length > 1) && <h4 className="font-semibold">{variant ? 'Когда доступен этот вариант?' : 'Основной вариант'}</h4>}
+        {!variant && <p className="text-sm">Это гарантированный путь без условий и расхода предметов.</p>}
+        {variant && <>
+          {variants.length > 1 && <>
+          <div className="flex flex-wrap gap-2">{[-1, 1].map((direction) => <button key={direction} type="button" className={buttonClass} disabled={disabled || (direction < 0 ? variants[0]?.id === variantId : variants.at(-1)?.id === variantId)} onClick={() => updateTask((current) => { const next = [...current.variants]; const i = next.findIndex((entry) => entry.id === variantId); [next[i], next[i + direction]] = [next[i + direction], next[i]]; return { variants: next } })}>{direction < 0 ? 'Выше в списке' : 'Ниже в списке'}</button>)}</div>
+          {(variant.conditions?.rules || []).length > 1 && <Field label="Как объединить условия?"><select className={inputClass} value={variant.conditions?.mode || 'all'} onChange={(event) => updateVariant({ conditions: { ...variant.conditions, mode: event.target.value } })}><option value="all">Должны выполняться все</option><option value="any">Достаточно любого</option></select></Field>}
+          {(variant.conditions?.rules || []).map((rule, i) => {
+            const previous = game.tasks.find((entry, n) => classicStageId(entry, n) === rule.stageId)
+            const source = rule.variantId && rule.variantId !== 'default' ? previous?.variants?.find((entry) => entry.id === rule.variantId)?.content : previous
+            return <div key={i} className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+              <Field label="Условие"><select className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-60`} disabled={disabled || stageIndex === 0} value={rule.type} onChange={(event) => {
+                const next = event.target.value === 'item' ? { type: 'item', itemId: '', quantity: 1 } : event.target.value === 'outcome' ? { type: 'outcome', stageId: '', variantId: '', outcome: '' } : { type: 'code', stageId: '', variantId: 'default', category: 'main', code: '', absent: false }
+                updateVariant({ conditions: { ...variant.conditions, rules: variant.conditions.rules.map((entry, n) => n === i ? next : entry) } })
+              }}><option value="item">Наличие или количество предмета</option><option value="outcome" disabled={!stageIndex}>Результат предыдущего этапа</option><option value="code" disabled={!stageIndex}>Ранее введённый код</option></select></Field>
+              {rule.type === 'item' ? <>
+                <Field label="Проверить количество"><select className={inputClass} value={rule.absent ? 'absent' : 'present'} onChange={(event) => updateRule(i, { absent: event.target.value === 'absent' })}><option value="present">Не меньше указанного</option><option value="absent">Меньше указанного (нет предмета, если указано 1)</option></select></Field>
+                <Quantities single items={items} value={[{ itemId: rule.itemId || '', quantity: rule.quantity ?? 1 }]} onChange={(next) => updateRule(i, next[0])} onCreateItem={(item, next) => updateRule(i, next[0], item)} />
+                {!rule.absent && rule.itemId && <label className="flex gap-2 text-sm"><input type="checkbox" checked={(variant.consumeItems || []).some((cost) => cost.itemId === rule.itemId)} onChange={(event) => updateVariant({ consumeItems: event.target.checked ? [...(variant.consumeItems || []), { itemId: rule.itemId, quantity: rule.quantity || 1 }] : (variant.consumeItems || []).filter((cost) => cost.itemId !== rule.itemId) })} />Забрать этот предмет при выборе (количество указано ниже)</label>}
+              </> : <>
+                <Field label="На каком этапе?"><select className={inputClass} value={rule.stageId || ''} onChange={(event) => updateRule(i, { stageId: event.target.value, variantId: rule.type === 'outcome' ? '' : 'default', code: '' })}><option value="">Выберите предыдущий этап</option>{game.tasks.slice(0, stageIndex).map((entry, n) => <option key={entry.id} value={classicStageId(entry, n)}>{n + 1}. {entry.title}</option>)}</select></Field>
+                {(previous?.variants?.length > 0 || (rule.type === 'outcome' && rule.variantId)) && <Field label="Вариант предыдущего этапа"><select className={inputClass} value={rule.variantId ?? 'default'} onChange={(event) => updateRule(i, { variantId: event.target.value, code: '' })}>{rule.type === 'outcome' && <option value="">Любой, включая отсутствие выбора</option>}<option value="default">Основное задание</option>{(previous?.variants || []).map((entry) => <option key={entry.id} value={entry.id}>{entry.title}</option>)}</select></Field>}
+                {rule.type === 'outcome' ? <Field label="Результат"><select className={inputClass} value={rule.outcome || ''} onChange={(event) => updateRule(i, { outcome: event.target.value })}><option value="">Выберите результат</option>{Object.entries(outcomes).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></Field> : <>
+                  <Field label="Тип кода"><select className={inputClass} value={rule.category || 'main'} onChange={(event) => updateRule(i, { category: event.target.value, code: '' })}>{Object.entries(categories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></Field>
+                  <Field label="Код"><select className={inputClass} value={rule.code || ''} onChange={(event) => updateRule(i, { code: event.target.value })}><option value="">Выберите код</option>{codesFor(source || {}, rule.category || 'main').filter(Boolean).map((code) => <option key={code} value={code}>{code}</option>)}</select></Field>
+                  <Field label="Что произошло с кодом?"><select className={inputClass} value={rule.absent ? 'absent' : 'found'} onChange={(event) => updateRule(i, { absent: event.target.value === 'absent' })}><option value="found">Команда ввела код</option><option value="absent">Команда не ввела код</option></select></Field>
                 </>}
-                {rule.type !== 'outcome' && <label className="flex gap-2"><input type="checkbox" checked={Boolean(rule.absent)} onChange={(e) => updateRule(i, { absent: e.target.checked })} />Условие отсутствия (кода нет / предметов меньше указанного)</label>}
-                <button type="button" className={buttonClass} onClick={() => updateVariant({ conditions: { ...variant.conditions, rules: variant.conditions.rules.filter((_, n) => n !== i) } })}>Удалить условие</button>
-              </div>
-            })}
-            <button type="button" className={buttonClass} onClick={() => updateVariant({ conditions: { mode: 'all', ...variant.conditions, rules: [...(variant.conditions?.rules || []), { type: 'item', itemId: items[0]?.id || '', quantity: 1, category: 'main' }] } })}>Добавить условие</button>
-            <p className="font-medium">Потратить при назначении</p><Quantities items={items} value={variant.consumeItems} onChange={(consumeItems) => updateVariant({ consumeItems })} />
-            <p className="font-medium">Полное задание выбранного пути</p>
-            <Field label="Скопировать содержимое существующего задания"><select className={inputClass} value="" onChange={(e) => {
-              const source = tasks[Number(e.target.value)]
-              const { variants: _variants, variantConfig: _config, stageKey: _key, _id, id: _draftId, outcomeRewards: _rewards, ...copy } = source
-              updateVariant({ content: structuredClone(copy) })
-            }}><option value="">Выберите задание для копирования</option>{tasks.map((source, i) => <option key={i} value={i}>{i + 1}. {source.title}</option>)}</select></Field>
-            <Field label="Название задания"><input className={inputClass} value={content.title || ''} onChange={(e) => updateContent({ title: e.target.value })} /></Field>
-            <Field label="Текст задания"><textarea className={inputClass} rows={5} value={content.task || ''} onChange={(e) => updateContent({ task: e.target.value })} /></Field>
-            <details><summary>Форматированный текст и медиа</summary><RichEditor taskTheme={normalizeTaskTheme(game?.taskTheme)} value={content.taskRich || ''} disabled={disabled} directory={`games/${game.id}/variants/${variant.id}`} onChange={({ html, plainText, media }) => updateContent({ taskRich: html, task: plainText, taskMedia: media })} /></details>
-            <Field label="Основные коды (по одному на строку)"><textarea className={inputClass} value={(content.codes || []).join('\n')} onChange={(e) => updateContent({ codes: e.target.value.split('\n') })} /></Field>
-            <Field label="Кодов для завершения (пусто — все)"><input className={inputClass} type="number" min="1" value={content.numCodesToCompliteTask ?? ''} onChange={(e) => updateContent({ numCodesToCompliteTask: e.target.value ? Number(e.target.value) : null })} /></Field>
-            <Field label="Подсказки (по одной на строку)"><textarea className={inputClass} value={(content.clues || []).map((clue) => clue.clue).join('\n')} onChange={(e) => updateContent({ clues: e.target.value.split('\n').map((clue) => ({ clue })) })} /></Field>
-            {['bonus', 'penalty'].map((category) => { const key = category === 'bonus' ? 'bonusCodes' : 'penaltyCodes'; return <details key={key}><summary>{category === 'bonus' ? 'Бонусные' : 'Штрафные'} коды</summary>{(content[key] || []).map((code, i) => <div key={i} className="my-2 flex gap-2"><input aria-label="Код" className={inputClass} value={code.code} onChange={(e) => updateContent({ [key]: content[key].map((v, n) => n === i ? { ...v, code: e.target.value } : v) })} /><input aria-label="Секунды" type="number" min="0" className={inputClass} value={code[category] || 0} onChange={(e) => updateContent({ [key]: content[key].map((v, n) => n === i ? { ...v, [category]: Number(e.target.value) } : v) })} /><button type="button" className={buttonClass} onClick={() => updateContent({ [key]: content[key].filter((_, n) => n !== i) })}>Убрать</button></div>)}<button type="button" className={buttonClass} onClick={() => updateContent({ [key]: [...(content[key] || []), { code: '', [category]: 0 }] })}>Добавить код</button></details> })}
-            <Field label="Сообщение после задания"><textarea className={inputClass} value={content.postMessage || ''} onChange={(e) => updateContent({ postMessage: e.target.value })} /></Field>
-            <details><summary>Форматированное сообщение после задания</summary><RichEditor taskTheme={normalizeTaskTheme(game?.taskTheme)} value={content.postMessageRich || ''} disabled={disabled} directory={`games/${game.id}/variants/${variant.id}/post`} onChange={({ html, plainText, media }) => updateContent({ postMessageRich: html, postMessage: plainText, postMessageMedia: media })} /></details>
-            <Field label="Бонус за выполнение, секунд"><input type="number" min="0" className={inputClass} value={content.taskBonusForComplite || 0} onChange={(e) => updateContent({ taskBonusForComplite: Number(e.target.value) })} /></Field>
-            <details><summary>Координаты и агенты</summary><div className="space-y-2">{[['latitude', 'Широта'], ['longitude', 'Долгота'], ['radius', 'Радиус, м']].map(([key, label]) => <Field key={key} label={label}><input type="number" step="any" className={inputClass} value={content.coordinates?.[key] ?? ''} onChange={(e) => updateContent({ coordinates: { ...content.coordinates, [key]: e.target.value === '' ? null : Number(e.target.value) } })} /></Field>)}{agents.map((agent) => <label key={agent.userId} className="flex gap-2"><input type="checkbox" checked={(content.agentUserIds || []).includes(agent.userId)} onChange={(e) => updateContent({ agentUserIds: e.target.checked ? [...(content.agentUserIds || []), agent.userId] : (content.agentUserIds || []).filter((value) => value !== agent.userId) })} />{agent.name || 'Агент'}</label>)}</div></details>
-          </>}
-        </>}
-        <details><summary>Предметы за исход выбранного задания</summary><Rewards content={content.itemRewards} items={items} onChange={(itemRewards) => updateContent({ itemRewards })} /></details>
-        <details><summary>Предметы за коды выбранного задания</summary>{Object.keys(categories).flatMap((category) => codesFor(content, category).filter(Boolean).map((code) => {
-          const rewards = content.itemRewards || {}
-          const reward = rewards.codes?.find((r) => r.category === category && r.code === code)
-          return <details key={`${category}:${code}`}><summary>{categories[category]}: {code}</summary><Quantities items={items} value={reward?.items} onChange={(value) => updateContent({ itemRewards: { ...rewards, codes: [...(rewards.codes || []).filter((r) => r.category !== category || r.code !== code), { category, code, items: value }] } })} /></details>
-        }))}</details>
-        <details><summary>Общие награды исхода этапа, в том числе без выбора</summary><Rewards outcomesOnly content={task.outcomeRewards} items={items} onChange={(outcomeRewards) => updateTask({ outcomeRewards })} /></details>
-        <details><summary>Проверка доступности</summary><Quantities items={items} value={simulation} onChange={setSimulation} />
-          {tasks.slice(0, stageIndex).map((previous, index) => {
-            const key = classicStageId(previous, index)
-            const state = simulationStages[key] || {}
-            const patch = (value) => setSimulationStages((current) => ({ ...current, [key]: { ...current[key], ...value } }))
-            const source = state.selectedVariantId === 'default' ? previous : previous.variants?.find((v) => v.id === state.selectedVariantId)?.content
-            return <details key={key}><summary>{index + 1}. {previous.title}</summary>
-              <select aria-label="Вариант в примере" className={inputClass} value={state.selectedVariantId || ''} onChange={(e) => patch({ selectedVariantId: e.target.value, main: [], bonus: [], penalty: [] })}><option value="">Не выбран</option><option value="default">Обычное задание</option>{(previous.variants || []).map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}</select>
-              <select aria-label="Исход в примере" className={inputClass} value={state.outcome || ''} onChange={(e) => patch({ outcome: e.target.value })}><option value="">Не завершён</option>{Object.entries(outcomes).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-              {source && Object.entries(categories).flatMap(([category, label]) => codesFor(source, category).filter(Boolean).map((code) => <label className="flex gap-2" key={`${category}:${code}`}><input type="checkbox" checked={(state[category] || []).includes(code)} onChange={(e) => patch({ [category]: e.target.checked ? [...(state[category] || []), code] : (state[category] || []).filter((value) => value !== code) })} />{label}: {code}</label>))}
-            </details>
+              </>}
+              <button type="button" className={buttonClass} onClick={() => updateVariant({ conditions: { ...variant.conditions, rules: variant.conditions.rules.filter((_, n) => n !== i) } })}>Удалить условие</button>
+            </div>
           })}
-          <p>Доступны: {getClassicVariantChoices(game, {
-            classicProgress: { inventory: simulation, stages: Object.entries(simulationStages).map(([stageId, state]) => ({ stageId, ...state })) },
-            ...Object.fromEntries([['main', 'findedCodes'], ['bonus', 'findedBonusCodes'], ['penalty', 'findedPenaltyCodes']].map(([category, key]) => [key, tasks.map((task, i) => simulationStages[classicStageId(task, i)]?.[category] || [])])),
-          }, stageIndex).map((v) => v.title).join(', ')}</p>
-        </details>
-      </>}
-      {errors.length > 0 && <ul className="text-sm text-amber-700 dark:text-amber-300">{errors.map((error) => <li key={error}>{error}</li>)}</ul>}
-    </fieldset>
-  </details>
+          {!variant.conditions?.rules?.length && <p className="text-sm">Пока доступен всем, у кого хватает предметов на расход.</p>}
+          <button type="button" className={buttonClass} onClick={() => updateVariant({ conditions: { mode: 'all', ...variant.conditions, rules: [...(variant.conditions?.rules || []), { type: 'item', itemId: '', quantity: 1 }] } })}>Добавить условие</button>
+          </>}
+          <details open={(variant.consumeItems || []).length > 0}><summary className="cursor-pointer font-medium">Что потратить при выборе?</summary><p className="my-2 text-xs text-slate-500">Расход проверяется всегда, даже если достаточно любого условия. Без этого списка предметы сохраняются.</p><Quantities items={items} value={variant.consumeItems} onChange={(consumeItems) => updateVariant({ consumeItems })} onCreateItem={(item, consumeItems) => updateVariant({ consumeItems }, item)} /></details>
+          <button type="button" className={`${buttonClass} text-red-600`} onClick={() => {
+            if (!window.confirm(`Удалить вариант «${variant.title}» вместе с его заданием? До сохранения игры изменения можно сбросить.`)) return
+            updateTask((current) => ({ variants: current.variants.filter((entry) => entry.id !== variantId) })); onSelectVariant('default')
+          }}>Удалить этот вариант</button>
+        </>}
+      </fieldset>
+      <ClassicVariantSimulation game={game} stageIndex={stageIndex} />
+    </>}
+  </section>
 }
-ClassicVariantsEditor.propTypes = { game: PropTypes.object.isRequired, onChange: PropTypes.func.isRequired, disabled: PropTypes.bool, agents: PropTypes.array }
+ClassicVariantsEditor.propTypes = { game: PropTypes.object.isRequired, stageIndex: PropTypes.number.isRequired, variantId: PropTypes.string.isRequired, onSelectVariant: PropTypes.func.isRequired, onChange: PropTypes.func.isRequired, disabled: PropTypes.bool }

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
-import ModalSection from '@components/modals/ModalSection'
 import {
   formatTaskDistributionTemplate,
   moveTaskInDistributionTemplate,
@@ -188,14 +187,15 @@ const TaskDistributionSection = ({
   }
 
   return (
-    <ModalSection>
+    <div className="border-t border-slate-200 pt-5 dark:border-slate-700">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
             Распределение заданий
-          </h2>
+          </h3>
         </div>
         <select
+          aria-label="Режим распределения заданий"
           value={mode}
           onChange={handleModeChange}
           disabled={disabled}
@@ -357,7 +357,7 @@ const TaskDistributionSection = ({
           </button>
         </div>
       </Modal>
-    </ModalSection>
+    </div>
   )
 }
 

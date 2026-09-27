@@ -27,6 +27,9 @@ const GameModals = ({
   isSaving,
   location,
   isDirty,
+  dirtyTaskIds,
+  beginTaskEditing,
+  cancelTaskEditing,
   handleModalPrimaryAction,
   handleResetChanges,
   updateSelectedGame,
@@ -283,6 +286,9 @@ const GameModals = ({
           isSaving={isSaving}
           location={location}
           isDirty={isDirty}
+          dirtyTaskIds={dirtyTaskIds}
+          beginTaskEditing={beginTaskEditing}
+          cancelTaskEditing={cancelTaskEditing}
           handleModalPrimaryAction={handleTasksModalPrimaryAction}
           handleResetChanges={handleResetChanges}
           expandedTaskIds={expandedTaskIds}
@@ -538,6 +544,9 @@ GameModals.propTypes = {
     PropTypes.shape({ city: PropTypes.string }),
   ]),
   isDirty: PropTypes.bool.isRequired,
+  dirtyTaskIds: PropTypes.arrayOf(PropTypes.string),
+  beginTaskEditing: PropTypes.func.isRequired,
+  cancelTaskEditing: PropTypes.func.isRequired,
   handleModalPrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
   updateSelectedGame: PropTypes.func.isRequired,
