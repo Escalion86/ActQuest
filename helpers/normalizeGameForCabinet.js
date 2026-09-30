@@ -1,3 +1,4 @@
+import { showClassicItemsAndVariants } from './classicEditorSettings.js'
 import { normalizeTaskTheme } from './taskThemes.js'
 import { ensureDateISOString } from './idAndDate.js'
 import {
@@ -713,6 +714,7 @@ const normalizeGameForCabinet = (game) => {
     prices: normalizePrices(game.prices),
     finances: normalizeFinances(game.finances),
     tasks: normalizeTasks(game.tasks),
+    classicItemsAndVariantsEnabled: showClassicItemsAndVariants(game),
     classicItems: game.classicItems || [],
     teamsCount: ensureNumber(game.teamsCount, 0),
     adminUnreadMessagesCount: ensureNumber(game.adminUnreadMessagesCount, 0),

@@ -1,5 +1,6 @@
 'use client'
 
+import { showClassicItemsAndVariants } from '@helpers/classicEditorSettings'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 
 
@@ -1104,6 +1105,7 @@ const buildUpdatePayload = (game) => {
     prices,
     finances,
     tasks: tasksWithAllowedAgents,
+    classicItemsAndVariantsEnabled: showClassicItemsAndVariants(game),
     classicItems: game.classicItems || [],
     moderators: Array.from(moderatorsSet),
     agents: agentIds.map((userId) => ({ userId, active: true })),
@@ -3084,6 +3086,7 @@ const GamesPage = ({
 
         if (createGameCloneOptions.tasks) {
           baseDraft.taskTheme = normalizeTaskTheme(normalizedSource.taskTheme)
+          baseDraft.classicItemsAndVariantsEnabled = showClassicItemsAndVariants(normalizedSource)
           baseDraft.classicItems = JSON.parse(JSON.stringify(normalizedSource.classicItems || []))
           baseDraft.tasks = Array.isArray(normalizedSource.tasks)
             ? JSON.parse(JSON.stringify(normalizedSource.tasks))

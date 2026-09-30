@@ -490,6 +490,7 @@ const PrequelConfigSchema = new Schema(
 )
 
 const gamesSchema = {
+  classicItemsAndVariantsEnabled: { type: Boolean, default: undefined },
   classicItems: {
     type: [{ id: String, title: String, description: String, image: String, kind: { type: String, enum: ['unique', 'stackable'] } }],
     default: [],

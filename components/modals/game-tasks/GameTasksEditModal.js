@@ -1,3 +1,4 @@
+import { canManageClassicEditor, showClassicItemsAndVariants } from '@helpers/classicEditorSettings'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { TASK_THEMES, normalizeTaskTheme } from '@helpers/taskThemes'
@@ -67,6 +68,8 @@ const GameTasksEditModal = ({
   canViewGameMap,
   handleOpenGameMap,
 }) => {
+  const canManageClassic = canManageClassicEditor(currentUserRole)
+  const showClassicFeatures = canManageClassic && showClassicItemsAndVariants(selectedGame)
   const variantsLocked = hasClassicVariants(selectedGame) && ['started', 'finished', 'closed'].includes(selectedGame?.status)
   const canEditSelectedGame = canEditGame && !variantsLocked
   const [expandedCodeAccordions, setExpandedCodeAccordions] = useState(
@@ -457,7 +460,7 @@ const GameTasksEditModal = ({
       hideStageFlags={editing}
       opensDialog={!editing}
       updateSelectedGame={updateSelectedGame}
-      canManageClassic={currentUserRole === 'dev'}
+      canManageClassic={showClassicFeatures}
       task={task}
       index={index}
       isExpanded={editing}
@@ -680,7 +683,7 @@ const GameTasksEditModal = ({
 
         <ModalSection>
           {variantsLocked ? <p className="mb-3 text-sm text-amber-700 dark:text-amber-300">Правила игры с вариантами зафиксированы при запуске. Для новой редакции создайте копию игры.</p> : null}
-          {currentUserRole === 'dev' && <ClassicItemsSection game={selectedGame} onChange={updateSelectedGame} disabled={!canEditSelectedGame || isSaving || ['started', 'finished', 'closed'].includes(selectedGame?.status)} />}
+          {showClassicFeatures && <ClassicItemsSection game={selectedGame} onChange={updateSelectedGame} disabled={!canEditSelectedGame || isSaving || ['started', 'finished', 'closed'].includes(selectedGame?.status)} />}
           {isGameClosed ? (
             <p className="mb-4 rounded-xl border border-amber-300/70 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200">
               Игра закрыта: задания можно только просматривать. Сохранение
@@ -779,7 +782,7 @@ const GameTasksEditModal = ({
               disabled={!canEditSelectedGame || isSaving}
             />
           ))}
-          {currentUserRole === 'dev' && selectedGame.type === 'classic' && (
+          {showClassicFeatures && (
               <NeonCheckbox
                 id={`task-stage-variants-${editingTask.id}`}
                 checked={Boolean(editingTask.variantConfig?.enabled)}
@@ -814,6 +817,7 @@ const GameTasksEditModal = ({
           onClose={() => setSelectedCodePhoto(null)}
         />
     <GameTaskSettingsModal
+      canManageClassic={canManageClassic}
       selectedGame={selectedGame}
       isOpen={isTasksModalOpen && isTaskSettingsModalOpen}
       onClose={() => setIsTaskSettingsModalOpen(false)}

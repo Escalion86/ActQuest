@@ -1,3 +1,5 @@
+import { canManageClassicEditor, showClassicItemsAndVariants } from '../helpers/classicEditorSettings.js'
+import normalizeGameForCabinet from '../helpers/normalizeGameForCabinet.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { classicEditorContent, copyClassicContent, updateClassicEditorContent, changeClassicEditorCode, normalizeClassicItemQuantities, explainClassicVariant, classicItemUsage } from '../helpers/classicVariantEditor.js'
@@ -136,4 +138,35 @@ test('каталог показывает выдачу и использован
   const usage = classicItemUsage(game.tasks, 'key')
   assert.equal(usage.grants.length, 2)
   assert.equal(usage.uses.length, 1)
+})
+
+test('настройки предметов доступны администратору и разработчику', () => {
+  assert.equal(canManageClassicEditor('admin'), true)
+  assert.equal(canManageClassicEditor('dev'), true)
+  for (const role of ['moderator', 'user', undefined]) assert.equal(canManageClassicEditor(role), false)
+})
+
+test('новая настройка редактора скрыта по умолчанию и сохраняется при нормализации', () => {
+  const game = { type: 'classic', tasks: [], classicItems: [] }
+  assert.equal(showClassicItemsAndVariants(game), false)
+  for (const enabled of [true, false]) {
+    const normalized = normalizeGameForCabinet({ ...game, classicItemsAndVariantsEnabled: enabled })
+    assert.equal(normalized.classicItemsAndVariantsEnabled, enabled)
+    assert.equal(showClassicItemsAndVariants(normalized), enabled)
+  }
+  assert.equal(showClassicItemsAndVariants({ ...game, type: 'photo', classicItemsAndVariantsEnabled: true }), false)
+})
+
+test('старые игры сохраняют доступ к механике, отключение интерфейса не удаляет правила', () => {
+  const game = fixture()
+  const original = structuredClone(game)
+  assert.equal(showClassicItemsAndVariants(game), true)
+  assert.equal(normalizeGameForCabinet(game).classicItemsAndVariantsEnabled, true)
+  assert.equal(showClassicItemsAndVariants({ type: 'classic', tasks: [{ variants: [{ id: 'saved' }], variantConfig: { enabled: false } }] }), true)
+  const hidden = { ...game, classicItemsAndVariantsEnabled: false }
+  assert.equal(showClassicItemsAndVariants(hidden), false)
+  assert.equal(normalizeGameForCabinet(hidden).classicItemsAndVariantsEnabled, false)
+  assert.deepEqual(hidden.tasks, original.tasks)
+  assert.deepEqual(hidden.classicItems, original.classicItems)
+  assert.deepEqual(getClassicVariantChoices(hidden, {}, 1), getClassicVariantChoices(game, {}, 1))
 })

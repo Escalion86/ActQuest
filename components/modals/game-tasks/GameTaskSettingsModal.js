@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types'
+import { showClassicItemsAndVariants } from '@helpers/classicEditorSettings'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -30,6 +31,7 @@ const handleCustomTaskPublicTitlesChange = (updateSelectedGame, eventOrChecked) 
 
 const GameTaskSettingsModal = ({
   selectedGame,
+  canManageClassic,
   isOpen,
   onClose,
   canEditSelectedGame,
@@ -95,6 +97,17 @@ const GameTaskSettingsModal = ({
             сочетание с фоном в предпросмотре.
           </p>
         </div>
+        {canManageClassic && selectedGame.type === 'classic' && (
+          <NeonCheckbox
+            id={`game-items-and-variants-${selectedGame.id}`}
+            checked={showClassicItemsAndVariants(selectedGame)}
+            onChange={(event) => updateSelectedGame({ classicItemsAndVariantsEnabled: event.target.checked })}
+            disabled={!canEditSelectedGame || isGameClosed || isSaving}
+            label="Предметы и вариативность заданий"
+            description="Показывать предметы, варианты заданий и награды в редакторе. При отключении их настройки сохраняются."
+            labelClassName="text-sm text-slate-600 dark:text-slate-200"
+          />
+        )}
         {['classic', 'photo'].includes(selectedGame.type) ? (
           <NeonCheckbox
             id={`game-custom-task-public-titles-${selectedGame.id}`}
@@ -123,11 +136,14 @@ const GameTaskSettingsModal = ({
 )
 
 GameTaskSettingsModal.propTypes = {
+  canManageClassic: PropTypes.bool.isRequired,
   selectedGame: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
     type: PropTypes.string,
     taskTheme: PropTypes.string,
+    classicItemsAndVariantsEnabled: PropTypes.bool,
+    classicItems: PropTypes.array,
     useCustomTaskPublicTitles: PropTypes.bool,
     taskDistributionMode: PropTypes.oneOf(['linear', 'random']),
     taskDistributionTemplate: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)),

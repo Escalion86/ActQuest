@@ -181,6 +181,7 @@ export async function GET(request) {
         prices: 1,
         finances: 1,
         tasks: 1,
+        classicItemsAndVariantsEnabled: 1,
         classicItems: 1,
         updatedAt: 1,
         createdAt: 1,
