@@ -334,6 +334,10 @@ const safeSerializeGameForClient = (game) => {
   return {
     _id: game._id ? String(game._id) : undefined,
     name: game.name || '',
+    prestartDescriptionRich:
+      (game.status || 'active') === 'active'
+        ? sanitizeFragment(game.prestartDescriptionRich)
+        : '',
     type: game.type || 'classic',
     location: game.location || '',
     dateStart: game.dateStart || null,

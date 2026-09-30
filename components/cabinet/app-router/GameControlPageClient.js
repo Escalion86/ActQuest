@@ -42,6 +42,16 @@ const formatTime = (totalSeconds) => {
 const formatForcedCluesCount = (count) =>
   `${Math.max(0, Number(count) || 0)} досрочно`
 
+const formatControlTaskLabel = (data, taskIndex, step, title) => {
+  const publicTitle = data?.useCustomTaskPublicTitles
+    ? data.tasks?.[taskIndex]?.publicTitle || `${taskIndex + 1} Задание`
+    : `Задание ${taskIndex + 1}`
+  const stagePrefix = data?.taskDistributionMode === 'random'
+    ? `Этап ${step + 1}/${Number(data?.tasksCount || 0)}: `
+    : ''
+  return `${stagePrefix}${publicTitle}. ${title || 'Без названия'}`
+}
+
 const normalizeSeconds = (value, fallback = 0) => {
   const seconds = Number(value)
   return Number.isFinite(seconds) ? seconds : fallback
@@ -1763,15 +1773,23 @@ export default function GameControlPageClient({ session: _session }) {
                     : 0
                 const activeTaskLabel = team.isTeamFinished
                   ? 'Завершено'
-                  : `Шаг ${activeTaskStep + 1}/${Number(data?.tasksCount || 0)}: задание ${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`
+                  : formatControlTaskLabel(
+                      data,
+                      team.activeTaskIndex,
+                      activeTaskStep,
+                      team.currentTaskTitle,
+                    )
                 const nextTaskLabel =
                   Number.isInteger(team?.activeTaskStep) &&
                   team.activeTaskStep + 1 < Number(data?.tasksCount || 0)
-                    ? `Шаг ${team.activeTaskStep + 2}/${Number(data?.tasksCount || 0)}: задание ${
+                    ? formatControlTaskLabel(
+                        data,
                         Number.isInteger(team.taskSequence?.[team.activeTaskStep + 1])
-                          ? team.taskSequence[team.activeTaskStep + 1] + 1
-                          : team.activeTaskIndex + 2
-                      }. ${team.nextTaskTitle || 'Без названия'}`
+                          ? team.taskSequence[team.activeTaskStep + 1]
+                          : team.activeTaskIndex + 1,
+                        team.activeTaskStep + 1,
+                        team.nextTaskTitle,
+                      )
                     : ''
 
                 return (

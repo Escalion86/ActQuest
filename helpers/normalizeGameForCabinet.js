@@ -643,6 +643,7 @@ const normalizeGameForCabinet = (game) => {
         : {},
     description: ensureString(game.description, ''),
     descriptionRich: ensureString(game.descriptionRich, ''),
+    prestartDescriptionRich: ensureString(game.prestartDescriptionRich, ''),
     descriptionMedia: normalizeTaskMedia(game.descriptionMedia),
     prequel: normalizePrequelForCabinet(game.prequel),
     prequels: normalizePrequelConfigs(

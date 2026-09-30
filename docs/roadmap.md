@@ -86,6 +86,7 @@
 
 ## Спринт 3: Escalioncloud и квесты
 
+- [x] Предстартовая страница в редакторе заданий: свободное rich-text описание, сохранение через `/api/[location]/games/[id]`, показ до запуска на `/game/[id]/process/[teamId]` (2026-09-30).
 - [x] Добавить скачивание/загрузку файлов через escalioncloud API.
 - [x] Реализовать upload UI для афиш/картинок в квестах.
 - [x] Сохранить URL в `schemas` (`game.image`, `task.images`, `clue.images` и related поля).

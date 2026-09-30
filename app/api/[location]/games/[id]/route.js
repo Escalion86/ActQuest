@@ -619,6 +619,11 @@ const execute = (request, params) =>
 
       if (req.method !== 'PUT') {
         if (req.method === 'POST' && req.body?.data) {
+          req.body.data.prestartDescriptionRich = sanitize(
+            typeof req.body.data.prestartDescriptionRich === 'string'
+              ? req.body.data.prestartDescriptionRich
+              : '',
+          )
           const participationMode = normalizeParticipationMode(
             req.body.data.participationMode,
           )
@@ -932,6 +937,14 @@ const execute = (request, params) =>
           updateData.storyNodes = normalizeStoryNodeAgentsForWrite(
             existingGame?.storyNodes,
             allowedAgentIds,
+          )
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'prestartDescriptionRich')) {
+          updateData.prestartDescriptionRich = sanitize(
+            typeof updateData.prestartDescriptionRich === 'string'
+              ? updateData.prestartDescriptionRich
+              : '',
           )
         }
 

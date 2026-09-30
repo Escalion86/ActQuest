@@ -529,6 +529,7 @@ const gamesSchema = {
     ],
     default: [],
   },
+  prestartDescriptionRich: { type: String, default: '' },
   prequel: {
     type: {
       enabled: { type: Boolean, default: false },

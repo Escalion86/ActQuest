@@ -142,6 +142,7 @@ export async function GET(request) {
         type: 1,
         description: 1,
         descriptionRich: 1,
+        prestartDescriptionRich: 1,
         descriptionMedia: 1,
         prequel: 1,
         prequels: 1,

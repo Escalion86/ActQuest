@@ -932,6 +932,10 @@ const buildUpdatePayload = (game) => {
         : stripHtmlToPlainText(game.descriptionRich),
     descriptionRich:
       typeof game.descriptionRich === 'string' ? game.descriptionRich : '',
+    prestartDescriptionRich:
+      typeof game.prestartDescriptionRich === 'string'
+        ? game.prestartDescriptionRich
+        : '',
     descriptionMedia: (Array.isArray(game.descriptionMedia)
       ? game.descriptionMedia
       : []
@@ -3032,6 +3036,7 @@ const GamesPage = ({
             ? normalizedSource.descriptionMedia
             : []
           baseDraft.prequel = normalizePrequelConfig(normalizedSource.prequel)
+          baseDraft.prestartDescriptionRich = normalizedSource.prestartDescriptionRich || ''
           baseDraft.prequels = normalizePrequelConfigs(
             normalizedSource.prequels,
           )

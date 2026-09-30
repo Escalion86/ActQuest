@@ -18,6 +18,7 @@ import GameTaskSettingsModal from './GameTaskSettingsModal'
 import ClassicItemsSection from './ClassicItemsSection'
 import { hasClassicVariants } from '@helpers/classicVariants'
 import PrequelSection from '@components/modals/game-edit/sections/PrequelSection'
+import PrestartPageSection, { PrestartPageEditor } from './PrestartPageSection'
 
 const GameTasksEditModal = ({
   currentUserRole,
@@ -80,6 +81,7 @@ const GameTasksEditModal = ({
   )
   const [selectedCodePhoto, setSelectedCodePhoto] = useState(null)
   const [isTaskSettingsModalOpen, setIsTaskSettingsModalOpen] = useState(false)
+  const [isPrestartModalOpen, setIsPrestartModalOpen] = useState(false)
   const [isPrequelEditing, setIsPrequelEditing] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState(null)
   const taskListFocusRef = useRef(null)
@@ -379,6 +381,7 @@ const GameTasksEditModal = ({
   useEffect(() => {
     if (!isTasksModalOpen) {
       setIsTaskSettingsModalOpen(false)
+      setIsPrestartModalOpen(false)
       setIsPrequelEditing(false)
       setEditingTaskId(null)
       taskListFocusRef.current = null
@@ -643,7 +646,7 @@ const GameTasksEditModal = ({
   return (
     <>
     <Modal
-      isOpen={isTasksModalOpen && !isTaskSettingsModalOpen && !editingTask}
+      isOpen={isTasksModalOpen && !isTaskSettingsModalOpen && !isPrestartModalOpen && !editingTask}
       title={`Редактор заданий «${selectedGame?.name || 'Без названия'}»`}
       onClose={() => { if (!isPrequelEditing) handleCloseTasksModal() }}
       footer={modalFooter}
@@ -680,6 +683,12 @@ const GameTasksEditModal = ({
             </CabinetButton>
           </div>
         </ModalSection>
+
+        <PrestartPageSection
+          selectedGame={selectedGame}
+          disabled={isSaving}
+          onOpen={() => setIsPrestartModalOpen(true)}
+        />
 
         <ModalSection>
           {variantsLocked ? <p className="mb-3 text-sm text-amber-700 dark:text-amber-300">Правила игры с вариантами зафиксированы при запуске. Для новой редакции создайте копию игры.</p> : null}
@@ -748,6 +757,35 @@ const GameTasksEditModal = ({
         {dragPreviews}
 
       </fieldset>
+    </Modal>
+    <Modal
+      isOpen={isTasksModalOpen && isPrestartModalOpen}
+      title="Предстартовая страница"
+      onClose={() => setIsPrestartModalOpen(false)}
+      footer={<>
+        <CabinetButton
+          onClick={() => setIsPrestartModalOpen(false)}
+          disabled={isSaving}
+          variant="secondary"
+        >
+          К списку заданий
+        </CabinetButton>
+        {isDirty && canEditSelectedGame ? (
+          <CabinetButton
+            onClick={handleTasksModalPrimaryAction}
+            disabled={isSaving || !location}
+            variant="primary"
+          >
+            {isSaving ? 'Сохранение…' : 'Сохранить'}
+          </CabinetButton>
+        ) : null}
+      </>}
+    >
+      <PrestartPageEditor
+        selectedGame={selectedGame}
+        disabled={!canEditSelectedGame || isSaving}
+        updateSelectedGame={updateSelectedGame}
+      />
     </Modal>
     <Modal
       isOpen={isTasksModalOpen && Boolean(editingTask)}

@@ -16,6 +16,7 @@ import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import {
   getTaskIndexForStep,
   getTeamTaskSequence,
+  normalizeTaskDistributionMode,
 } from '@helpers/taskDistribution'
 
 const normalizeStringId = (value) => {
@@ -96,6 +97,7 @@ const normalizeTaskPreview = (task, index, taskTheme) => {
   return {
     id: normalizeText(task?.id) || `task-${index + 1}`,
     title: normalizeText(task?.title),
+    publicTitle: normalizeText(task?.publicTitle),
     task: normalizeText(task?.task),
     taskTheme: normalizeTaskTheme(taskTheme),
     taskRich: normalizeText(task?.taskRich),
@@ -1708,6 +1710,8 @@ export async function GET(request) {
           gameName: game.name ?? '',
           gameStatus: game.status ?? '',
           gameType: game.type ?? 'classic',
+          taskDistributionMode: normalizeTaskDistributionMode(game.taskDistributionMode),
+          useCustomTaskPublicTitles: game.useCustomTaskPublicTitles === true,
           dateStartFact: game.dateStartFact ?? null,
           taskDuration,
           cluesDuration,

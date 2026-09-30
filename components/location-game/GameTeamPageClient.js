@@ -1058,6 +1058,14 @@ function GameTeamPage({
 
   const effectiveTheme = theme ?? 'light'
 
+  useEffect(() => {
+    if (error || status !== 'active') return
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') router.refresh()
+    }, 15000)
+    return () => window.clearInterval(intervalId)
+  }, [error, router, status])
+
   const updateTaskData = useCallback((payload) => {
     setTaskData((prev) => {
       const next = normalizeTaskPayload(payload)
@@ -2177,7 +2185,7 @@ function GameTeamPage({
   const shouldShowLastMessage =
     displayedResultMessages.length > 0 && !isStoryGame && !isGameCompletion
   const shouldShowAnswerForm =
-    !isStoryGame && !isGameCompletion && !isBreakState && currentTaskState !== 'choosing_variant'
+    isGameStarted && !isStoryGame && !isGameCompletion && !isBreakState && currentTaskState !== 'choosing_variant'
   const shouldShowGameCompletedBlock = !isStoryGame && isGameCompletion
   const shouldShowCurrentTaskBlock =
     Boolean(
@@ -2633,6 +2641,15 @@ function GameTeamPage({
             {statusNotice ? (
               <section className="p-6 text-sm text-blue-800 border border-blue-200 bg-blue-50 rounded-3xl dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-100">
                 {statusNotice}
+              </section>
+            ) : null}
+
+            {!error && status === 'active' && game?.prestartDescriptionRich ? (
+              <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
+                <RichTaskContentView
+                  html={game.prestartDescriptionRich}
+                  directory={`games/${gameId}/prestart`}
+                />
               </section>
             ) : null}
 
@@ -3293,6 +3310,7 @@ GameTeamPage.propTypes = {
   location: PropTypes.string.isRequired,
   game: PropTypes.shape({
     name: PropTypes.string,
+    prestartDescriptionRich: PropTypes.string,
     dateStart: PropTypes.oneOfType([
       PropTypes.string,
       PropTypes.instanceOf(Date),
