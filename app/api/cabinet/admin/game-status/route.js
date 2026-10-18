@@ -1,4 +1,6 @@
 import { normalizeTaskTheme } from '@helpers/taskThemes'
+import buildGameTaskOverview from '@helpers/buildGameTaskOverview'
+import { resolveRequiredMainCodesCount } from '@helpers/classicGameRules'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -1484,6 +1486,8 @@ export async function GET(request) {
         return {
           taskIndex,
           taskTitle: normalizeText(game.tasks?.[taskIndex]?.title) || 'Без названия',
+          variantTitle: taskSource?.variantTitle || '',
+          requiredCodesCount: resolveRequiredMainCodesCount(taskSource),
           startedAt: startAt,
           endedAt: endAt,
           completedSeconds,
@@ -1491,6 +1495,7 @@ export async function GET(request) {
           failedByCaptain: taskFailure?.source === 'captain',
           failedByTimeout: taskFailure?.source === 'timeout',
           failedAt: taskFailure?.failedAt || null,
+          failureSource: taskFailure?.source || null,
           penaltyByTaskFailureSeconds,
           penaltyByCodesSeconds,
           penaltyByManyWrongSeconds,
@@ -1587,9 +1592,9 @@ export async function GET(request) {
         classicInventory: classicPublicInventory(sourceGame, gt),
         classicStages: gt.classicProgress?.stages || [],
         classicHistory: (gt.classicProgress?.history || []).map((event) => ({ ...event, items: (event.items || []).map((item) => ({ ...item, title: sourceGame.classicItems?.find((entry) => entry.id === item.itemId)?.title || '' })) })),
-        selectedTaskPreview: game.tasks?.[Number(gt.activeNum || 0)] ? normalizeTaskPreview(game.tasks[Number(gt.activeNum || 0)], Number(gt.activeNum || 0), game.taskTheme) : null,
-        selectedVariantTitle: game.tasks?.[Number(gt.activeNum || 0)]?.variantTitle || '',
-        isChoosingVariant: Boolean(sourceGame.tasks?.[Number(gt.activeNum || 0)]?.variantConfig?.enabled && !game.tasks?.[Number(gt.activeNum || 0)]?.selectedVariantId && !gt.taskFailures?.some((entry) => entry.taskIndex === Number(gt.activeNum || 0))),
+        selectedTaskPreview: game.tasks?.[activeTaskIndex] ? normalizeTaskPreview(game.tasks[activeTaskIndex], activeTaskIndex, game.taskTheme) : null,
+        selectedVariantTitle: game.tasks?.[activeTaskIndex]?.variantTitle || '',
+        isChoosingVariant: Boolean(sourceGame.tasks?.[activeTaskIndex]?.variantConfig?.enabled && !game.tasks?.[activeTaskIndex]?.selectedVariantId && !gt.taskFailures?.some((entry) => entry.taskIndex === activeTaskIndex)),
         teamName: team?.name ?? 'Без названия',
         unreadTeamMessagesCount: Number(unreadMessagesByTeamId[teamId] || 0),
         members: teamMembersByTeamId.get(teamId) || [],
@@ -1719,6 +1724,7 @@ export async function GET(request) {
           tasksCount,
           taskTitles,
           tasks: tasksPreview,
+          taskOverview: buildGameTaskOverview({ tasks: game.tasks, teams: teamsStatus, taskDuration }),
           teams: teamsStatus,
           serverTime: now.toISOString(),
         },

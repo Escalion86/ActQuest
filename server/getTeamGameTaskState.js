@@ -339,6 +339,7 @@ const safeSerializeGameForClient = (game) => {
         ? sanitizeFragment(game.prestartDescriptionRich)
         : '',
     type: game.type || 'classic',
+    taskTheme: normalizeTaskTheme(game.taskTheme),
     location: game.location || '',
     dateStart: game.dateStart || null,
     dateStartFact: game.dateStartFact || null,

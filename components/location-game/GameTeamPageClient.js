@@ -1,17 +1,21 @@
 'use client'
 
 import PropTypes from 'prop-types'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faArrowsRotate,
-  faMoon,
-  faSun,
-} from '@fortawesome/free-solid-svg-icons'
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
 import { useSession } from 'next-auth/react'
 
+import { getTaskThemeStyle } from '@helpers/taskThemes'
 import { LOCATIONS } from '@server/serverConstants'
 import pauseOtherAudioElements from '@helpers/audioPlayback'
 import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
@@ -971,7 +975,6 @@ function GameTeamPage({
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [theme, setTheme] = useState(null)
   const [isTestRunUpdating, setIsTestRunUpdating] = useState(false)
   const isTestMode = Boolean(testRunId)
   const [answer, setAnswer] = useState('')
@@ -1056,7 +1059,7 @@ function GameTeamPage({
     [gameId, teamId],
   )
 
-  const effectiveTheme = theme ?? 'light'
+  const effectiveTheme = getTaskThemeStyle(game?.taskTheme).colorScheme
 
   useEffect(() => {
     if (error || status !== 'active') return
@@ -1073,42 +1076,22 @@ function GameTeamPage({
     })
   }, [])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    // Тема игры действует и на окна в порталах, но не меняет тему кабинета.
+    root.setAttribute('data-game-theme', effectiveTheme)
+    root.classList.toggle('dark', effectiveTheme === 'dark')
+    root.setAttribute('data-theme', effectiveTheme)
+    root.style.colorScheme = effectiveTheme
 
-    const rootElement = window.document?.documentElement
-    if (!rootElement) return
-
-    const applyTheme = (nextTheme) => {
-      rootElement.classList.toggle('dark', nextTheme === 'dark')
-      rootElement.setAttribute('data-theme', nextTheme)
+    return () => {
+      const personalTheme = resolveThemePreference()
+      root.removeAttribute('data-game-theme')
+      root.classList.toggle('dark', personalTheme === 'dark')
+      root.setAttribute('data-theme', personalTheme)
+      root.style.colorScheme = personalTheme
     }
-
-    if (theme == null) {
-      const resolvedTheme = resolveThemePreference()
-      applyTheme(resolvedTheme)
-
-      setTheme(resolvedTheme)
-
-      try {
-        window.localStorage.setItem('cabinet-theme', resolvedTheme)
-        window.localStorage.setItem('aq-theme', resolvedTheme)
-      } catch {
-        // ignore inaccessible storage
-      }
-
-      return
-    }
-
-    applyTheme(theme)
-
-    try {
-      window.localStorage.setItem('cabinet-theme', theme)
-      window.localStorage.setItem('aq-theme', theme)
-    } catch {
-      // ignore inaccessible storage
-    }
-  }, [theme])
+  }, [effectiveTheme])
 
   useEffect(() => {
     setAnswer('')
@@ -1199,13 +1182,6 @@ function GameTeamPage({
     const storedValue = window.localStorage.getItem(collapseStorageKey)
     setIsGameInfoCollapsed(storedValue === 'true')
   }, [collapseStorageKey, isClient])
-
-  const handleThemeToggle = () => {
-    setTheme((prev) => {
-      const current = prev ?? 'light'
-      return current === 'dark' ? 'light' : 'dark'
-    })
-  }
 
   const handleGameInfoToggle = () => {
     setIsGameInfoCollapsed((prev) => {
@@ -2385,24 +2361,6 @@ function GameTeamPage({
                   ) : null}
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={handleThemeToggle}
-                className="inline-flex items-center justify-center w-10 h-10 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-                aria-label={
-                  effectiveTheme === 'dark'
-                    ? 'Включить светлую тему'
-                    : 'Включить тёмную тему'
-                }
-                title={
-                  effectiveTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'
-                }
-              >
-                <FontAwesomeIcon
-                  icon={effectiveTheme === 'dark' ? faSun : faMoon}
-                  className="w-4 h-4"
-                />
-              </button>
               {resolvedSession ? (
                 <button
                   type="button"
@@ -3309,6 +3267,7 @@ function GameTeamPage({
 GameTeamPage.propTypes = {
   location: PropTypes.string.isRequired,
   game: PropTypes.shape({
+    taskTheme: PropTypes.string,
     name: PropTypes.string,
     prestartDescriptionRich: PropTypes.string,
     dateStart: PropTypes.oneOfType([

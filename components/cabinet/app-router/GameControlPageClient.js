@@ -29,6 +29,7 @@ import CardActionIconButton, {
 } from '@components/cabinet/CardActionIconButton'
 import GameTasksViewModal from '@components/modals/GameTasksViewModal'
 import GameControlTeamStatsModal from '@components/modals/GameControlTeamStatsModal'
+import GameControlTasksOverview from '@components/cabinet/GameControlTasksOverview'
 import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
 
 const formatTime = (totalSeconds) => {
@@ -922,6 +923,7 @@ export default function GameControlPageClient({ session: _session }) {
   const gameId = searchParams.get('gameId')
 
   const [isDetailedView, setIsDetailedView] = useState(true)
+  const [controlView, setControlView] = useState('teams')
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(5000)
   const [nowTs, setNowTs] = useState(() => Date.now())
@@ -1711,8 +1713,30 @@ export default function GameControlPageClient({ session: _session }) {
             </div>
           </div>
 
-          {/* Команды */}
-          {teams.length === 0 ? (
+          <div className="mb-4 flex gap-2" role="group" aria-label="Режим контроля игры">
+            {[['teams', 'Команды'], ['tasks', 'Задания']].map(([view, label]) => (
+              <button
+                key={view}
+                type="button"
+                aria-pressed={controlView === view}
+                onClick={() => setControlView(view)}
+                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${controlView === view
+                  ? 'border-cyan-600 bg-cyan-600 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Команды и обзор заданий используют один снимок состояния игры. */}
+          {controlView === 'tasks' ? (
+            <GameControlTasksOverview
+              key={gameId}
+              tasks={data.taskOverview || []}
+              onSelectTeam={setSelectedTeamForStatsId}
+            />
+          ) : teams.length === 0 ? (
             <div className="p-8 text-center bg-white border rounded-xl border-slate-200 dark:border-slate-700/50 dark:bg-slate-800/40">
               <p className="text-slate-600 dark:text-slate-400">
                 Нет зарегистрированных команд

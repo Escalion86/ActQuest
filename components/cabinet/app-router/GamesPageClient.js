@@ -1460,7 +1460,6 @@ const GamesPage = ({
     DEFAULT_CREATE_GAME_CLONE_OPTIONS,
   )
   const [createGameFeedback, setCreateGameFeedback] = useState(null)
-  const [isLocationFilterLoading, setIsLocationFilterLoading] = useState(false)
   const [locationFilterError, setLocationFilterError] = useState(null)
   const [gamesDisplayMode, setGamesDisplayMode] = useState('list')
   const [showCanceledGames, setShowCanceledGames] = useState(false)
@@ -2214,23 +2213,23 @@ const GamesPage = ({
       return
     }
 
-    setGames([])
-    setPersistedGames([])
-    setSelectedGameId(null)
-    setHasMoreGames(false)
+    // При ошибке фонового обновления сохраняем уже загруженные карточки.
+    if (!gamesQuery.data) {
+      setGames([])
+      setPersistedGames([])
+      setSelectedGameId(null)
+      setHasMoreGames(false)
+    }
     setLocationFilterError(
       extractErrorMessage(gamesQuery.error) ||
         (shouldShowLocationFilter
           ? 'Не удалось загрузить игры выбранного города.'
           : 'Не удалось загрузить список игр.'),
     )
-  }, [gamesQuery.error, shouldShowLocationFilter])
+  }, [gamesQuery.data, gamesQuery.error, shouldShowLocationFilter])
 
-  useEffect(() => {
-    setIsLocationFilterLoading(
-      Boolean(gamesQuery.isFetching && !gamesQuery.isFetchingNextPage),
-    )
-  }, [gamesQuery.isFetching, gamesQuery.isFetchingNextPage])
+  // Загрузчик нужен только при первом запросе или выборе города без кэша.
+  const isLocationFilterLoading = gamesQuery.isLoading
 
   const loadSeasonsForLocation = useCallback(async (locationKey) => {
     const normalizedLocation =

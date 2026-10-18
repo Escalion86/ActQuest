@@ -4,6 +4,9 @@ import { useEffect } from 'react'
 
 export default function ThemeInitializerClient() {
   useEffect(() => {
+    // Экран игры уже применил тему организатора до первого отображения.
+    if (document.documentElement.hasAttribute('data-game-theme')) return
+
     try {
       const saved = localStorage.getItem('cabinet-theme')
       const systemDark =
