@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
 import { calculateRatingGameScore } from '@helpers/ratingV2'
@@ -201,7 +202,7 @@ export const loadPlayersRatingBreakdown = async ({
   const normalizedPlayers = (Array.isArray(players) ? players : [])
     .map((player) => ({
       id: toStringId(player?.id),
-      telegramId: Number(player?.telegramId),
+      telegramId: normalizeTelegramId(player?.telegramId),
     }))
     .filter((player) => player.id)
   if (!db || !normalizedPlayers.length) return new Map()
@@ -260,7 +261,7 @@ export const loadPlayersRatingBreakdown = async ({
 
     teamMemberships.forEach((membership) => {
       const membershipUserId = toStringId(membership?.userId)
-      const membershipTelegramId = Number(membership?.userTelegramId)
+      const membershipTelegramId = normalizeTelegramId(membership?.userTelegramId)
       const playerId = membershipUserId
         ? requestedPlayerIds.has(membershipUserId)
           ? membershipUserId

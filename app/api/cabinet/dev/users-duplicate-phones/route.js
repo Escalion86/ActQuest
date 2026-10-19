@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -16,9 +17,7 @@ const normalizeUser = (user) => ({
   id: String(user?._id || ''),
   name: typeof user?.name === 'string' ? user.name : '',
   username: typeof user?.username === 'string' ? user.username : '',
-  telegramId: Number.isFinite(Number(user?.telegramId))
-    ? Number(user.telegramId)
-    : null,
+  telegramId: normalizeTelegramId(user?.telegramId),
   role: typeof user?.role === 'string' ? user.role : 'client',
   accountLocation:
     typeof user?.accountLocation === 'string'
@@ -31,9 +30,7 @@ const normalizeUser = (user) => ({
 
 const buildMergePlan = ({ users, teamsUsersMemberships, games, keepUserId }) => {
   const keepUser = users[0]
-  const keepTelegramId = Number.isFinite(Number(keepUser?.telegramId))
-    ? Number(keepUser.telegramId)
-    : null
+  const keepTelegramId = normalizeTelegramId(keepUser?.telegramId)
   const removeUsers = users.slice(1)
   const removeUserIds = removeUsers.map((user) => String(user._id))
 

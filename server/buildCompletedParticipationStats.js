@@ -1,3 +1,4 @@
+import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
 import { toStringId } from '../helpers/idAndDate.js'
 import {
   isCompletedParticipationStatus,
@@ -10,7 +11,7 @@ export const resolveParticipantStatsKey = ({ userId, telegramId }) => {
     return `uid:${normalizedUserId}`
   }
 
-  const normalizedTelegramId = Number(telegramId)
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
   return Number.isFinite(normalizedTelegramId) && normalizedTelegramId > 0
     ? `tg:${normalizedTelegramId}`
     : null

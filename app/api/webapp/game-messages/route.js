@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -15,10 +16,8 @@ import {
 } from '@server/gameTeamMessages'
 import { isCaptainRole, isLiaisonRole } from '@helpers/teamRoles'
 
-const getSessionTelegramId = (session) => {
-  const telegramId = Number(session?.user?.telegramId)
-  return Number.isFinite(telegramId) ? telegramId : null
-}
+const getSessionTelegramId = (session) =>
+  normalizeTelegramId(session?.user?.telegramId)
 
 const normalizeRole = (value) =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''

@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -20,10 +21,8 @@ const getSessionUserId = (session) => {
   return rawId ? String(rawId) : ''
 }
 
-const getSessionTelegramId = (session) => {
-  const telegramId = Number(session?.user?.telegramId)
-  return Number.isFinite(telegramId) ? telegramId : null
-}
+const getSessionTelegramId = (session) =>
+  normalizeTelegramId(session?.user?.telegramId)
 
 const isObjectIdString = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ''))
 

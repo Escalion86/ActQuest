@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const normalizeNumber = (value) => {
@@ -9,7 +10,7 @@ const normalizeNumber = (value) => {
 const buildIdentityFilters = ({ telegramId, vkId, phone }) => {
   const filters = []
 
-  const normalizedTelegramId = normalizeNumber(telegramId)
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
   const normalizedVkId = normalizeNumber(vkId)
   const normalizedPhone = normalizeNumber(phone)
 
@@ -32,7 +33,7 @@ const upsertGlobalUser = async ({
   if (!db) return null
 
   const Users = db.model('Users')
-  const normalizedTelegramId = normalizeNumber(telegramId)
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
   const normalizedVkId = normalizeNumber(vkId)
   const normalizedPhone = normalizeNumber(phone)
 

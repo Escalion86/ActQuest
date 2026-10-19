@@ -7,6 +7,7 @@ import {
   isGameReviewPending,
   normalizeGameReviewInput,
   resolveSessionGameReviewIdentity,
+  resolveGameReviewTeamId,
   serializeGameReview,
   serializePublishedGameReview,
 } from '../server/gameReviews.js'
@@ -115,6 +116,39 @@ test('prefers the canonical session user id', () => {
     }),
     { userId: 'global-user', telegramId: 123 },
   )
+})
+
+test('пустой Telegram ID не связывает автора с чужой командой', () => {
+  const game = { result: { teamsUsers: [
+    { userId: 'other', userTelegramId: null, teamId: 'wrong-team' },
+    { userId: 'author', userTelegramId: null, teamId: 'correct-team' },
+  ] } }
+  for (const telegramId of [null, undefined, '', ' ', 0, '0', -1, false, 'bad']) {
+    const identity = resolveSessionGameReviewIdentity({ id: 'author', telegramId })
+    assert.equal(identity.telegramId, null)
+    assert.equal(findGameReviewMembership({ game, ...identity })?.teamId, 'correct-team')
+    assert.equal(findGameReviewMembership({ game, userId: 'stranger', telegramId }), null)
+  }
+})
+
+test('точное совпадение пользователя приоритетнее Telegram ID другой записи', () => {
+  const game = { result: { teamsUsers: [
+    { userId: 'legacy', userTelegramId: 123, teamId: 'wrong-team' },
+    { userId: 'author', userTelegramId: null, teamId: 'correct-team' },
+  ] } }
+  assert.equal(findGameReviewMembership({ game, userId: 'author', telegramId: '123' })?.teamId, 'correct-team')
+  assert.equal(findGameReviewMembership({ game, userId: 'migrated', telegramId: '123' })?.teamId, 'wrong-team')
+})
+
+test('команда старого отзыва восстанавливается из снимка игры', () => {
+  const review = { userId: 'author', teamId: 'wrong-team' }
+  const game = { result: { teamsUsers: [
+    { userId: 'other', userTelegramId: null, teamId: 'wrong-team' },
+    { userId: 'author', userTelegramId: null, teamId: 'correct-team' },
+  ] } }
+  assert.equal(resolveGameReviewTeamId({ review, game }), 'correct-team')
+  assert.equal(resolveGameReviewTeamId({ review, game: null }), 'wrong-team')
+  assert.equal(review.teamId, 'wrong-team')
 })
 
 test('keeps aggregate and personal review ratings in cabinet game data', () => {

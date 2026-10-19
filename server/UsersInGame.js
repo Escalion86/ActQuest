@@ -1,3 +1,5 @@
+import { toStringId } from '@helpers/idAndDate'
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 import isUserAdmin from '@helpers/isUserAdmin'
@@ -46,29 +48,28 @@ export default async function UsersInGame(req, res) {
             teamId: { $in: teamsIds },
           })
           .lean()
-        const usersTelegramIds = teamsUsers.map(
-          (teamsUser) => teamsUser.userTelegramId
-        )
-        const users = await db
-          .model('Users')
-          .find({
-            telegramId: { $in: usersTelegramIds },
-          })
-          .select({ telegramId: 1, location: 1 })
-          .lean()
-        const usersWithTeams = users.map((user) => {
-          const userTeam = teamsUsers.find(
-            (teamsUser) => teamsUser.userTelegramId === user.telegramId
-          )
-          const team = teams.find((team) => String(team._id) == userTeam.teamId)
-
-          return {
+        const userIds = [...new Set(teamsUsers.map((item) => toStringId(item.userId)).filter(Boolean))]
+        const telegramIds = [...new Set(teamsUsers.map((item) => normalizeTelegramId(item.userTelegramId)).filter((id) => id !== null))]
+        const filters = [
+          ...(userIds.length ? [{ _id: { $in: userIds } }] : []),
+          ...(telegramIds.length ? [{ telegramId: { $in: telegramIds } }] : []),
+        ]
+        const users = filters.length ? await db.model('Users')
+          .find({ $or: filters }).select({ telegramId: 1, location: 1 }).lean() : []
+        const usersById = new Map(users.map((user) => [toStringId(user._id), user]))
+        const usersByTelegramId = new Map(users
+          .filter((user) => normalizeTelegramId(user.telegramId) !== null)
+          .map((user) => [normalizeTelegramId(user.telegramId), user]))
+        const usersWithTeams = teamsUsers.flatMap((membership) => {
+          const user = usersById.get(toStringId(membership.userId)) ||
+            usersByTelegramId.get(normalizeTelegramId(membership.userTelegramId))
+          if (!user) return []
+          const team = teams.find((item) => toStringId(item._id) === toStringId(membership.teamId))
+          return [{
             location: user.location || null,
-            team: team
-              ? { _id: team._id, name: team.name || '' }
-              : null,
-            roleInTeam: userTeam.role,
-          }
+            team: team ? { _id: team._id, name: team.name || '' } : null,
+            roleInTeam: membership.role,
+          }]
         })
         return res?.status(200).json({
           success: true,

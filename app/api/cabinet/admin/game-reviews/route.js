@@ -6,6 +6,7 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import {
+  resolveGameReviewTeamId,
   resolveSessionGameReviewIdentity,
   serializeGameReview,
 } from '@server/gameReviews'
@@ -167,42 +168,42 @@ export async function GET(request) {
           .filter((id) => id && OBJECT_ID_PATTERN.test(id)),
       ),
     )
-    const teamIds = Array.from(
-      new Set(
-        reviewDocs
-          .map((item) => toStringId(item?.teamId))
-          .filter((id) => id && OBJECT_ID_PATTERN.test(id)),
-      ),
-    )
-
-    const [games, users, teams] = await Promise.all([
+    const [games, users] = await Promise.all([
       gameIds.length
         ? db
             .model('Games')
             .find({ _id: { $in: gameIds } })
-            .select({ _id: 1, name: 1, dateStart: 1 })
+            .select({ _id: 1, name: 1, dateStart: 1, 'result.teamsUsers': 1 })
             .lean()
         : [],
       userIds.length
         ? db
             .model('Users')
             .find({ _id: { $in: userIds } })
-            .select({ _id: 1, name: 1, username: 1 })
-            .lean()
-        : [],
-      teamIds.length
-        ? db
-            .model('Teams')
-            .find({ _id: { $in: teamIds } })
-            .select({ _id: 1, name: 1 })
+            .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
             .lean()
         : [],
     ])
 
     const gameById = new Map(games.map((game) => [toStringId(game?._id), game]))
     const userById = new Map(users.map((user) => [toStringId(user?._id), user]))
+    const resolvedReviews = reviewDocs.map((review) => ({
+      ...review,
+      teamId: resolveGameReviewTeamId({
+        review,
+        game: gameById.get(toStringId(review.gameId)),
+        telegramId: userById.get(toStringId(review.userId))?.telegramId,
+      }),
+    }))
+    const teamIds = [...new Set(resolvedReviews
+      .map((review) => review.teamId)
+      .filter((id) => id && OBJECT_ID_PATTERN.test(id)))]
+    const teams = teamIds.length
+      ? await db.model('Teams').find({ _id: { $in: teamIds } })
+          .select({ _id: 1, name: 1 }).lean()
+      : []
     const teamById = new Map(teams.map((team) => [toStringId(team?._id), team]))
-    const items = reviewDocs.map((doc) => {
+    const items = resolvedReviews.map((doc) => {
       const review = serializeGameReview(doc)
       const game = gameById.get(review.gameId)
       const user = userById.get(review.userId)

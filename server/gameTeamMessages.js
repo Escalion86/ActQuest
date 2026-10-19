@@ -1,4 +1,5 @@
-import { toStringId } from '@helpers/idAndDate'
+import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
+import { toStringId } from '../helpers/idAndDate.js'
 
 export const GAME_TEAM_MESSAGE_LIMIT = 100
 
@@ -17,7 +18,7 @@ export const getTeamMessageReadUserKey = ({ userId, telegramId }) => {
   const normalizedUserId = toStringId(userId)
   if (normalizedUserId) return `user:${normalizedUserId}`
 
-  const normalizedTelegramId = toStringId(telegramId)
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
   if (normalizedTelegramId) return `tg:${normalizedTelegramId}`
 
   return ''
@@ -453,12 +454,18 @@ export const getUsersForTeamIds = async ({ db, teamIds }) => {
 export const getTeamMembershipForUser = async ({ db, teamId, userId, telegramId }) => {
   const normalizedTeamId = toStringId(teamId)
   const normalizedUserId = toStringId(userId)
-  const normalizedTelegramId = toStringId(telegramId)
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
 
-  const query = { teamId: normalizedTeamId, $or: [] }
-  if (normalizedUserId) query.$or.push({ userId: normalizedUserId })
-  if (normalizedTelegramId) query.$or.push({ userTelegramId: Number(telegramId) })
-  if (query.$or.length === 0) return null
-
-  return db.model('TeamsUsers').findOne(query).select({ role: 1 }).lean()
+  if (!normalizedTeamId) return null
+  const memberships = db.model('TeamsUsers')
+  if (normalizedUserId) {
+    const membership = await memberships.findOne({
+      teamId: normalizedTeamId, userId: normalizedUserId,
+    }).select({ role: 1 }).lean()
+    if (membership) return membership
+  }
+  if (normalizedTelegramId === null) return null
+  return memberships.findOne({
+    teamId: normalizedTeamId, userTelegramId: normalizedTelegramId,
+  }).select({ role: 1 }).lean()
 }

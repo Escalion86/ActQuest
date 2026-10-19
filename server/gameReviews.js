@@ -1,3 +1,4 @@
+import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
 import { toStringId } from '../helpers/idAndDate.js'
 
 export const GAME_REVIEW_TAGS = [
@@ -37,9 +38,7 @@ export const resolveSessionGameReviewIdentity = (sessionUser) => ({
       sessionUser?._id ??
       sessionUser?.id,
   ),
-  telegramId: Number.isFinite(Number(sessionUser?.telegramId))
-    ? Number(sessionUser.telegramId)
-    : null,
+  telegramId: normalizeTelegramId(sessionUser?.telegramId),
 })
 
 export const findGameReviewMembership = ({ game, userId, telegramId }) => {
@@ -47,18 +46,30 @@ export const findGameReviewMembership = ({ game, userId, telegramId }) => {
     ? game.result.teamsUsers
     : []
 
-  return (
-    memberships.find((membership) => {
-      if (userId && toStringId(membership?.userId) === userId) {
-        return true
-      }
-      return (
-        telegramId !== null &&
-        Number(membership?.userTelegramId) === telegramId
+  const normalizedUserId = toStringId(userId)
+  const byUserId = normalizedUserId
+    ? memberships.find(
+        (membership) => toStringId(membership?.userId) === normalizedUserId,
       )
-    }) ?? null
-  )
+    : null
+  if (byUserId) return byUserId
+
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
+  if (normalizedTelegramId === null) return null
+  return memberships.find(
+    (membership) =>
+      normalizeTelegramId(membership?.userTelegramId) === normalizedTelegramId,
+  ) ?? null
 }
+
+// Старые отзывы могли сохранить чужую команду из-за совпадения пустых Telegram ID.
+// Восстанавливаем принадлежность по снимку игры, а не по текущему составу команд.
+export const resolveGameReviewTeamId = ({ review, game, telegramId }) =>
+  toStringId(findGameReviewMembership({
+    game,
+    userId: review?.userId,
+    telegramId,
+  })?.teamId) ?? toStringId(review?.teamId)
 
 const normalizeText = (value) =>
   typeof value === 'string'

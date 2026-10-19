@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -65,7 +66,7 @@ export async function POST(request) {
       )
     }
 
-    if (!Number.isFinite(Number(user.telegramId))) {
+    if (!Number.isFinite(normalizeTelegramId(user.telegramId))) {
       return NextResponse.json(
         {
           success: false,
@@ -87,7 +88,7 @@ export async function POST(request) {
     }
 
     const messagePayload = {
-      chat_id: Number(user.telegramId),
+      chat_id: normalizeTelegramId(user.telegramId),
       text:
         'Администратор запросил подтверждение номера телефона для вашего аккаунта ActQuest.\n\n' +
         'Нажмите кнопку ниже и отправьте ваш контакт из Telegram.',
@@ -142,7 +143,7 @@ export async function POST(request) {
         data: {
           userId: String(user._id),
           globalUserId: String(user._id),
-          telegramId: Number(user.telegramId),
+          telegramId: normalizeTelegramId(user.telegramId),
           phoneAlreadySet: Number.isFinite(Number(user.phone)),
           sentLocations,
           failedLocations,

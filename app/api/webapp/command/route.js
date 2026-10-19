@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -64,9 +65,7 @@ export async function POST(request) {
     session?.user?.id ||
     null
   const sessionTelegramId =
-    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
-      ? Number(session.user.telegramId)
-      : null
+    normalizeTelegramId(session?.user?.telegramId)
   const hasTelegramId = Number.isFinite(sessionTelegramId)
 
   if (!sessionUserId && !hasTelegramId) {

@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -56,7 +57,8 @@ const dedupeUsers = (users) => {
     if (!user || typeof user !== 'object') return
     const idKey = toStringId(user?._id)
     const tgKey =
-      Number.isFinite(Number(user?.telegramId)) ? `tg:${Number(user.telegramId)}` : ''
+      normalizeTelegramId(user?.telegramId) !== null
+        ? `tg:${normalizeTelegramId(user.telegramId)}` : ''
     const fallbackKey =
       typeof user?.phone === 'number' && Number.isFinite(user.phone)
         ? `ph:${String(user.phone)}`

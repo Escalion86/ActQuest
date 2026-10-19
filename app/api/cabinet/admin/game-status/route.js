@@ -1,3 +1,4 @@
+import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 import buildGameTaskOverview from '@helpers/buildGameTaskOverview'
 import { resolveRequiredMainCodesCount } from '@helpers/classicGameRules'
@@ -1000,7 +1001,7 @@ export async function GET(request) {
       const membershipTelegramIds = Array.from(
         new Set(
           memberships
-            .map((item) => Number(item?.userTelegramId))
+            .map((item) => normalizeTelegramId(item?.userTelegramId))
             .filter((value) => Number.isFinite(value)),
         ),
       )
@@ -1029,7 +1030,7 @@ export async function GET(request) {
         if (userId) {
           userById.set(userId, user)
         }
-        const telegramId = Number(user?.telegramId)
+        const telegramId = normalizeTelegramId(user?.telegramId)
         if (Number.isFinite(telegramId)) {
           userByTelegramId.set(String(telegramId), user)
         }
@@ -1042,7 +1043,7 @@ export async function GET(request) {
         }
 
         const membershipUserId = normalizeStringId(membership?.userId)
-        const membershipTelegramId = Number(membership?.userTelegramId)
+        const membershipTelegramId = normalizeTelegramId(membership?.userTelegramId)
         const user =
           (membershipUserId ? userById.get(membershipUserId) : null) ||
           (Number.isFinite(membershipTelegramId)
@@ -1061,8 +1062,8 @@ export async function GET(request) {
               : 'Участник'),
           username: normalizeText(user?.username),
           phone: normalizeText(user?.phone),
-          telegramId: Number.isFinite(Number(user?.telegramId))
-            ? String(Number(user.telegramId))
+          telegramId: Number.isFinite(normalizeTelegramId(user?.telegramId))
+            ? String(normalizeTelegramId(user.telegramId))
             : Number.isFinite(membershipTelegramId)
               ? String(membershipTelegramId)
               : '',

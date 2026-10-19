@@ -1,5 +1,6 @@
-import { toStringId } from '@helpers/idAndDate'
-import { buildRatingRanksV2 } from '@helpers/ratingV2'
+import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
+import { toStringId } from '../helpers/idAndDate.js'
+import { buildRatingRanksV2 } from '../helpers/ratingV2.js'
 
 const normalizeLocation = (value) =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -9,7 +10,8 @@ const getObjectEntries = (value) =>
 
 const resolveParticipantRatingKey = (userId, telegramId) => {
   if (userId) return `uid:${userId}`
-  if (Number.isFinite(telegramId)) return `tg:${telegramId}`
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
+  if (normalizedTelegramId !== null) return `tg:${normalizedTelegramId}`
   return null
 }
 
@@ -25,7 +27,7 @@ const resolveUserFilterByRatingKey = (key) => {
     return userId ? { _id: userId } : null
   }
   if (key.startsWith('tg:')) {
-    const telegramId = Number(key.slice(3))
+    const telegramId = normalizeTelegramId(key.slice(3))
     return Number.isFinite(telegramId) ? { telegramId } : null
   }
   return null
@@ -78,7 +80,7 @@ const buildTimeline = (games) =>
         : []
       teamsUsers.forEach((membership) => {
         const userId = toStringId(membership?.userId)
-        const telegramId = Number(membership?.userTelegramId)
+        const telegramId = normalizeTelegramId(membership?.userTelegramId)
         const participantKey = resolveParticipantRatingKey(userId, telegramId)
         const teamKey = resolveTeamRatingKey(membership?.teamId)
         const place = teamKey ? allTeamsPlaces.get(teamKey) : null
@@ -293,7 +295,7 @@ const updateParticipantsRatings = async ({
   const currentUserRefs = new Map()
   teamsUsers.forEach((membership) => {
     const userId = toStringId(membership?.userId)
-    const telegramId = Number(membership?.userTelegramId)
+    const telegramId = normalizeTelegramId(membership?.userTelegramId)
     const key = resolveParticipantRatingKey(userId, telegramId)
     if (key && userId) currentUserRefs.set(key, { _id: userId })
     else if (key && Number.isFinite(telegramId)) {

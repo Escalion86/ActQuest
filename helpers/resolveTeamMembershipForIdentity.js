@@ -1,3 +1,5 @@
+const normalizeTelegramId = require('./normalizeTelegramId')
+
 const isCaptainRole = (value) => {
   if (typeof value !== 'string') {
     return false
@@ -22,7 +24,7 @@ const resolveTeamMembershipForIdentity = ({
 }) => {
   const memberships = Array.isArray(teamUsers) ? teamUsers : []
   const normalizedUserId = normalizeStringId(userId)
-  const normalizedTelegramId = normalizeStringId(telegramId)
+  const normalizedTelegramId = normalizeTelegramId(telegramId)
 
   const matchedByUserId = normalizedUserId
     ? memberships.filter(
@@ -39,7 +41,7 @@ const resolveTeamMembershipForIdentity = ({
         ? memberships.filter(
             (teamUser) =>
               teamUser &&
-              normalizeStringId(teamUser.userTelegramId) ===
+              normalizeTelegramId(teamUser.userTelegramId) ===
                 normalizedTelegramId,
           )
         : []
