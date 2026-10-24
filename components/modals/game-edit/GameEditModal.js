@@ -384,6 +384,7 @@ const GameEditModal = ({
         />
 
         <GameModeratorsSection
+          selectedGame={selectedGame}
           selectedGameModerators={selectedGameModerators}
           canEditSelectedGame={canEditSelectedGame}
           isSaving={isSaving}

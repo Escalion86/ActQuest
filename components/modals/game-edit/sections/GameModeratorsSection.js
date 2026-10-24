@@ -10,6 +10,7 @@ const fieldLabelClassName =
   'text-sm font-semibold text-slate-700 dark:text-white'
 
 const GameModeratorsSection = ({
+  selectedGame,
   selectedGameModerators,
   canEditSelectedGame,
   availableModeratorsForSelect,
@@ -259,6 +260,14 @@ const GameModeratorsSection = ({
 )
 
 GameModeratorsSection.propTypes = {
+  selectedGame: PropTypes.shape({
+    agentNotifications: PropTypes.shape({
+      onPreviousTask: PropTypes.bool,
+      onCurrentTask: PropTypes.bool,
+      onTaskCompleted: PropTypes.bool,
+      onAllTeamsPassed: PropTypes.bool,
+    }),
+  }).isRequired,
   selectedGameModerators: PropTypes.array.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
   availableModeratorsForSelect: PropTypes.array.isRequired,
