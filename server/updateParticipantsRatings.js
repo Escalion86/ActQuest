@@ -1,4 +1,5 @@
 import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
+import assertParticipantUserIds from '../helpers/assertParticipantUserIds.js'
 import { toStringId } from '../helpers/idAndDate.js'
 import { buildRatingRanksV2 } from '../helpers/ratingV2.js'
 
@@ -8,10 +9,8 @@ const normalizeLocation = (value) =>
 const getObjectEntries = (value) =>
   value instanceof Map ? Array.from(value.entries()) : Object.entries(value || {})
 
-const resolveParticipantRatingKey = (userId, telegramId) => {
+const resolveParticipantRatingKey = (userId) => {
   if (userId) return `uid:${userId}`
-  const normalizedTelegramId = normalizeTelegramId(telegramId)
-  if (normalizedTelegramId !== null) return `tg:${normalizedTelegramId}`
   return null
 }
 
@@ -25,10 +24,6 @@ const resolveUserFilterByRatingKey = (key) => {
   if (key.startsWith('uid:')) {
     const userId = toStringId(key.slice(4))
     return userId ? { _id: userId } : null
-  }
-  if (key.startsWith('tg:')) {
-    const telegramId = normalizeTelegramId(key.slice(3))
-    return Number.isFinite(telegramId) ? { telegramId } : null
   }
   return null
 }
@@ -282,6 +277,7 @@ const updateParticipantsRatings = async ({
   updateAllEntities = false,
 }) => {
   if (!db || !game) return { usersUpdated: 0, teamsUpdated: 0 }
+  assertParticipantUserIds([game])
 
   const gameId = toStringId(game?._id)
   const result =
@@ -298,9 +294,6 @@ const updateParticipantsRatings = async ({
     const telegramId = normalizeTelegramId(membership?.userTelegramId)
     const key = resolveParticipantRatingKey(userId, telegramId)
     if (key && userId) currentUserRefs.set(key, { _id: userId })
-    else if (key && Number.isFinite(telegramId)) {
-      currentUserRefs.set(key, { telegramId })
-    }
   })
 
   const currentTeamRefs = new Map()
@@ -328,6 +321,7 @@ const updateParticipantsRatings = async ({
       result: 1,
     })
     .lean()
+  assertParticipantUserIds(ratedGames)
   const timeline = buildTimeline(ratedGames)
   if (!timeline.length) return { usersUpdated: 0, teamsUpdated: 0 }
 

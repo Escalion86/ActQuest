@@ -110,6 +110,7 @@ const execute = (request, { params }) => {
             'telegram/commands/gameStop'
           )
           const result = await gameStop({ jsonCommand, location, db })
+          if (result?.success === false) return res.status(409).json({ success: false, error: result.message })
           const message = result.message
 
           runInBackground('game stop push notifications', async () => {
@@ -165,6 +166,7 @@ const execute = (request, { params }) => {
           return res.status(200).json({ success: true, message })
         }
       } catch (error) {
+        if (error.statusCode === 409) return res.status(409).json({ success: false, error: error.message })
         console.error('Failed to stop game', { error, gameId: id, location })
         return res
           .status(500)

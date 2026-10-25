@@ -13,6 +13,8 @@ import getGameProcessFinishingPlace from '@helpers/getGameProcessFinishingPlace'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 import {
   acquireGameProcessLock,
+  guardGameProgressModel,
+  refreshProgressGame,
   didGameProcessStepChange,
   releaseGameProcessLock,
 } from '@server/gameProcessLock'
@@ -969,7 +971,7 @@ const failTaskForCaptain = async ({
   }
 }
 
-const computeTaskHtml = async ({
+const computeTaskHtmlUnlocked = async ({
   game,
   gameTeam,
   processResult,
@@ -1200,7 +1202,7 @@ const computeTaskHtml = async ({
 
   let effectiveGameTeam = gameTeam
 
-  for (let guard = 0; !skipAutomaticProgress && guard < tasksCount + 1; guard += 1) {
+  for (let guard = 0; isGameStarted && !isGameFinished && !skipAutomaticProgress && guard < tasksCount + 1; guard += 1) {
     const previousActiveNum = Number.isInteger(effectiveGameTeam?.activeNum)
       ? effectiveGameTeam.activeNum
       : 0
@@ -1496,6 +1498,26 @@ const computeTaskHtml = async ({
   }
 }
 
+const computeTaskHtml = async (options) => {
+  if (!options.isGameStarted || options.isGameFinished || options.skipAutomaticProgress) {
+    return computeTaskHtmlUnlocked({ ...options, skipAutomaticProgress: true })
+  }
+  const { gamesTeamsModel, gameTeam } = options
+  const lock = await acquireGameProcessLock({ GamesTeams: gamesTeamsModel, teamId: gameTeam._id })
+  if (!lock.acquired) return computeTaskHtmlUnlocked({ ...options, skipAutomaticProgress: true })
+  try {
+    const game = await refreshProgressGame(gamesTeamsModel, options.game)
+    return await computeTaskHtmlUnlocked({
+      ...options, game, gameTeam: lock.gameTeam,
+      isGameStarted: game.status === 'started',
+      isGameFinished: ['finished', 'closed'].includes(game.status),
+      gamesTeamsModel: guardGameProgressModel(gamesTeamsModel, lock),
+    })
+  } finally {
+    await releaseGameProcessLock({ GamesTeams: gamesTeamsModel, teamId: gameTeam._id, token: lock.token })
+  }
+}
+
 const getTeamGameTaskState = async ({
   location,
   gameId,
@@ -1692,8 +1714,11 @@ const getTeamGameTaskState = async ({
           try {
             const actionGameTeam = lock?.gameTeam || gameTeam
             const currentActiveStep = getActiveTaskStep(actionGameTeam)
+            const actionGame = await refreshProgressGame(gamesTeamsModel, game)
 
-            if (
+            if (!canMutateClassicGameProgress(actionGame.status)) {
+              processResult = { message: 'Игра уже остановлена.', statusCode: 409 }
+            } else if (
               lock?.acquired &&
               didGameProcessStepChange(expectedActiveStep, currentActiveStep)
             ) {
@@ -1705,9 +1730,9 @@ const getTeamGameTaskState = async ({
               }
             } else {
               const actionResult = await captainActionHandler({
-                game,
+                game: actionGame,
                 gameTeam: actionGameTeam,
-                gamesTeamsModel,
+                gamesTeamsModel: lock?.acquired ? guardGameProgressModel(gamesTeamsModel, lock) : gamesTeamsModel,
                 isCaptain,
               })
               gameTeam = actionResult.gameTeam || actionGameTeam

@@ -16,6 +16,8 @@ import {
 } from '@helpers/classicGameRules'
 import {
   acquireGameProcessLock,
+  guardGameProgressModel,
+  refreshProgressGame,
   didGameProcessStepChange,
   releaseGameProcessLock,
 } from '@server/gameProcessLock'
@@ -902,6 +904,8 @@ const webGameProcess = async (options) => {
 
     return await webGameProcessUnlocked({
       ...options,
+      game: await refreshProgressGame(GamesTeams, options.game),
+      progressModel: guardGameProgressModel(GamesTeams, lock),
       gameTeam: lock.gameTeam,
       gameTeamId: effectiveTeamId,
     })

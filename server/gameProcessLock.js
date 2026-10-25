@@ -81,3 +81,49 @@ export const didGameProcessStepChange = (expectedStep, currentStep) =>
   Number.isInteger(expectedStep) &&
   Number.isInteger(currentStep) &&
   expectedStep !== currentStep
+
+export const gameProgressConflict = () => Object.assign(
+  new Error('Состояние игры изменилось или блокировка истекла. Обновите экран.'),
+  { statusCode: 409 },
+)
+
+// Проверка владельца входит в саму запись MongoDB: истёкшая блокировка
+// не позволяет старому запросу затереть результат нового владельца.
+export const guardGameProgressModel = (model, lock) => new Proxy(model, {
+  get(target, key) {
+    if (key === 'findByIdAndUpdate') return (id, update, options = {}) => {
+      if (String(id) !== String(lock.gameTeam._id)) throw gameProgressConflict()
+      let promise
+      const execute = (lean = false) => {
+        if (!promise) {
+          const query = target.findOneAndUpdate({
+            _id: id,
+            'gameProcessLock.token': lock.token,
+            'gameProcessLock.expiresAt': { $gt: new Date() },
+          }, update, options)
+          promise = Promise.resolve(lean ? query.lean() : query)
+            .then((result) => {
+              if (!result) throw gameProgressConflict()
+              return result
+            })
+        }
+        return promise
+      }
+      return {
+        lean: () => execute(true),
+        then: (resolve, reject) => execute().then(resolve, reject),
+      }
+    }
+    const value = Reflect.get(target, key)
+    return typeof value === 'function' ? value.bind(target) : value
+  },
+})
+
+// Тестовые прогоны используют свой снимок; реальные команды перечитывают
+// статус только после захвата блокировки, в том числе после ожидания СТОП.
+export const refreshProgressGame = async (model, game) => {
+  if (model.modelName !== 'GamesTeams' || !model.db) return game
+  const current = await model.db.model('Games').findById(game._id).lean()
+  if (!current) throw gameProgressConflict()
+  return current
+}

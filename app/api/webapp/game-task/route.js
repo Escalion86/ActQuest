@@ -41,7 +41,7 @@ export async function POST(request) {
   const sessionTelegramId =
     normalizeTelegramId(session?.user?.telegramId)
 
-  if (!sessionUserId && !Number.isFinite(sessionTelegramId)) {
+  if (!sessionUserId) {
     return NextResponse.json(
       { success: false, error: 'Необходимо войти в аккаунт' },
       { status: 401 },

@@ -93,16 +93,6 @@ const isManagerOfGame = ({ sessionUser, game }) => {
     return true
   }
 
-  const sessionTelegramId = toStringId(sessionUser.telegramId)
-  const gameCreatorTelegramId = toStringId(game.creatorTelegramId)
-  if (
-    sessionTelegramId &&
-    gameCreatorTelegramId &&
-    sessionTelegramId === gameCreatorTelegramId
-  ) {
-    return true
-  }
-
   if (!sessionUserId) {
     return false
   }

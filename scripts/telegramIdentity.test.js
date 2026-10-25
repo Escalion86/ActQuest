@@ -30,7 +30,7 @@ test('сообщения используют роль по userId, даже е�
   assert.deepEqual(calls, [{ teamId: 'team', userId: 'author' }])
 })
 
-test('сообщения не ищут членство по пустому ID, но поддерживают старый Telegram ID', async () => {
+test('сообщения не используют Telegram ID даже при отсутствии userId в членстве', async () => {
   const calls = []
   const db = { model: () => ({ findOne: (query) => {
     calls.push(query)
@@ -40,8 +40,8 @@ test('сообщения не ищут членство по пустому ID, 
     assert.equal(await getTeamMembershipForUser({ db, teamId: 'team', telegramId }), null)
   }
   assert.equal(calls.length, 0)
-  assert.equal((await getTeamMembershipForUser({ db, teamId: 'team', userId: 'migrated', telegramId: '123' })).role, 'captain')
-  assert.deepEqual(calls, [{ teamId: 'team', userId: 'migrated' }, { teamId: 'team', userTelegramId: 123 }])
+  assert.equal(await getTeamMembershipForUser({ db, teamId: 'team', userId: 'migrated', telegramId: '123' }), null)
+  assert.deepEqual(calls, [{ teamId: 'team', userId: 'migrated' }])
 })
 
 test('пересчёт рейтинга не записывает результат участнику с Telegram ID 0', async () => {
@@ -49,7 +49,7 @@ test('пересчёт рейтинга не записывает результ
     teamsPlaces: { first: 1, second: 2 },
     teamsUsers: [
       { userId: 'author', userTelegramId: null, teamId: 'first' },
-      { userTelegramId: '123', teamId: 'second' },
+      { userId: 'second-user', userTelegramId: '123', teamId: 'second' },
       ...invalidIds.map((userTelegramId) => ({ userTelegramId, teamId: 'first' })),
     ],
   } }
@@ -60,6 +60,6 @@ test('пересчёт рейтинга не записывает результ
       : { bulkWrite: async (ops) => { if (name === 'Users') userOps.push(...ops) } } }
     await updateParticipantsRatings({ db, game, updateAllEntities })
     const filters = userOps.map((op) => (op.updateOne || op.updateMany).filter)
-    assert.deepEqual(filters, [{ _id: 'author' }, { telegramId: 123 }])
+    assert.deepEqual(filters, [{ _id: 'author' }, { _id: 'second-user' }])
   }
 })

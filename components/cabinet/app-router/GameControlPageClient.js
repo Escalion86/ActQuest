@@ -12,6 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import requestApiJson from '@helpers/requestApiJson'
+import { getControlTaskTitle } from '@helpers/gameControlProgress'
 import { resolveRequiredMainCodesCount } from '@helpers/classicGameRules'
 import getTelegramUserHref from '@helpers/getTelegramUserHref'
 import Modal from '@components/Modal'
@@ -44,13 +45,25 @@ const formatForcedCluesCount = (count) =>
   `${Math.max(0, Number(count) || 0)} досрочно`
 
 const formatControlTaskLabel = (data, taskIndex, step, title) => {
-  const publicTitle = data?.useCustomTaskPublicTitles
-    ? data.tasks?.[taskIndex]?.publicTitle || `${taskIndex + 1} Задание`
-    : `Задание ${taskIndex + 1}`
-  const stagePrefix = data?.taskDistributionMode === 'random'
-    ? `Этап ${step + 1}/${Number(data?.tasksCount || 0)}: `
-    : ''
-  return `${stagePrefix}${publicTitle}. ${title || 'Без названия'}`
+  return `№${step + 1}. ${getControlTaskTitle(data, taskIndex, title)}`
+}
+
+const ControlTaskLabel = ({ step, title }) => (
+  <span className="inline-flex items-center gap-2 font-medium text-slate-800 dark:text-slate-200">
+    <span
+      className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 px-1 text-xs font-semibold tabular-nums dark:border-slate-600 dark:bg-slate-800"
+      aria-label={`Задание ${step + 1} по порядку команды`}
+      title="Номер задания по порядку команды"
+    >
+      {step + 1}
+    </span>
+    <span>{title}</span>
+  </span>
+)
+
+ControlTaskLabel.propTypes = {
+  step: PropTypes.number.isRequired,
+  title: PropTypes.string.isRequired,
 }
 
 const normalizeSeconds = (value, fallback = 0) => {
@@ -1915,9 +1928,14 @@ export default function GameControlPageClient({ session: _session }) {
                         <span className="text-slate-600 dark:text-slate-500">
                           Задание:{' '}
                         </span>
-                        <span className="font-medium text-slate-800 dark:text-slate-200">
-                          {activeTaskLabel}
-                        </span>
+                        {team.isTeamFinished ? (
+                          <span className="font-medium text-slate-800 dark:text-slate-200">Завершено</span>
+                        ) : (
+                          <ControlTaskLabel
+                            step={activeTaskStep}
+                            title={getControlTaskTitle(data, team.activeTaskIndex, team.currentTaskTitle)}
+                          />
+                        )}
                       </div>
                       <div>
                         <span className="text-slate-600 dark:text-slate-500">
@@ -2193,9 +2211,14 @@ export default function GameControlPageClient({ session: _session }) {
                             <span className="text-slate-600 dark:text-slate-500">
                               Следующее задание:{' '}
                             </span>
-                            <span className="font-medium text-cyan-700 dark:text-cyan-200">
-                              {nextTaskLabel}
-                            </span>
+                            <ControlTaskLabel
+                              step={activeTaskStep + 1}
+                              title={getControlTaskTitle(
+                                data,
+                                team.taskSequence?.[activeTaskStep + 1] ?? team.activeTaskIndex + 1,
+                                team.nextTaskTitle,
+                              )}
+                            />
                           </div>
                         )}
                     </div>

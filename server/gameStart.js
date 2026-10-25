@@ -12,6 +12,7 @@ import {
   getGameTeamPrequelProgresses,
 } from '@helpers/normalizePrequel'
 import { isIndividualGameStart } from '@helpers/gameRegistration'
+import withGameTeamsLocked from './withGameTeamsLocked.js'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -25,7 +26,7 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId, db)
+  let game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (!jsonCommand.confirm) {
@@ -55,34 +56,23 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
     }
   }
 
-  // Получаем список команд
-  const gameTeams = await db.model('GamesTeams').find({
-    gameId: jsonCommand.gameId,
-  })
-
-  const taskDistributionErrors =
-    game.type === 'story' ? [] : getTaskDistributionStartErrors(game, gameTeams)
-  if (taskDistributionErrors.length > 0) {
-    return {
-      success: false,
-      error: 'Задания не распределены',
-      errors: taskDistributionErrors,
-      message: `Запуск игры невозможен. Обнаружены ошибки:\n- ${taskDistributionErrors.join('\n- ')}`,
-    }
-  }
-
-  const startedAt = new Date()
-  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
-    status: 'started',
-    dateStartFact: startedAt,
-  })
-
-  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
-  const gameTasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
-  const isIndividualStart = isIndividualGameStart(game)
-
-  const resetResults = await Promise.all(
-    gameTeams.map((team) => {
+  const prepared = await withGameTeamsLocked({ db, gameId: jsonCommand.gameId }, async ({
+    game: currentGame, teams, Games, teamModel, assertHeld,
+  }) => {
+    game = currentGame
+    if (game.status === 'started') return { alreadyStarted: true, message: 'Игра уже запущена.' }
+    if (game.status !== 'active') return { success: false, message: 'Запустить можно только ожидающую игру.' }
+    const errors = [
+      ...getGameValidationErrors(game),
+      ...(game.type === 'story' ? [] : getTaskDistributionStartErrors(game, teams)),
+    ]
+    if (errors.length) return { success: false, errors, message: errors.join('\n') }
+    const startedAt = new Date()
+    const gameTasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
+    const isIndividualStart = isIndividualGameStart(game)
+    // До окончания подготовки игра остаётся active: частичный сбой не запускает
+    // часть команд. Повторная попытка безопасно повторит подготовку.
+    for (const team of teams) {
       let storyProgress = null
       if (game.type === 'story' && !isIndividualStart) {
         const baseProgress = buildInitialStoryProgress(game, {
@@ -100,23 +90,26 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
         }).progress
       }
 
-      return db.model('GamesTeams').findByIdAndUpdate(
+      await teamModel(team._id).findByIdAndUpdate(
         team._id,
         buildGameStartProgressUpdate({
           gameTasksCount,
+          taskSequence: game.type === 'story' ? [] : team.taskSequence,
+          startedAt,
           startImmediately: !isIndividualStart,
           timeAddings: team.timeAddings,
           storyProgress,
         }),
       )
-    }),
-  )
-  console.info('[game-start] reset team progress', {
-    gameId: String(jsonCommand.gameId),
-    teamsCount: gameTeams.length,
-    resetCount: resetResults.filter(Boolean).length,
-    individualStart: isIndividualStart,
+    }
+    await assertHeld()
+    await Games.findByIdAndUpdate(game._id, { status: 'started', dateStartFact: startedAt })
+    return { teams, isIndividualStart }
   })
+  if (prepared.success === false || prepared.alreadyStarted) return prepared
+  const gameTeams = prepared.teams
+  const teamsIds = gameTeams.map((team) => team.teamId)
+  const isIndividualStart = prepared.isIndividualStart
 
   if (!isIndividualStart) {
     // const teams = await db.model('Teams').find({

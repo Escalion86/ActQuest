@@ -115,17 +115,6 @@ const hasGameManageAccess = ({ identity, game }) => {
     return true
   }
 
-  const creatorTelegramId =
-    game?.creatorTelegramId !== null && game?.creatorTelegramId !== undefined
-      ? String(game.creatorTelegramId).trim()
-      : ''
-
-  if (identity.userTelegramId && creatorTelegramId) {
-    if (identity.userTelegramId === creatorTelegramId) {
-      return true
-    }
-  }
-
   if (!identity.userId) {
     return false
   }
@@ -146,35 +135,20 @@ const hasGameManageAccess = ({ identity, game }) => {
 
 const resolveUserParticipationTeamIds = ({ result, session }) => {
   const identity = normalizeSessionIdentity(session)
-  if (!identity.userId && !identity.userTelegramId) {
+  if (!identity.userId) {
     return []
   }
 
   const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
   const userId = identity.userId
-  const userTelegramId = identity.userTelegramId
 
   return Array.from(
     new Set(
       teamsUsers
         .filter((membership) => {
           const membershipUserId = toStringId(membership?.userId)
-          const membershipTelegramId =
-            typeof membership?.userTelegramId === 'number'
-              ? String(membership.userTelegramId)
-              : typeof membership?.userTelegramId === 'string'
-                ? membership.userTelegramId.trim()
-                : ''
 
           if (userId && membershipUserId && membershipUserId === userId) {
-            return true
-          }
-
-          if (
-            userTelegramId &&
-            membershipTelegramId &&
-            membershipTelegramId === userTelegramId
-          ) {
             return true
           }
 

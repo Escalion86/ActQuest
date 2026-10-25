@@ -68,7 +68,7 @@ export async function POST(request) {
     normalizeTelegramId(session?.user?.telegramId)
   const hasTelegramId = Number.isFinite(sessionTelegramId)
 
-  if (!sessionUserId && !hasTelegramId) {
+  if (!sessionUserId) {
     return NextResponse.json(
       { success: false, error: 'Необходимо войти в аккаунт' },
       { status: 401 },
@@ -95,28 +95,13 @@ export async function POST(request) {
       )
     }
 
-    let user = null
-    if (sessionUserId) {
-      user = await db.model('Users').findById(String(sessionUserId))
-    }
-    if (!user && hasTelegramId) {
-      user = await db.model('Users').findOne({ telegramId: sessionTelegramId })
-    }
+    let user = await db.model('Users').findById(String(sessionUserId))
 
     if (!user) {
-      const name = session.user?.name || session.user?.username || 'Участник'
-      const payload = {
-        name,
-        username: session.user?.username ?? null,
-        photoUrl: session.user?.photoUrl ?? null,
-        languageCode: session.user?.languageCode ?? null,
-        isPremium: session.user?.isPremium ?? false,
-        currentLocation: targetLocation,
-      }
-      if (hasTelegramId) {
-        payload.telegramId = sessionTelegramId
-      }
-      user = await db.model('Users').create(payload)
+      return NextResponse.json(
+        { success: false, error: 'Пользователь не найден. Войдите в аккаунт повторно.' },
+        { status: 401 },
+      )
     } else {
       const updates = {}
       if (session.user?.name && session.user.name !== user.name) {
@@ -149,9 +134,7 @@ export async function POST(request) {
       }
 
       if (Object.keys(updates).length > 0) {
-        const userFilter = sessionUserId
-          ? { _id: String(sessionUserId) }
-          : { telegramId: sessionTelegramId }
+        const userFilter = { _id: String(sessionUserId) }
         user = await db
           .model('Users')
           .findOneAndUpdate(userFilter, { $set: updates }, { returnDocument: 'after' })

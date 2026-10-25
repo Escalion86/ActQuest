@@ -921,6 +921,14 @@ const gamesSchema = {
     enum: ['active', 'started', 'finished', 'closed', 'canceled'],
     default: 'active',
   },
+  gameProcessLock: {
+    type: {
+      token: { type: String, default: null },
+      acquiredAt: { type: Date, default: null },
+      expiresAt: { type: Date, default: null },
+    },
+    default: null,
+  },
   isRated: {
     type: Boolean,
     default: true,

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import withGameTeamsLocked from '@server/withGameTeamsLocked'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import { toStringId } from '@helpers/idAndDate'
 import {
@@ -112,7 +113,6 @@ export async function POST(request) {
     }
 
     const GamesModel = db.model('Games')
-    const GamesTeamsModel = db.model('GamesTeams')
 
     const game = await findGameByAnyId(GamesModel, gameId)
     if (!game?._id) {
@@ -129,140 +129,137 @@ export async function POST(request) {
       )
     }
 
-    if (game.taskDistributionMode !== 'random') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Распределение доступно только для режима «Случайное»',
-        },
-        { status: 400 },
-      )
-    }
-
-    const tasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
-    const gameTemplate = normalizeStoredTaskDistributionTemplate(
-      game.taskDistributionTemplate,
-      tasksCount,
-    )
-    const gameTemplateValidation = validateTaskDistributionTemplate(
-      gameTemplate,
-      tasksCount,
-    )
-
-    if (!gameTemplateValidation.valid) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: buildValidationError(
-            'Общий шаблон распределения некорректен',
-            gameTemplateValidation,
-          ),
-        },
-        { status: 400 },
-      )
-    }
-
-    const normalizedGameId = normalizeStringId(game._id)
-    const teamConditions = []
-    if (teamId) {
-      if (isObjectIdLike(teamId)) {
-        teamConditions.push({ _id: teamId })
+    return await withGameTeamsLocked({ db, gameId: game._id }, async ({ game, teams, teamModel, assertHeld }) => {
+      if (!canAccessGameAsModerator({ userRole, currentUserId, game })) {
+        return NextResponse.json({ success: false, error: 'Нет доступа к этой игре' }, { status: 403 })
       }
-      teamConditions.push({ teamId })
-    }
-    const query = {
-      gameId: normalizedGameId,
-      ...(teamConditions.length > 0 ? { $or: teamConditions } : {}),
-    }
-    const gameTeams = await GamesTeamsModel.find(query).lean()
+      if (['finished', 'closed'].includes(game.status)) {
+        return NextResponse.json({ success: false, error: 'Нельзя менять маршрут завершённой игры' }, { status: 409 })
+      }
+      if (game.taskDistributionMode !== 'random') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Распределение доступно только для режима «Случайное»',
+          },
+          { status: 400 },
+        )
+      }
 
-    if (teamId && gameTeams.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Команда не найдена в этой игре' },
-        { status: 404 },
-      )
-    }
-
-    const generatedAt = new Date()
-    const updates = []
-
-    for (const gameTeam of gameTeams) {
-      const { template, source } = resolveTemplateForTeam({
-        gameTemplate,
-        gameTeam,
+      const tasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
+      const gameTemplate = normalizeStoredTaskDistributionTemplate(
+        game.taskDistributionTemplate,
         tasksCount,
-      })
-      const validation = validateTaskDistributionTemplate(template, tasksCount)
+      )
+      const gameTemplateValidation = validateTaskDistributionTemplate(
+        gameTemplate,
+        tasksCount,
+      )
 
-      if (!validation.valid) {
+      if (!gameTemplateValidation.valid) {
         return NextResponse.json(
           {
             success: false,
             error: buildValidationError(
-              `Индивидуальный шаблон команды ${normalizeStringId(gameTeam?.teamId) || normalizeStringId(gameTeam?._id)} некорректен`,
-              validation,
+              'Общий шаблон распределения некорректен',
+              gameTemplateValidation,
             ),
           },
           { status: 400 },
         )
       }
 
-      const generatedSequence = buildTaskSequenceFromTemplate(template)
-      const taskSequence = mergeTaskSequenceWithLockedPrefix(
-        generatedSequence,
-        getLockedTaskSequencePrefix(gameTeam),
-      )
+      const normalizedGameId = normalizeStringId(game._id)
+      const gameTeams = teams.filter((team) => !teamId ||
+        normalizeStringId(team._id) === teamId || normalizeStringId(team.teamId) === teamId)
 
-      if (!isValidTaskSequence(taskSequence, tasksCount)) {
+      if (teamId && gameTeams.length === 0) {
         return NextResponse.json(
-          {
-            success: false,
-            error: 'Не удалось собрать корректную последовательность заданий',
-          },
-          { status: 400 },
+          { success: false, error: 'Команда не найдена в этой игре' },
+          { status: 404 },
         )
       }
 
-      updates.push({
-        id: gameTeam._id,
-        gameTeamId: normalizeStringId(gameTeam._id),
-        teamId: normalizeStringId(gameTeam.teamId),
-        taskSequence,
-        taskSequenceSource: source,
-      })
-    }
+      const generatedAt = new Date()
+      const updates = []
 
-    await Promise.all(
-      updates.map((item) =>
-        GamesTeamsModel.findByIdAndUpdate(item.id, {
+      for (const gameTeam of gameTeams) {
+        const { template, source } = resolveTemplateForTeam({
+          gameTemplate,
+          gameTeam,
+          tasksCount,
+        })
+        const validation = validateTaskDistributionTemplate(template, tasksCount)
+
+        if (!validation.valid) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: buildValidationError(
+                `Индивидуальный шаблон команды ${normalizeStringId(gameTeam?.teamId) || normalizeStringId(gameTeam?._id)} некорректен`,
+                validation,
+              ),
+            },
+            { status: 400 },
+          )
+        }
+
+        const generatedSequence = buildTaskSequenceFromTemplate(template)
+        const taskSequence = mergeTaskSequenceWithLockedPrefix(
+          generatedSequence,
+          getLockedTaskSequencePrefix(gameTeam),
+        )
+
+        if (!isValidTaskSequence(taskSequence, tasksCount)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Не удалось собрать корректную последовательность заданий',
+            },
+            { status: 400 },
+          )
+        }
+
+        updates.push({
+          id: gameTeam._id,
+          gameTeamId: normalizeStringId(gameTeam._id),
+          teamId: normalizeStringId(gameTeam.teamId),
+          taskSequence,
+          taskSequenceSource: source,
+        })
+      }
+
+      await assertHeld()
+      for (const item of updates) {
+        await teamModel(item.id).findByIdAndUpdate(item.id, {
           $set: {
             taskSequence: item.taskSequence,
             taskSequenceSource: item.taskSequenceSource,
             taskSequenceGeneratedAt: generatedAt,
           },
-        }),
-      ),
-    )
+        })
+      }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        gameId: normalizedGameId,
-        teamsUpdated: updates.length,
-        teams: updates.map((item) => ({
-          gameTeamId: item.gameTeamId,
-          teamId: item.teamId,
-          taskSequence: item.taskSequence,
-          taskSequenceSource: item.taskSequenceSource,
-          taskSequenceGeneratedAt: generatedAt.toISOString(),
-        })),
-      },
+      return NextResponse.json({
+        success: true,
+        data: {
+          gameId: normalizedGameId,
+          teamsUpdated: updates.length,
+          teams: updates.map((item) => ({
+            gameTeamId: item.gameTeamId,
+            teamId: item.teamId,
+            taskSequence: item.taskSequence,
+            taskSequenceSource: item.taskSequenceSource,
+            taskSequenceGeneratedAt: generatedAt.toISOString(),
+          })),
+        },
+      })
     })
   } catch (error) {
     console.error('Failed to distribute game tasks', { error, gameId, teamId })
     return NextResponse.json(
-      { success: false, error: 'Не удалось распределить задания' },
-      { status: 500 },
+      { success: false, error: error.statusCode === 409 ? error.message : 'Не удалось распределить задания' },
+      { status: error.statusCode || 500 },
     )
   }
 }

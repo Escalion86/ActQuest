@@ -11,6 +11,8 @@ import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
 import {
   acquireGameProcessLock,
+  guardGameProgressModel,
+  refreshProgressGame,
   didGameProcessStepChange,
   releaseGameProcessLock,
 } from '@server/gameProcessLock'
@@ -160,6 +162,7 @@ const forceFailActiveTask = async ({ GamesTeams, game, gameTeam }) => {
 
 const runLockedAdminProgressAction = async ({
   GamesTeams,
+  game,
   gameTeam,
   actionHandler,
 }) => {
@@ -181,6 +184,10 @@ const runLockedAdminProgressAction = async ({
   }
 
   try {
+    const currentGame = await refreshProgressGame(GamesTeams, game)
+    if (currentGame.status !== 'started') return {
+      success: false, statusCode: 409, message: 'Игра уже остановлена.',
+    }
     const currentActiveStep = Number.isInteger(lock.gameTeam?.activeNum)
       ? lock.gameTeam.activeNum
       : 0
@@ -192,7 +199,7 @@ const runLockedAdminProgressAction = async ({
       }
     }
 
-    return await actionHandler(lock.gameTeam)
+    return await actionHandler(lock.gameTeam, guardGameProgressModel(GamesTeams, lock), currentGame)
   } finally {
     try {
       await releaseGameProcessLock({
@@ -397,11 +404,12 @@ export async function POST(request) {
     if (action === 'force_complete') {
       const result = await runLockedAdminProgressAction({
         GamesTeams,
+        game,
         gameTeam,
-        actionHandler: (currentGameTeam) =>
+        actionHandler: (currentGameTeam, lockedModel, currentGame) =>
           forceCompleteActiveTask({
-            GamesTeams,
-            game,
+            GamesTeams: lockedModel,
+            game: currentGame,
             gameTeam: currentGameTeam,
           }),
       })
@@ -441,11 +449,12 @@ export async function POST(request) {
     if (action === 'force_fail') {
       const result = await runLockedAdminProgressAction({
         GamesTeams,
+        game,
         gameTeam,
-        actionHandler: (currentGameTeam) =>
+        actionHandler: (currentGameTeam, lockedModel, currentGame) =>
           forceFailActiveTask({
-            GamesTeams,
-            game,
+            GamesTeams: lockedModel,
+            game: currentGame,
             gameTeam: currentGameTeam,
           }),
       })

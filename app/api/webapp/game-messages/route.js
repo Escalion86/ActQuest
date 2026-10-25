@@ -46,7 +46,7 @@ export async function GET(request) {
   const userId = getSessionUserId(session?.user)
   const telegramId = getSessionTelegramId(session)
   const userReadKey = getTeamMessageReadUserKey({ userId, telegramId })
-  if (!userId && telegramId === null) {
+  if (!userId) {
     return NextResponse.json(
       { success: false, error: 'Требуется авторизация' },
       { status: 401 },
@@ -147,7 +147,7 @@ export async function POST(request) {
   const session = await getServerSession(authOptions)
   const userId = getSessionUserId(session?.user)
   const telegramId = getSessionTelegramId(session)
-  if (!userId && telegramId === null) {
+  if (!userId) {
     return NextResponse.json(
       { success: false, error: 'Требуется авторизация' },
       { status: 401 },

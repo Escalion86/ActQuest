@@ -25,6 +25,9 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import {
   acquireGameProcessLock,
+  guardGameProgressModel,
+  refreshProgressGame,
+  gameProgressConflict,
   releaseGameProcessLock,
 } from '@server/gameProcessLock'
 import {
@@ -109,18 +112,6 @@ export const hasGameManageAccess = ({ identity, game }) => {
     return true
   }
 
-  const creatorTelegramId =
-    game?.creatorTelegramId !== null && game?.creatorTelegramId !== undefined
-      ? String(game.creatorTelegramId).trim()
-      : ''
-  if (
-    identity.userTelegramId &&
-    creatorTelegramId &&
-    identity.userTelegramId === creatorTelegramId
-  ) {
-    return true
-  }
-
   return canAccessGameAsModerator({
     userRole: identity.role,
     currentUserId: identity.userId,
@@ -138,13 +129,6 @@ const userHasTeamAccess = async ({ TeamsUsers, identity, teamId }) => {
   if (identity.userId) {
     filters.push({ teamId: normalizedTeamId, userId: identity.userId })
   }
-  if (identity.userTelegramId) {
-    filters.push({
-      teamId: normalizedTeamId,
-      userTelegramId: identity.userTelegramId,
-    })
-  }
-
   if (filters.length === 0) {
     return false
   }
@@ -163,18 +147,27 @@ export const ensureStoryProgress = async ({
   actor = 'system',
   save = false,
 }) => {
+  if (save) {
+    const lock = await acquireGameProcessLock({ GamesTeams, teamId: gameTeam._id })
+    if (!lock.acquired) throw gameProgressConflict()
+    try {
+      const currentGame = await refreshProgressGame(GamesTeams, game)
+      if (currentGame.status !== 'started') return lock.gameTeam.storyProgress || { status: 'not_started' }
+      const progress = await ensureStoryProgress({ GamesTeams, game: currentGame, gameTeam: lock.gameTeam, actor })
+      if (JSON.stringify(progress) !== JSON.stringify(lock.gameTeam.storyProgress)) {
+        await guardGameProgressModel(GamesTeams, lock).findByIdAndUpdate(gameTeam._id, { $set: { storyProgress: progress } })
+      }
+      return progress
+    } finally {
+      await releaseGameProcessLock({ GamesTeams, teamId: gameTeam._id, token: lock.token })
+    }
+  }
   if (gameTeam?.storyProgress) {
     const normalized = upgradeInvestigationProgress(
       game,
       gameTeam.storyProgress,
       { actor },
     )
-    if (normalized.upgraded && save) {
-      await GamesTeams.updateOne(
-        { _id: gameTeam._id },
-        { $set: { storyProgress: normalized.progress } },
-      )
-    }
     return normalized.progress
   }
 
@@ -191,12 +184,6 @@ export const ensureStoryProgress = async ({
     effects: appliedPrequelEffects,
     actor,
   })
-  if (save) {
-    await GamesTeams.updateOne(
-      { _id: gameTeam._id },
-      { $set: { storyProgress: progress } },
-    )
-  }
 
   return progress
 }
@@ -218,15 +205,18 @@ export const runLockedStoryMutation = async ({ context, actor, action }) => {
   }
 
   try {
+    const currentGame = await refreshProgressGame(context.GamesTeams, context.game)
+    if (currentGame.status !== 'started') return { response: jsonError('Игра уже остановлена.', 409) }
     const progress = await ensureStoryProgress({
       GamesTeams: context.GamesTeams,
-      game: context.game,
+      game: currentGame,
       gameTeam: lock.gameTeam,
       actor,
       save: false,
     })
     const mutationResult = await action({
       ...context,
+      game: currentGame,
       gameTeam: lock.gameTeam,
       progress,
     })
@@ -236,6 +226,7 @@ export const runLockedStoryMutation = async ({ context, actor, action }) => {
       {
         _id: context.gameTeam._id,
         'gameProcessLock.token': lock.token,
+        'gameProcessLock.expiresAt': { $gt: new Date() },
       },
       { $set: { storyProgress: nextProgress } },
     )

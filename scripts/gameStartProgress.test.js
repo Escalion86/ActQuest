@@ -3,6 +3,37 @@ import assert from 'node:assert/strict'
 
 import buildGameStartProgressUpdate from '../server/buildGameStartProgressUpdate.js'
 
+test('общий старт учитывает первое задание команды и единое время запуска', () => {
+  const startedAt = new Date('2026-10-24T12:13:00.217Z')
+  for (const taskSequence of [[1, 0, 2], [2, 0, 1], [0, 1, 2]]) {
+    const result = buildGameStartProgressUpdate({
+      gameTasksCount: 3, startImmediately: true, taskSequence, startedAt,
+    })
+    assert.equal(result.activeNum, 0)
+    assert.deepEqual(result.startTime, [0, 1, 2].map((index) =>
+      index === taskSequence[0] ? startedAt : null,
+    ))
+    assert.deepEqual(result.endTime, [null, null, null])
+  }
+})
+
+test('индивидуальный старт не запускает таймер заранее', () => {
+  const result = buildGameStartProgressUpdate({
+    gameTasksCount: 3, startImmediately: false, taskSequence: [2, 0, 1],
+  })
+  assert.deepEqual(result.startTime, [])
+})
+
+test('некорректный порядок использует линейное распределение', () => {
+  const startedAt = new Date('2026-10-24T12:13:00.217Z')
+  for (const taskSequence of [[], [1, 1, 0], [5, 0, 1]]) {
+    const result = buildGameStartProgressUpdate({
+      gameTasksCount: 3, startImmediately: true, taskSequence, startedAt,
+    })
+    assert.deepEqual(result.startTime, [startedAt, null, null])
+  }
+})
+
 test('preserves manual adjustments and removes system clue penalties on game start', () => {
   const preservedBonus = {
     id: 'manual-bonus',

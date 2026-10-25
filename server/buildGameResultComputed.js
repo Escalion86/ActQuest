@@ -199,6 +199,13 @@ const buildTaskDurations = (gameTeam, game) => {
         result.push(taskDuration)
         continue
       }
+      // На перерыве шаг ещё текущий, но задание уже выполнено.
+      if (toDate(startTime[index]) && toDate(endTime[index])) {
+        result.push(applyTaskElapsedAdjustment(
+          getSecondsBetween(startTime[index], endTime[index]),
+        ))
+        continue
+      }
       result.push('[не завершено]')
       continue
     }

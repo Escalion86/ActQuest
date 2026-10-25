@@ -11,6 +11,8 @@ import {
 import applyPrequelSubmission from '@server/applyPrequelSubmission'
 import normalizePrequelProgressForApi from '@server/normalizePrequelProgress'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
+import { acquireGameProcessLock, releaseGameProcessLock, guardGameProgressModel } from '@server/gameProcessLock'
 
 const normalizeStringId = (value) =>
   value === null || value === undefined ? '' : String(value).trim()
@@ -25,9 +27,7 @@ const resolveCurrentUserId = (session) =>
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   const currentUserId = resolveCurrentUserId(session)
-  const currentTelegramId = session?.user?.telegramId || session?.user?.id || null
-
-  if (!currentUserId && !currentTelegramId) {
+  if (!currentUserId) {
     return NextResponse.json(
       { success: false, error: 'Необходимо войти в аккаунт' },
       { status: 401 },
@@ -48,6 +48,8 @@ export async function POST(request) {
     )
   }
 
+  let GamesTeams
+  let lock
   try {
     const db = await dbConnectGlobal()
     if (!db) {
@@ -57,8 +59,8 @@ export async function POST(request) {
       )
     }
 
-    const GamesTeams = db.model('GamesTeams')
-    const gameTeam = await GamesTeams.findById(gameTeamId).lean()
+    GamesTeams = db.model('GamesTeams')
+    let gameTeam = await GamesTeams.findById(gameTeamId).lean()
     if (!gameTeam) {
       return NextResponse.json(
         { success: false, error: 'Команда игры не найдена' },
@@ -72,26 +74,19 @@ export async function POST(request) {
       .find({ teamId })
       .select({ role: 1, userId: 1, userTelegramId: 1 })
       .lean()
-    const matchedMemberships = memberships.filter(
-      (membership) =>
-        normalizeStringId(membership?.userId) === normalizeStringId(currentUserId) ||
-        normalizeStringId(membership?.userTelegramId) ===
-          normalizeStringId(currentTelegramId),
-    )
-
-    if (
-      matchedMemberships.length === 0 ||
-      !matchedMemberships.some(
-        (membership) =>
-          String(membership.role || '').trim().toLowerCase() === 'captain',
-      )
-    ) {
+    const membership = resolveTeamMembershipForIdentity({ teamUsers: memberships, userId: currentUserId })
+    if (!membership.isCaptain) {
       return NextResponse.json(
         { success: false, error: 'Отправлять коды приквела может только капитан команды' },
         { status: 403 },
       )
     }
 
+    lock = await acquireGameProcessLock({ GamesTeams, teamId: gameTeamId })
+    if (!lock.acquired) return NextResponse.json(
+      { success: false, error: 'Другой ответ ещё обрабатывается. Повторите ввод.' }, { status: 409 },
+    )
+    gameTeam = lock.gameTeam
     const game = await db.model('Games').findById(gameTeam.gameId).lean()
     if (!game) {
       return NextResponse.json(
@@ -159,7 +154,7 @@ export async function POST(request) {
     if (progressIndex >= 0) nextProgresses[progressIndex] = result.progress
     else nextProgresses.push(result.progress)
 
-    await GamesTeams.findByIdAndUpdate(gameTeamId, {
+    await guardGameProgressModel(GamesTeams, lock).findByIdAndUpdate(gameTeamId, {
       $set: { prequelProgresses: nextProgresses },
     })
 
@@ -175,7 +170,9 @@ export async function POST(request) {
     console.error('Failed to submit prequel code', error)
     return NextResponse.json(
       { success: false, error: 'Не удалось обработать код приквела' },
-      { status: 500 },
+      { status: error.statusCode || 500 },
     )
+  } finally {
+    if (lock?.acquired) await releaseGameProcessLock({ GamesTeams, teamId: gameTeamId, token: lock.token })
   }
 }

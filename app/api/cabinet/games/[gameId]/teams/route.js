@@ -348,17 +348,6 @@ const hasGameManageAccess = ({ identity, game }) => {
     return true
   }
 
-  const creatorTelegramId =
-    game?.creatorTelegramId !== null && game?.creatorTelegramId !== undefined
-      ? String(game.creatorTelegramId).trim()
-      : ''
-
-  if (identity.userTelegramId && creatorTelegramId) {
-    if (identity.userTelegramId === creatorTelegramId) {
-      return true
-    }
-  }
-
   if (!identity.userId) {
     return false
   }

@@ -24,13 +24,8 @@ const hasParticipantAccess = async ({ db, session, teamIds }) => {
   const userId = toStringId(
     user.globalUserId ?? user.userId ?? user._id ?? user.id,
   )
-  const telegramId =
-    user.telegramId === null || user.telegramId === undefined
-      ? ''
-      : String(user.telegramId).trim()
   const identityFilters = []
   if (userId) identityFilters.push({ userId })
-  if (telegramId) identityFilters.push({ userTelegramId: telegramId })
   if (identityFilters.length === 0 || teamIds.length === 0) return false
 
   const membership = await db.model('TeamsUsers').findOne({

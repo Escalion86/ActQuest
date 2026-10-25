@@ -32,7 +32,7 @@ test('uses userId as the primary identity source', () => {
   )
 })
 
-test('falls back to telegramId only when no userId membership is found', () => {
+test('совпадение Telegram ID не заменяет отсутствующее членство по userId', () => {
   const membership = resolveTeamMembershipForIdentity({
     teamUsers: [
       {
@@ -46,12 +46,12 @@ test('falls back to telegramId only when no userId membership is found', () => {
     telegramId: 777001,
   })
 
-  assert.equal(membership.isTeamMember, true)
-  assert.equal(membership.isCaptain, true)
-  assert.equal(membership.matchedBy, 'telegramId')
+  assert.equal(membership.isTeamMember, false)
+  assert.equal(membership.isCaptain, false)
+  assert.equal(membership.matchedBy, null)
   assert.deepEqual(
     membership.matchedMemberships.map((item) => item._id),
-    ['membership-telegram-legacy'],
+    [],
   )
 })
 

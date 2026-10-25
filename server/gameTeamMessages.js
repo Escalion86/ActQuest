@@ -1,4 +1,3 @@
-import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
 import { toStringId } from '../helpers/idAndDate.js'
 
 export const GAME_TEAM_MESSAGE_LIMIT = 100
@@ -14,12 +13,9 @@ export const getSessionUserId = (sessionUser) => {
   return rawId ? String(rawId) : ''
 }
 
-export const getTeamMessageReadUserKey = ({ userId, telegramId }) => {
+export const getTeamMessageReadUserKey = ({ userId }) => {
   const normalizedUserId = toStringId(userId)
   if (normalizedUserId) return `user:${normalizedUserId}`
-
-  const normalizedTelegramId = normalizeTelegramId(telegramId)
-  if (normalizedTelegramId) return `tg:${normalizedTelegramId}`
 
   return ''
 }
@@ -42,16 +38,6 @@ export const isGameManager = ({ sessionUser, game }) => {
   const sessionUserId = getSessionUserId(sessionUser)
   const creatorUserId = toStringId(game.creatorUserId)
   if (sessionUserId && creatorUserId && sessionUserId === creatorUserId) {
-    return true
-  }
-
-  const sessionTelegramId = toStringId(sessionUser.telegramId)
-  const creatorTelegramId = toStringId(game.creatorTelegramId)
-  if (
-    sessionTelegramId &&
-    creatorTelegramId &&
-    sessionTelegramId === creatorTelegramId
-  ) {
     return true
   }
 
@@ -451,12 +437,10 @@ export const getUsersForTeamIds = async ({ db, teamIds }) => {
   return Array.from(uniqueByUserId.values())
 }
 
-export const getTeamMembershipForUser = async ({ db, teamId, userId, telegramId }) => {
+export const getTeamMembershipForUser = async ({ db, teamId, userId }) => {
   const normalizedTeamId = toStringId(teamId)
   const normalizedUserId = toStringId(userId)
-  const normalizedTelegramId = normalizeTelegramId(telegramId)
-
-  if (!normalizedTeamId) return null
+  if (!normalizedTeamId || !normalizedUserId) return null
   const memberships = db.model('TeamsUsers')
   if (normalizedUserId) {
     const membership = await memberships.findOne({
@@ -464,8 +448,5 @@ export const getTeamMembershipForUser = async ({ db, teamId, userId, telegramId 
     }).select({ role: 1 }).lean()
     if (membership) return membership
   }
-  if (normalizedTelegramId === null) return null
-  return memberships.findOne({
-    teamId: normalizedTeamId, userTelegramId: normalizedTelegramId,
-  }).select({ role: 1 }).lean()
+  return null
 }

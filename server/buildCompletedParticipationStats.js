@@ -1,20 +1,17 @@
-import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
+import assertParticipantUserIds from '../helpers/assertParticipantUserIds.js'
 import { toStringId } from '../helpers/idAndDate.js'
 import {
   isCompletedParticipationStatus,
   resolveParticipationPlace,
 } from '../helpers/gameParticipation.js'
 
-export const resolveParticipantStatsKey = ({ userId, telegramId }) => {
+export const resolveParticipantStatsKey = ({ userId }) => {
   const normalizedUserId = toStringId(userId)
   if (normalizedUserId) {
     return `uid:${normalizedUserId}`
   }
 
-  const normalizedTelegramId = normalizeTelegramId(telegramId)
-  return Number.isFinite(normalizedTelegramId) && normalizedTelegramId > 0
-    ? `tg:${normalizedTelegramId}`
-    : null
+  return null
 }
 
 const resolveGameDate = (game) => {
@@ -72,6 +69,7 @@ export const buildParticipationSnapshot = ({ gamesById, nowIso }) => {
 }
 
 export const buildCompletedParticipationStats = (games) => {
+  assertParticipantUserIds(games)
   const userGamesByKey = new Map()
   const teamGamesById = new Map()
   const diagnostics = {

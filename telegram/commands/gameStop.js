@@ -3,6 +3,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
+import withGameTeamsLocked from '@server/withGameTeamsLocked'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -36,23 +37,30 @@ const gameStop = async ({ telegramId: _telegramId, jsonCommand, location, db }) 
     }
   }
 
-  const snapshots = await buildGameResultSnapshots({
-    db,
-    gameId: jsonCommand.gameId,
+  const stopped = await withGameTeamsLocked({ db, gameId: jsonCommand.gameId }, async ({
+    game: currentGame, teams, Games, assertHeld,
+  }) => {
+    if (['finished', 'closed'].includes(currentGame.status)) {
+      return { alreadyStopped: true, message: 'Игра уже остановлена.' }
+    }
+    if (currentGame.status !== 'started') return { success: false, message: 'Игра ещё не запущена.' }
+    const stoppedAt = new Date()
+    const snapshots = await buildGameResultSnapshots({
+      db, gameId: jsonCommand.gameId,
+      game: { ...currentGame, dateEndFact: stoppedAt },
+      gameTeams: teams.map(({ gameProcessLock: _lock, ...team }) => team),
+    })
+    await assertHeld()
+    // Все принятые до захвата блокировок ответы включены в снимок.
+    // Ожидающие запросы перечитают finished после освобождения блокировки.
+    await Games.findByIdAndUpdate(currentGame._id, {
+      status: 'finished', dateEndFact: stoppedAt,
+      result: { ...snapshots, teamsPlaces: {}, computed: null, text: '' },
+    })
+    return { snapshots }
   })
-
-  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
-    status: 'finished',
-    dateEndFact: new Date(),
-    result: {
-      teams: snapshots.teams,
-      gameTeams: snapshots.gameTeams,
-      teamsUsers: snapshots.teamsUsers,
-      teamsPlaces: {},
-      computed: null,
-      text: '',
-    },
-  })
+  if (stopped.success === false || stopped.alreadyStopped) return stopped
+  const snapshots = stopped.snapshots
 
   const teamsUsers = Array.isArray(snapshots.teamsUsers) ? snapshots.teamsUsers : []
   // Получаем telegramId всех участников игры (только валидные числа)

@@ -1,3 +1,5 @@
+import { compareGameControlTeams } from '@helpers/gameControlProgress'
+import { acquireGameProcessLock, releaseGameProcessLock, guardGameProgressModel, refreshProgressGame } from '@server/gameProcessLock'
 import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 import buildGameTaskOverview from '@helpers/buildGameTaskOverview'
@@ -351,12 +353,29 @@ const getTaskFailureForIndex = (gameTeam, taskIndex) =>
     (item) => item.taskIndex === taskIndex,
   ) || null
 
-const syncGameTeamProgressForStatus = async ({
+const syncGameTeamProgressForStatus = async (options) => {
+  const { gamesTeamsModel, gameTeam } = options
+  const lock = await acquireGameProcessLock({ GamesTeams: gamesTeamsModel, teamId: gameTeam._id })
+  if (!lock.acquired) return gameTeam
+  try {
+    return await syncGameTeamProgressForStatusUnlocked({
+      ...options,
+      game: await refreshProgressGame(gamesTeamsModel, options.game),
+      gameTeam: lock.gameTeam,
+      gamesTeamsModel: guardGameProgressModel(gamesTeamsModel, lock),
+    })
+  } finally {
+    await releaseGameProcessLock({ GamesTeams: gamesTeamsModel, teamId: gameTeam._id, token: lock.token })
+  }
+}
+
+const syncGameTeamProgressForStatusUnlocked = async ({
   game,
   gameTeam,
   gamesTeamsModel,
   now = new Date(),
 }) => {
+  if (game?.status !== 'started') return gameTeam
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
   const tasksCount = tasks.length
   if (!gameTeam || tasksCount === 0) return gameTeam
@@ -1656,38 +1675,7 @@ export async function GET(request) {
       }
     })
 
-    // Сортировка в статусе игры:
-    // 1) По номеру текущего задания (более позднее выше)
-    // 2) Для одинакового задания:
-    //    - завершившие игру выше незавершивших, между собой по общему времени (меньше выше)
-    //    - команды на перерыве выше команд в активной фазе
-    //    - на перерыве: кто дольше на перерыве (меньше осталось) — выше
-    //    - в активной фазе: кто дольше на задании — выше
-    teamsStatus.sort((a, b) => {
-      if (b.activeTaskStep !== a.activeTaskStep) {
-        return b.activeTaskStep - a.activeTaskStep
-      }
-      if (a.isTeamFinished || b.isTeamFinished) {
-        if (a.isTeamFinished && !b.isTeamFinished) return -1
-        if (!a.isTeamFinished && b.isTeamFinished) return 1
-        return a.sumTimeSeconds - b.sumTimeSeconds
-      }
-      if (a.isTeamOnBreak || b.isTeamOnBreak) {
-        if (a.isTeamOnBreak && !b.isTeamOnBreak) return -1
-        if (!a.isTeamOnBreak && b.isTeamOnBreak) return 1
-        if (a.breakTimeLeftSeconds !== b.breakTimeLeftSeconds) {
-          // Меньше осталось -> дольше уже на перерыве -> выше в списке
-          return a.breakTimeLeftSeconds - b.breakTimeLeftSeconds
-        }
-      } else if (a.currentTaskSeconds !== b.currentTaskSeconds) {
-        // Больше времени на текущем задании -> выше в списке
-        return b.currentTaskSeconds - a.currentTaskSeconds
-      }
-      if (b.findedCodesCount !== a.findedCodesCount) {
-        return b.findedCodesCount - a.findedCodesCount
-      }
-      return 0
-    })
+    teamsStatus.sort(compareGameControlTeams)
 
     await Promise.all(
       gameTeams.map((gameTeam) => {

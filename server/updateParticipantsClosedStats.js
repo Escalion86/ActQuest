@@ -1,4 +1,5 @@
 import { toStringId } from '@helpers/idAndDate'
+import assertParticipantUserIds from '@helpers/assertParticipantUserIds'
 import { COMPLETED_PARTICIPATION_STATUSES } from '@helpers/gameParticipation'
 import {
   buildCompletedParticipationStats,
@@ -20,8 +21,6 @@ const collectCurrentParticipantRefs = (game) => {
 
     if (userId) {
       refs.set(key, { _id: userId })
-    } else if (Number.isFinite(telegramId) && telegramId > 0) {
-      refs.set(key, { telegramId })
     }
   })
 
@@ -63,6 +62,7 @@ const updateParticipantsClosedStats = async ({ db, game }) => {
   if (!db || !game) {
     return { usersUpdated: 0, teamsUpdated: 0 }
   }
+  assertParticipantUserIds([game])
 
   const participantRefs = collectCurrentParticipantRefs(game)
   const teamRefs = collectCurrentTeamRefs(game)
