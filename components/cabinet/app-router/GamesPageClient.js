@@ -1778,14 +1778,26 @@ const GamesPage = ({
     }
 
     if (normalizedStatus === 'canceled') {
+      const hasFinishedResult = Boolean(
+        statusModalGame.isResultGenerated || statusModalGame.dateEndFact,
+      )
       return [
-        {
-          id: 'activate_game',
-          label: 'Активировать',
-          description: 'Вернёт отменённую игру в статус «Активна».',
-          variant: 'primary',
-          tone: 'success',
-        },
+        hasFinishedResult
+          ? {
+              id: 'restore_finished_game',
+              label: 'Восстановить в «Завершена»',
+              description:
+                'Вернёт проведённую игру в завершённые. Сохранённые результаты, состав участников и прогресс останутся прежними; статистика участия восстановится.',
+              variant: 'primary',
+              tone: 'success',
+            }
+          : {
+              id: 'activate_game',
+              label: 'Активировать',
+              description: 'Вернёт отменённую непроведённую игру в статус «Активна».',
+              variant: 'primary',
+              tone: 'success',
+            },
         {
           id: 'delete_game',
           label: 'Удалить игру',
@@ -5711,6 +5723,15 @@ const GamesPage = ({
         }
       }
 
+      if (typeof window !== 'undefined' && actionId === 'cancel_game') {
+        const shouldCancel = window.confirm(
+          'Отменить игру? Она исчезнет из сыгранных игр и статистики участия. Сохранённые результаты не удаляются.',
+        )
+        if (!shouldCancel) {
+          return
+        }
+      }
+
       if (typeof window !== 'undefined' && actionId === 'delete_game') {
         const shouldDelete = window.confirm(
           'Удалить игру без возможности восстановления? Это действие необратимо.',
@@ -5856,6 +5877,9 @@ const GamesPage = ({
 
           if (actionId === 'restart_game' || actionId === 'activate_game') {
             nextStatus = 'active'
+          } else if (actionId === 'restore_finished_game') {
+            nextStatus = 'finished'
+            successMessage = 'Игра восстановлена в «Завершена»'
           } else if (actionId === 'cancel_game') {
             nextStatus = 'canceled'
           } else if (actionId === 'close_game') {

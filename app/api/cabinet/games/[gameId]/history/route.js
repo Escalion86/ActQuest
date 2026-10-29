@@ -66,9 +66,13 @@ export async function GET(request, { params }) {
     const docs = await GameHistoryEntries.find({ gameId })
       .sort({ createdAt: -1, _id: -1 })
       .select({
-        before: 0,
-        after: 0,
-        rollback: 0,
+        _id: 1,
+        actionType: 1,
+        entityScope: 1,
+        summary: 1,
+        actor: 1,
+        warnings: 1,
+        createdAt: 1,
         'snapshot.schemaVersion': 1,
         'snapshot.capturedAt': 1,
       })

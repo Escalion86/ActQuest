@@ -696,13 +696,44 @@ const execute = (request, params) =>
               : 'active'
             : requestedStatus
         const nextStatusNormalized = String(resolvedStatus || '').toLowerCase()
+        const isRestoringFinishedGame =
+          previousStatus === 'canceled' && nextStatusNormalized === 'finished'
+        if (isRestoringFinishedGame) {
+          if (!hasResultSnapshots(existingGame.result)) {
+            return res.status(409).json({
+              success: false,
+              error: 'Нельзя восстановить игру в «Завершена»: нет сохранённых снимков результатов проведённой игры.',
+            })
+          }
+          // Восстановление меняет только статус, а не исторические данные игры.
+          if (Object.keys(updatePayload).some((key) => key !== 'status')) {
+            return res.status(409).json({
+              success: false,
+              error: 'Восстановление выполняется отдельно от редактирования: передайте только статус игры.',
+            })
+          }
+        }
+        if (
+          previousStatus === 'canceled' &&
+          (nextStatusNormalized === 'closed' ||
+            (nextStatusNormalized === 'active' &&
+              (hasResultSnapshots(existingGame.result) ||
+                hasComputedResult(existingGame.result) ||
+                existingGame.dateEndFact)))
+        ) {
+          return res.status(409).json({
+            success: false,
+            error: 'Сначала восстановите проведённую игру в «Завершена». Закрытие или перезапуск выполняются отдельным действием.',
+          })
+        }
         const shouldReset =
           (previousStatus === 'finished' || previousStatus === 'closed') &&
           nextStatusNormalized === 'active'
         const shouldCreateResultSnapshot =
           nextStatusNormalized === 'finished' &&
           previousStatus !== 'finished' &&
-          previousStatus !== 'closed'
+          previousStatus !== 'closed' &&
+          !isRestoringFinishedGame
         const {
           shouldUpdateParticipationStats,
           shouldUpdateRatings,
@@ -712,6 +743,7 @@ const execute = (request, params) =>
         })
         const shouldRebuildResult =
           shouldCreateResultSnapshot ||
+          (isRestoringFinishedGame && !hasComputedResult(existingGame.result)) ||
           (nextStatusNormalized === 'closed' && previousStatus !== 'closed')
 
         const updateData = protectStoryScenarioUpdate({
@@ -772,7 +804,7 @@ const execute = (request, params) =>
               'Присоединение после запуска доступно только при индивидуальном старте.',
           })
         }
-        if (!isIndividualGameStart(effectiveGameForRegistration)) {
+        if (!isIndividualGameStart(effectiveGameForRegistration) && !isRestoringFinishedGame) {
           updateData.allowJoinAfterStart = false
         }
 
