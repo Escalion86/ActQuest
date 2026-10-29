@@ -1,6 +1,7 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 export const SITE_ACCESS_DEFAULTS = {
+  phoneVerificationPrimaryMethod: 'call',
   allowSiteAuth: true,
   allowSiteRegistration: true,
   allowSmsVerification: true,
@@ -13,6 +14,7 @@ const toBooleanOrDefault = (value, fallback) => {
 }
 
 export const normalizeSiteAccessControls = (doc = null) => ({
+  phoneVerificationPrimaryMethod: doc?.phoneVerificationPrimaryMethod === 'sms' ? 'sms' : 'call',
   allowSiteAuth: toBooleanOrDefault(
     doc?.allowSiteAuth,
     SITE_ACCESS_DEFAULTS.allowSiteAuth,
@@ -42,6 +44,7 @@ export const getSiteAccessControlsByLocation = async (location) => {
       .model('SiteSettings')
       .findOne({})
       .select({
+        phoneVerificationPrimaryMethod: 1,
         allowSiteAuth: 1,
         allowSiteRegistration: 1,
         allowSmsVerification: 1,

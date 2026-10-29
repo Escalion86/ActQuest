@@ -31,7 +31,7 @@ export async function POST(request) {
   if (!phone) {
     return errorJson(400, 'Укажите корректный номер телефона.')
   }
-  if (!Number.isFinite(callId)) {
+  if (body?.callId != null && !Number.isFinite(callId)) {
     return errorJson(400, 'Некорректный идентификатор звонка.')
   }
 
@@ -66,15 +66,15 @@ export async function POST(request) {
     }
 
     const verification = await PhoneVerifications.findOne({ phone, flow: FLOW }).lean()
-    if (!verification || Number(verification.callId) !== callId || !verification.confirmed) {
+    if (!verification || !verification.confirmed || (verification.verificationMethod !== 'sms' && Number(verification.callId) !== callId)) {
       return errorJson(
         400,
-        'Номер телефона не подтвержден. Сначала завершите проверку звонком.',
+        'Номер телефона не подтвержден. Сначала завершите подтверждение номера.',
       )
     }
 
     if (verification.expiresAt && new Date(verification.expiresAt).getTime() <= Date.now()) {
-      return errorJson(400, 'Время подтверждения истекло. Запросите звонок повторно.')
+      return errorJson(400, 'Время подтверждения истекло. Запустите подтверждение повторно.')
     }
 
     const existingUserWithPhone = await Users.findOne({ phone }).select({ _id: 1 }).lean()

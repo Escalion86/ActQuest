@@ -52,6 +52,8 @@ const telefonipRequest = async (path) => {
 
   const response = await fetch(`${TELEFONIP_BASE_URL}/${token}${path}`, {
     method: 'GET',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(15000),
   })
   const data = await safeJson(response)
 

@@ -19,6 +19,9 @@ const errorJson = (status, type, message) =>
     { status },
   )
 
+const isExpired = (value) =>
+  Boolean(value && new Date(value).getTime() <= Date.now())
+
 const resolveStatusFromProvider = (providerData = {}) => {
   const rawStatus = String(
     providerData?.data?.status ||
@@ -63,12 +66,21 @@ export async function POST(request) {
     const PhoneVerifications = globalDb.model('PhoneVerifications')
     const verification = await PhoneVerifications.findOne({ phone, flow }).lean()
 
-    if (!verification || Number(verification.callId) !== callId) {
+    if (!verification || verification.verificationMethod === 'sms' || Number(verification.callId) !== callId) {
       return errorJson(
         404,
         'not_found',
         'Запрос подтверждения не найден. Запустите проверку снова.',
       )
+    }
+
+    // Общее подтверждение живёт дольше номера для звонка, но тоже имеет TTL.
+    if (
+      isExpired(verification.expiresAt) ||
+      (!verification.confirmed &&
+        isExpired(verification.callExpiresAt || verification.expiresAt))
+    ) {
+      return NextResponse.json({ success: true, data: { status: 'expired' } })
     }
 
     if (verification.confirmed) {
@@ -85,23 +97,22 @@ export async function POST(request) {
     const providerData = provider?.data || {}
     const providerStatusRaw = resolveStatusFromProvider(providerData)
     const providerPhone = normalizeAuthPhone7(providerData?.data?.phone)
+    // Пока ожидали провайдера, любой из сроков мог истечь.
     const verificationExpired =
-      (verification.callExpiresAt || verification.expiresAt) &&
-      new Date(verification.callExpiresAt || verification.expiresAt).getTime() <=
-        Date.now()
+      isExpired(verification.expiresAt) ||
+      isExpired(verification.callExpiresAt || verification.expiresAt)
 
-    // По контракту Telefon-IP успешный ответ может содержать только data.phone
-    // и data.id, без status="ok". Возвращённый провайдером номер — основной
-    // признак успешного подтверждения.
-    const confirmed = providerPhone !== null && providerPhone === phone
-    const providerStatus = confirmed
-      ? 'ok'
-      : verificationExpired
-        ? 'expired'
+    // Telefon-IP может вернуть номер без status=ok. Принимаем его только
+    // в пределах срока неподтверждённого звонка и общего подтверждения.
+    const confirmed = !verificationExpired && providerPhone !== null && providerPhone === phone
+    const providerStatus = verificationExpired
+      ? 'expired'
+      : confirmed
+        ? 'ok'
         : providerStatusRaw
 
-    await PhoneVerifications.findOneAndUpdate(
-      { _id: verification._id },
+    const updated = await PhoneVerifications.findOneAndUpdate(
+      { _id: verification._id, callId, verificationMethod: { $ne: 'sms' } },
       {
         $set: {
           providerStatus,
@@ -114,6 +125,8 @@ export async function POST(request) {
       },
     )
 
+    if (!updated) return errorJson(409, 'method_changed', 'Способ подтверждения изменён. Продолжите текущую проверку.')
+
     return NextResponse.json(
       {
         success: true,
@@ -123,8 +136,8 @@ export async function POST(request) {
       },
       { status: 200 },
     )
-  } catch (error) {
-    console.error('Phone verify check error (app)', error)
+  } catch {
+    // Ошибка провайдера может содержать секрет в URL.
     return errorJson(
       500,
       'unknown',

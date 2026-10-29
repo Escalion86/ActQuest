@@ -13,7 +13,7 @@ const phoneVerificationsSchema = {
   },
   callId: {
     type: Number,
-    required: true,
+    default: null,
     index: true,
   },
   authPhone: {
@@ -49,6 +49,10 @@ const phoneVerificationsSchema = {
   smsAttempts: {
     type: Number,
     default: 0,
+  },
+  startRequestedAt: {
+    type: Date,
+    default: null,
   },
   smsSentAt: {
     type: Date,

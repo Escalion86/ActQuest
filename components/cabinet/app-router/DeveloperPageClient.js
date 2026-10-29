@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import AssistantAiSetting from '@components/cabinet/AssistantAiSetting'
+import PhoneVerificationPrioritySetting from '@components/cabinet/PhoneVerificationPrioritySetting'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import UserSelectField from '@components/cabinet/UserSelectField'
@@ -865,6 +866,7 @@ const DeveloperPage = ({ session: initialSession }) => {
         activePage="developer"
       >
         <AssistantAiSetting />
+        <PhoneVerificationPrioritySetting />
         {/* Баннер режима impersonate */}
         {displaySession?.user?.isDeveloperImpersonating ? (
           <div className="mb-6 rounded-2xl border border-amber-300/70 bg-amber-50 p-6 dark:border-amber-500/50 dark:bg-amber-500/10">

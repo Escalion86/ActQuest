@@ -58,6 +58,7 @@ const ProfilePage = ({ initialProfile }) => {
   const [phoneVerifyAuthPhone, setPhoneVerifyAuthPhone] = useState(null)
   const [phoneVerifyImageUrl, setPhoneVerifyImageUrl] = useState(null)
   const [phoneVerifyStatus, setPhoneVerifyStatus] = useState('pending')
+  const isPhoneVerificationStarted = Boolean(phoneVerifyCallId) || ['sms_pending', 'ok'].includes(phoneVerifyStatus)
   const [phoneSmsCode, setPhoneSmsCode] = useState('')
   const [phoneModalError, setPhoneModalError] = useState(null)
   const [isPhoneModalSubmitting, setIsPhoneModalSubmitting] = useState(false)
@@ -67,6 +68,7 @@ const ProfilePage = ({ initialProfile }) => {
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationSaveError, setLocationSaveError] = useState(null)
   const phoneCheckInFlightRef = useRef(false)
+  const phoneVerificationGenerationRef = useRef(0)
   const effectiveRole = session?.user?.role ?? 'client'
   const pushLocation =
     typeof session?.user?.location === 'string' ? session.user.location : null
@@ -272,7 +274,8 @@ const ProfilePage = ({ initialProfile }) => {
     return json?.data || { allowed: true, reason: null, message: null }
   }, [])
 
-  const startPhoneVerification = useCallback(async (digitsOnly) => {
+  const startPhoneVerification = useCallback(async (digitsOnly, method = 'preferred') => {
+    phoneVerificationGenerationRef.current += 1
     const { response, json } = await requestApiJson(
       `${PHONE_VERIFY_API_BASE}/start`,
       {
@@ -284,6 +287,7 @@ const ProfilePage = ({ initialProfile }) => {
         body: JSON.stringify({
           phone: digitsOnly,
           flow: 'change_phone',
+          method,
         }),
         fallbackMessage: 'Не удалось запустить подтверждение номера',
       },
@@ -297,10 +301,11 @@ const ProfilePage = ({ initialProfile }) => {
       )
     }
 
-    setPhoneVerifyCallId(Number(json?.data?.id))
+    setPhoneVerifyCallId(json?.data?.method === 'sms' ? null : Number(json?.data?.id))
     setPhoneVerifyAuthPhone(json?.data?.auth_phone || null)
     setPhoneVerifyImageUrl(json?.data?.url_image || null)
-    setPhoneVerifyStatus('pending')
+    setPhoneVerifyStatus(json?.data?.method === 'sms' ? 'sms_pending' : 'pending')
+    setPhoneSmsCode('')
     setPhoneModalError(null)
   }, [])
 
@@ -312,6 +317,7 @@ const ProfilePage = ({ initialProfile }) => {
       return 'pending'
     }
 
+    const generation = phoneVerificationGenerationRef.current
     phoneCheckInFlightRef.current = true
     try {
       const { response, json } = await requestApiJson(
@@ -339,6 +345,7 @@ const ProfilePage = ({ initialProfile }) => {
         )
       }
 
+      if (generation !== phoneVerificationGenerationRef.current) return 'pending'
       const nextStatus = String(json?.data?.status || 'pending').toLowerCase()
       setPhoneVerifyStatus(nextStatus)
       if (nextStatus === 'expired') {
@@ -356,6 +363,7 @@ const ProfilePage = ({ initialProfile }) => {
   }, [])
 
   const startSmsVerification = useCallback(async () => {
+    phoneVerificationGenerationRef.current += 1
     const digitsOnly = normalizePhoneForSubmit(phoneDraft)
     const { response, json } = await requestApiJson(
       `${PHONE_VERIFY_API_BASE}/sms/start`,
@@ -474,7 +482,7 @@ const ProfilePage = ({ initialProfile }) => {
       setPhoneModalError(null)
 
       try {
-        if (!phoneVerifyCallId) {
+        if (!isPhoneVerificationStarted) {
           const precheck = await precheckPhoneForChange(digitsOnly)
           if (precheck?.allowed === false) {
             setPhoneModalError(
@@ -527,6 +535,7 @@ const ProfilePage = ({ initialProfile }) => {
       phoneDraft,
       phoneSmsCode,
       phoneVerifyCallId,
+      isPhoneVerificationStarted,
       phoneVerifyStatus,
       precheckPhoneForChange,
       startPhoneVerification,
@@ -974,7 +983,7 @@ const ProfilePage = ({ initialProfile }) => {
             >
               {isPhoneModalSubmitting
                 ? 'Проверяем…'
-                : phoneVerifyCallId
+                : isPhoneVerificationStarted
                   ? phoneVerifyStatus === 'sms_pending'
                     ? 'Подтвердить SMS-код'
                     : phoneVerifyStatus === 'ok'
@@ -999,10 +1008,10 @@ const ProfilePage = ({ initialProfile }) => {
               setPhoneDraft(formatPhoneInput(event.target.value))
             }
             placeholder="+7"
-            disabled={isPhoneModalSubmitting || Boolean(phoneVerifyCallId)}
+            disabled={isPhoneModalSubmitting || isPhoneVerificationStarted}
           />
 
-          {phoneVerifyCallId ? (
+          {isPhoneVerificationStarted ? (
             <div className="rounded-xl border border-[#00D1FF]/25 bg-[#050012]/70 p-3 text-xs text-[#bfeeff] dark:text-[#bfeeff]">
               {phoneVerifyStatus === 'sms_pending' ? (
                 <div className="space-y-2">
@@ -1093,6 +1102,25 @@ const ProfilePage = ({ initialProfile }) => {
                 </CabinetButton>
               ) : null}
             </div>
+          ) : null}
+
+          {(phoneVerifyStatus === 'sms_pending' || phoneModalError) && phoneVerifyStatus !== 'ok' ? (
+            <CabinetButton type="button" variant="secondary" tone="brand" disabled={isPhoneModalSubmitting}
+              onClick={async () => {
+                setIsPhoneModalSubmitting(true)
+                try { await startPhoneVerification(normalizePhoneForSubmit(phoneDraft), 'call') }
+                catch (error) { setPhoneModalError(error.message) }
+                finally { setIsPhoneModalSubmitting(false) }
+              }}>Подтвердить звонком</CabinetButton>
+          ) : null}
+          {phoneVerifyStatus === 'sms_pending' ? (
+            <CabinetButton type="button" variant="secondary" tone="brand" disabled={isPhoneModalSubmitting}
+              onClick={async () => {
+                setIsPhoneModalSubmitting(true)
+                try { await startSmsVerification() }
+                catch (error) { setPhoneModalError(error.message) }
+                finally { setIsPhoneModalSubmitting(false) }
+              }}>Отправить SMS-код повторно (через минуту)</CabinetButton>
           ) : null}
 
           {phoneModalError ? (

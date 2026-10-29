@@ -72,6 +72,7 @@ const CabinetRegisterPage = ({
   const vkWidgetInstanceRef = useRef(null)
   const vkWidgetConfigKeyRef = useRef('')
   const phoneCheckInFlightRef = useRef(false)
+  const phoneVerificationGenerationRef = useRef(0)
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
   const currentPath = `${pathname || ''}${
     searchParams?.toString() ? `?${searchParams.toString()}` : ''
@@ -89,6 +90,7 @@ const CabinetRegisterPage = ({
   const isPhoneStep = registerStep === 'phone'
   const isVkRegisterOptionVisible =
     isPhoneStep && isVkSignInEnabled && Boolean(vkidAppId)
+  const isPhoneVerificationStarted = Boolean(phoneVerifyCallId) || ['sms_pending', 'ok'].includes(phoneVerifyStatus)
   const isPhoneConfirmed = Boolean(confirmedPhone && phoneVerifyStatus === 'ok')
 
   useEffect(() => {
@@ -106,6 +108,7 @@ const CabinetRegisterPage = ({
   }, [session?.user?.location])
 
   const resetPhoneVerification = useCallback(() => {
+    phoneVerificationGenerationRef.current += 1
     setPhoneVerifyCallId(null)
     setPhoneVerifyAuthPhone(null)
     setPhoneVerifyImageUrl(null)
@@ -116,11 +119,11 @@ const CabinetRegisterPage = ({
 
   const previousLocationRef = useRef(location)
   useEffect(() => {
-    if (previousLocationRef.current !== location && phoneVerifyCallId) {
+    if (previousLocationRef.current !== location && isPhoneVerificationStarted) {
       resetPhoneVerification()
     }
     previousLocationRef.current = location
-  }, [location, phoneVerifyCallId, resetPhoneVerification])
+  }, [location, isPhoneVerificationStarted, resetPhoneVerification])
 
   useEffect(() => {
     if (!isClient || !location) {
@@ -189,13 +192,15 @@ const CabinetRegisterPage = ({
   }, [update])
 
   const startPhoneVerification = useCallback(
-    async (digitsOnly) => {
+    async (digitsOnly, method = 'preferred') => {
+      phoneVerificationGenerationRef.current += 1
       const response = await fetch(`${PHONE_VERIFY_API_BASE}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: digitsOnly,
           flow: flowType,
+          method,
           location,
         }),
       })
@@ -204,10 +209,11 @@ const CabinetRegisterPage = ({
         throw new Error(json?.error?.message || 'Не удалось запустить подтверждение номера.')
       }
 
-      setPhoneVerifyCallId(Number(json?.data?.id))
+      setPhoneVerifyCallId(json?.data?.method === 'sms' ? null : Number(json?.data?.id))
       setPhoneVerifyAuthPhone(json?.data?.auth_phone || null)
       setPhoneVerifyImageUrl(json?.data?.url_image || null)
-      setPhoneVerifyStatus('pending')
+      setPhoneVerifyStatus(json?.data?.method === 'sms' ? 'sms_pending' : 'pending')
+      setSmsCode('')
       setConfirmedPhone('')
     },
     [flowType, location],
@@ -239,6 +245,7 @@ const CabinetRegisterPage = ({
       if (!digitsOnly || !callId) return 'pending'
       if (phoneCheckInFlightRef.current) return 'pending'
 
+      const generation = phoneVerificationGenerationRef.current
       phoneCheckInFlightRef.current = true
       try {
         const response = await fetch(`${PHONE_VERIFY_API_BASE}/check`, {
@@ -255,6 +262,7 @@ const CabinetRegisterPage = ({
           throw new Error(json?.error?.message || 'Не удалось проверить подтверждение номера.')
         }
 
+        if (generation !== phoneVerificationGenerationRef.current) return 'pending'
         const nextStatus = String(json?.data?.status || 'pending').toLowerCase()
         setPhoneVerifyStatus(nextStatus)
         if (nextStatus === 'ok') {
@@ -280,6 +288,7 @@ const CabinetRegisterPage = ({
   )
 
   const startSmsVerification = useCallback(async () => {
+    phoneVerificationGenerationRef.current += 1
     const digitsOnly = normalizePhoneForSubmit(phoneInput)
     const response = await fetch(`${PHONE_VERIFY_API_BASE}/sms/start`, {
       method: 'POST',
@@ -474,7 +483,7 @@ const CabinetRegisterPage = ({
           return
         }
 
-        if (!phoneVerifyCallId) {
+        if (!isPhoneVerificationStarted) {
           setIsSubmitting(true)
           try {
             const precheck = await precheckPhoneForFlow(digitsOnly)
@@ -631,6 +640,7 @@ const CabinetRegisterPage = ({
       passwordInput,
       passwordRepeatInput,
       phoneVerifyCallId,
+      isPhoneVerificationStarted,
       registerStep,
       phoneInput,
       phoneVerifyStatus,
@@ -928,12 +938,12 @@ const CabinetRegisterPage = ({
                   isSubmitting ||
                   !isFlowAllowed ||
                   !isPhoneStep ||
-                  Boolean(phoneVerifyCallId)
+                  isPhoneVerificationStarted
                 }
                 className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
               />
 
-              {isPhoneStep && phoneVerifyCallId ? (
+              {isPhoneStep && isPhoneVerificationStarted ? (
                 <div className="p-3 text-xs border rounded-xl border-[#00D1FF]/25 bg-[#050012]/70 text-[#bfeeff] space-y-2">
                   {phoneVerifyStatus === 'sms_pending' ? (
                     <>
@@ -1024,6 +1034,25 @@ const CabinetRegisterPage = ({
                 </div>
               ) : null}
 
+              {isPhoneStep && (phoneVerifyStatus === 'sms_pending' || authError) ? (
+                <button type="button" disabled={isSubmitting} className="w-full cursor-pointer rounded-lg border border-cyan-400/40 px-3 py-2 text-sm text-[#bfeeff] disabled:opacity-60"
+                  onClick={async () => {
+                    setIsSubmitting(true)
+                    try { await startPhoneVerification(normalizePhoneForSubmit(phoneInput), 'call'); setAuthError(null) }
+                    catch (error) { setAuthError(error.message) }
+                    finally { setIsSubmitting(false) }
+                  }}>Подтвердить звонком</button>
+              ) : null}
+              {isPhoneStep && phoneVerifyStatus === 'sms_pending' ? (
+                <button type="button" disabled={isSubmitting} className="w-full cursor-pointer px-3 py-2 text-sm text-[#bfeeff] disabled:opacity-60"
+                  onClick={async () => {
+                    setIsSubmitting(true)
+                    try { await startSmsVerification() }
+                    catch (error) { setAuthError(error.message) }
+                    finally { setIsSubmitting(false) }
+                  }}>Отправить SMS-код повторно (через минуту)</button>
+              ) : null}
+
               {!isPhoneStep ? (
                 <>
                   <label className="block text-sm font-semibold text-[#bfeeff]">
@@ -1066,7 +1095,7 @@ const CabinetRegisterPage = ({
                     ? 'Обновление пароля...'
                     : 'Регистрация...'
                   : isPhoneStep
-                    ? phoneVerifyCallId
+                    ? isPhoneVerificationStarted
                       ? phoneVerifyStatus === 'sms_pending'
                         ? 'Подтвердить SMS-код'
                         : 'Проверить подтверждение'
@@ -1094,7 +1123,7 @@ const CabinetRegisterPage = ({
                   Изменить номер телефона
                 </button>
               ) : null}
-              {isPhoneStep && phoneVerifyCallId ? (
+              {isPhoneStep && isPhoneVerificationStarted ? (
                 <button
                   type="button"
                   onClick={resetPhoneVerification}
