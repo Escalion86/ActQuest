@@ -576,6 +576,12 @@ const gamesSchema = {
     type: Date,
     default: null,
   },
+  // Плановое окончание игры: по нему строится обратный отсчёт на экране команды.
+  // Игру не запускает и не останавливает — фактическая остановка пишется в dateEndFact.
+  dateEnd: {
+    type: Date,
+    default: null,
+  },
   dateStartFact: {
     type: Date,
     default: null,

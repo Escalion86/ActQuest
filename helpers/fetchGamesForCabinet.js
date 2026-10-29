@@ -247,6 +247,7 @@ const fetchGamesForCabinet = async ({
       name: 1,
       status: 1,
       dateStart: 1,
+      dateEnd: 1,
       dateStartFact: 1,
       dateEndFact: 1,
       type: 1,

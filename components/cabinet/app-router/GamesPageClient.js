@@ -925,6 +925,7 @@ const buildUpdatePayload = (game) => {
   return {
     name: game.name,
     dateStart: game.dateStart ? new Date(game.dateStart).toISOString() : null,
+    dateEnd: game.dateEnd ? new Date(game.dateEnd).toISOString() : null,
     type: game.type,
     description:
       typeof game.description === 'string'

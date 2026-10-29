@@ -26,6 +26,7 @@ import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
 import LinkedMessageText from '@components/game/LinkedMessageText'
 import Modal from '@components/Modal'
 import StoryInvestigationProcess from './story/StoryInvestigationProcess'
+import GameScheduleCountdown from './GameScheduleCountdown'
 
 const PHOTO_ANSWER_ACCEPT_TYPES =
   'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/*'
@@ -485,6 +486,7 @@ const StoryQuestProcess = ({ gameId, teamId, testRunId, isActive }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [error, setError] = useState('')
+  const [scheduleGame, setScheduleGame] = useState(game)
   const [codeDrafts, setCodeDrafts] = useState({})
   const [openedClues, setOpenedClues] = useState({})
   const [resultMessageHtml, setResultMessageHtml] = useState('')
@@ -1031,8 +1033,6 @@ function GameTeamPage({
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
   const countdownPanelRef = useRef(null)
-  const countdownPanelLabelRef = useRef(null)
-  const countdownPanelValueRef = useRef(null)
   const [
     shouldClearMessagesForActiveTask,
     setShouldClearMessagesForActiveTask,
@@ -1070,6 +1070,7 @@ function GameTeamPage({
   }, [error, router, status])
 
   const updateTaskData = useCallback((payload) => {
+    if (payload?.game) setScheduleGame(payload.game)
     setTaskData((prev) => {
       const next = normalizeTaskPayload(payload)
       return areTaskPayloadsEqual(prev, next) ? prev : next
@@ -2214,7 +2215,7 @@ function GameTeamPage({
 
     const updateCountdowns = () => {
       const now = Date.now()
-      let panelState = null
+      const panelStates = []
 
       countdowns = countdowns.map((item) => {
         const { element, target, initialSeconds, startTimestamp } = item
@@ -2236,7 +2237,7 @@ function GameTeamPage({
 
         element.textContent = formatCountdownSeconds(remainingSeconds)
 
-        if (!panelState) {
+        {
           const countdownType = String(
             element.getAttribute('data-task-countdown') || '',
           )
@@ -2249,10 +2250,10 @@ function GameTeamPage({
                 ? 'До окончания перерыва'
                 : 'До завершения задания'
 
-          panelState = {
+          panelStates.push({
             label,
             value: formatCountdownSeconds(remainingSeconds),
-          }
+          })
         }
 
         if (item.refreshOnComplete && remainingSeconds <= 0) {
@@ -2288,14 +2289,14 @@ function GameTeamPage({
       })
 
       if (countdownPanelRef.current) {
-        if (panelState) {
+        if (panelStates.length > 0) {
           countdownPanelRef.current.style.display = ''
-          if (countdownPanelLabelRef.current) {
-            countdownPanelLabelRef.current.textContent = panelState.label + ':'
-          }
-          if (countdownPanelValueRef.current) {
-            countdownPanelValueRef.current.textContent = panelState.value
-          }
+          countdownPanelRef.current.innerHTML = panelStates
+            .map(
+              ({ label, value }) =>
+                `<span class="flex flex-wrap items-center gap-x-2"><span>${label}:</span><span class="font-mono tracking-wide">${value}</span></span>`,
+            )
+            .join('')
         } else {
           countdownPanelRef.current.style.display = 'none'
         }
@@ -2595,6 +2596,8 @@ function GameTeamPage({
                 страницу позже.
               </section>
             ) : null}
+
+            {!error ? <GameScheduleCountdown game={scheduleGame} /> : null}
 
             {statusNotice ? (
               <section className="p-6 text-sm text-blue-800 border border-blue-200 bg-blue-50 rounded-3xl dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-100">
@@ -2938,15 +2941,9 @@ function GameTeamPage({
                 ) : null}
                 <div
                   ref={countdownPanelRef}
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100"
+                  className="mt-4 inline-flex max-w-full flex-col items-start gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100"
                   style={{ display: 'none' }}
-                >
-                  <span ref={countdownPanelLabelRef} />
-                  <span
-                    ref={countdownPanelValueRef}
-                    className="font-mono tracking-wide"
-                  />
-                </div>
+                />
                 {isBonusTask ? (
                   <p className="mt-4 border-t border-amber-200 pt-4 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:text-amber-100">
                     Время, проведённое на этом задании, не учитывается в
@@ -3274,6 +3271,11 @@ GameTeamPage.propTypes = {
       PropTypes.string,
       PropTypes.instanceOf(Date),
     ]),
+    dateEnd: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date),
+    ]),
+    serverTime: PropTypes.string,
     dateStartFact: PropTypes.oneOfType([
       PropTypes.string,
       PropTypes.instanceOf(Date),

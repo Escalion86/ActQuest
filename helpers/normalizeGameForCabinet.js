@@ -593,6 +593,7 @@ const normalizeGameForCabinet = (game) => {
     name: ensureString(game.name, ''),
     status: ensureString(game.status, 'active'),
     dateStart: ensureDateISOString(game.dateStart),
+    dateEnd: ensureDateISOString(game.dateEnd),
     dateStartFact: ensureDateISOString(game.dateStartFact),
     dateEndFact: ensureDateISOString(game.dateEndFact),
     location: ensureString(game.location, ''),

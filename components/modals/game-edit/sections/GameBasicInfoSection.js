@@ -148,6 +148,28 @@ const GameBasicInfoSection = ({
           labelClassName={fieldLabelClassName}
           inputClassName={fieldInputClassName}
         />
+        <div>
+          <CabinetInputField
+            id="game-date-end"
+            label="Плановое окончание (необязательно)"
+            type="datetime-local"
+            value={selectedGame.dateEnd
+              ? formatDateTimeLocalInLocation(selectedGame.dateEnd, selectedGame.location)
+              : ''}
+            onChange={(event) => updateSelectedGame({
+              dateEnd: event.target.value
+                ? parseDateTimeLocalInLocation(event.target.value, selectedGame.location)
+                : null,
+            })}
+            disabled={!canEditSelectedGame || isSaving}
+            labelClassName={fieldLabelClassName}
+            inputClassName={fieldInputClassName}
+          />
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
+            Время указано для города игры. Показывает обратный отсчёт, но не
+            останавливает игру. СТОП ИГРА выполняет администратор.
+          </p>
+        </div>
       </div>
 
       <NeonCheckbox
@@ -343,6 +365,7 @@ GameBasicInfoSection.propTypes = {
     type: PropTypes.string,
     location: PropTypes.string,
     dateStart: PropTypes.string,
+    dateEnd: PropTypes.string,
     individualStart: PropTypes.bool,
     allowJoinAfterStart: PropTypes.bool,
     storyConfig: PropTypes.shape({

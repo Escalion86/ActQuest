@@ -344,6 +344,8 @@ const safeSerializeGameForClient = (game) => {
     taskTheme: normalizeTaskTheme(game.taskTheme),
     location: game.location || '',
     dateStart: game.dateStart || null,
+    dateEnd: game.dateEnd || null,
+    serverTime: new Date().toISOString(),
     dateStartFact: game.dateStartFact || null,
     dateEndFact: game.dateEndFact || null,
     status: game.status || 'active',

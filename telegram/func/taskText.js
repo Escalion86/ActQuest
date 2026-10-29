@@ -193,7 +193,11 @@ const taskText = ({
     format,
   })
 
-  const webHiddenCountdown = `<span style="display:none" aria-hidden="true">${countdownValue}</span>`
+  const taskFinishCountdown =
+    format === 'web' && showTimedCountdown
+      ? `<span data-task-countdown="task" data-refresh-on-complete="true"${startTaskDate ? ` data-target="${startTaskDate.getTime() + (taskDuration - clueAdvanceSeconds) * 1000}"` : ''} data-seconds="${secondsToTaskFinish}">${secondsToTime(secondsToTaskFinish)}</span>`
+      : ''
+  const webHiddenCountdown = `<span style="display:none" aria-hidden="true">${countdownValue}${taskFinishCountdown}</span>`
 
   return `<b>Задание №${taskNum + 1}${
     taskEntry.isBonusTask ? ' (БОНУСНОЕ)' : ''
