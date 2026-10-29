@@ -99,6 +99,9 @@ const GameModals = ({
   handleAddBonusCode,
   handleBonusCodeChange,
   handleRemoveBonusCode,
+  onSaveBeforeCopy,
+  onTasksCopied,
+  onOpenCopiedTasks,
   handleSaveAndOpenTaskPreview,
   canViewGameMap,
   handleOpenGameMap,
@@ -323,6 +326,9 @@ const GameModals = ({
           selectedGameAgents={selectedGameAgents}
           canViewCodePhotos={canViewCodePhotos}
           updateSelectedGame={updateSelectedGame}
+          onSaveBeforeCopy={onSaveBeforeCopy}
+          onTasksCopied={onTasksCopied}
+          onOpenCopiedTasks={onOpenCopiedTasks}
           handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
           canViewGameMap={canViewGameMap}
           handleOpenGameMap={handleOpenGameMap}
@@ -617,6 +623,9 @@ GameModals.propTypes = {
   handleAddBonusCode: PropTypes.func.isRequired,
   handleBonusCodeChange: PropTypes.func.isRequired,
   handleRemoveBonusCode: PropTypes.func.isRequired,
+  onSaveBeforeCopy: PropTypes.func.isRequired,
+  onTasksCopied: PropTypes.func.isRequired,
+  onOpenCopiedTasks: PropTypes.func.isRequired,
   handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
   canViewGameMap: PropTypes.bool,
   handleOpenGameMap: PropTypes.func,

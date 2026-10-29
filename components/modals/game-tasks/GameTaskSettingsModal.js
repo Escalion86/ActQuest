@@ -40,6 +40,7 @@ const GameTaskSettingsModal = ({
   isDirty,
   location,
   onSave,
+  onCopyTasks,
   updateSelectedGame,
 }) => (
   <Modal
@@ -68,6 +69,11 @@ const GameTaskSettingsModal = ({
       className="m-0 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
     >
       <ModalSection>
+        {['classic', 'photo'].includes(selectedGame.type) ? (
+          <CabinetButton onClick={onCopyTasks} disabled={isSaving} variant="secondary">
+            Скопировать задания в другую игру
+          </CabinetButton>
+        ) : null}
         <div className="space-y-2">
           <label
             className="text-sm font-semibold text-slate-700 dark:text-white"
@@ -160,6 +166,7 @@ GameTaskSettingsModal.propTypes = {
     PropTypes.shape({ city: PropTypes.string }),
   ]),
   onSave: PropTypes.func.isRequired,
+  onCopyTasks: PropTypes.func.isRequired,
   updateSelectedGame: PropTypes.func.isRequired,
 }
 

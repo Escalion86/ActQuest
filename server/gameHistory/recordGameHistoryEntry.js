@@ -41,6 +41,7 @@ const pruneOldSnapshots = async ({ GameHistoryEntries, gameId }) => {
 const recordGameHistoryEntry = async ({
   db,
   gameId,
+  entryId = null,
   location = null,
   actionType,
   entityScope = 'mixed',
@@ -79,6 +80,7 @@ const recordGameHistoryEntry = async ({
   // Полные before/after в БД не сохраняем: они нужны только в памяти
   // для подсчёта компактного diff. Rollback работает исключительно по snapshot.
   const entry = await GameHistoryEntries.create({
+    ...(entryId ? { _id: entryId } : {}),
     gameId: String(gameId),
     location: normalizeLocation(location),
     actionType,
@@ -89,6 +91,10 @@ const recordGameHistoryEntry = async ({
     diff: buildGameHistoryDiff({ before, after }),
     snapshot,
     rollback,
+  }).catch(async (error) => {
+    // Детерминированный ID защищает историю при повторе завершения копирования.
+    if (entryId && error?.code === 11000) return GameHistoryEntries.findById(entryId)
+    throw error
   })
 
   if (entry?.snapshot) {

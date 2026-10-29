@@ -784,6 +784,8 @@ const gamesSchema = {
     ],
     default: [],
   },
+  // Служебные квитанции атомарного копирования; не входят в клиентский черновик.
+  taskCopyOperations: { type: [Schema.Types.Mixed], default: undefined, select: false },
   taskDistributionMode: {
     type: String,
     enum: ['linear', 'random'],

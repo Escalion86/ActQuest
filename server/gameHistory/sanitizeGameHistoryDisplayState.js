@@ -1,4 +1,4 @@
-const OMITTED_DISPLAY_KEYS = new Set(['_id', 'createdAt', 'updatedAt'])
+const OMITTED_DISPLAY_KEYS = new Set(['_id', 'createdAt', 'updatedAt', 'taskCopyOperations'])
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value)

@@ -15,6 +15,7 @@ import FullscreenImageViewer from '@components/FullscreenImageViewer'
 
 import ClassicStageTaskItem from './ClassicStageTaskItem'
 import GameTaskSettingsModal from './GameTaskSettingsModal'
+import CopyGameTasksModal from './CopyGameTasksModal'
 import ClassicItemsSection from './ClassicItemsSection'
 import { hasClassicVariants } from '@helpers/classicVariants'
 import PrequelSection from '@components/modals/game-edit/sections/PrequelSection'
@@ -68,6 +69,9 @@ const GameTasksEditModal = ({
   handleSaveAndOpenTaskPreview,
   canViewGameMap,
   handleOpenGameMap,
+  onSaveBeforeCopy,
+  onTasksCopied,
+  onOpenCopiedTasks,
 }) => {
   const canManageClassic = canManageClassicEditor(currentUserRole)
   const showClassicFeatures = canManageClassic && showClassicItemsAndVariants(selectedGame)
@@ -81,6 +85,7 @@ const GameTasksEditModal = ({
   )
   const [selectedCodePhoto, setSelectedCodePhoto] = useState(null)
   const [isTaskSettingsModalOpen, setIsTaskSettingsModalOpen] = useState(false)
+  const [isCopyTasksOpen, setIsCopyTasksOpen] = useState(false)
   const [isPrestartModalOpen, setIsPrestartModalOpen] = useState(false)
   const [isPrequelEditing, setIsPrequelEditing] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -380,6 +385,7 @@ const GameTasksEditModal = ({
 
   useEffect(() => {
     if (!isTasksModalOpen) {
+      setIsCopyTasksOpen(false)
       setIsTaskSettingsModalOpen(false)
       setIsPrestartModalOpen(false)
       setIsPrequelEditing(false)
@@ -857,21 +863,39 @@ const GameTasksEditModal = ({
     <GameTaskSettingsModal
       canManageClassic={canManageClassic}
       selectedGame={selectedGame}
-      isOpen={isTasksModalOpen && isTaskSettingsModalOpen}
+      isOpen={isTasksModalOpen && isTaskSettingsModalOpen && !isCopyTasksOpen}
       onClose={() => setIsTaskSettingsModalOpen(false)}
       canEditSelectedGame={canEditSelectedGame}
       isGameClosed={isGameClosed}
       isSaving={isSaving}
       isDirty={isDirty}
       location={location}
+      onCopyTasks={() => setIsCopyTasksOpen(true)}
       onSave={handleTasksModalPrimaryAction}
       updateSelectedGame={updateSelectedGame}
     />
+    {isTasksModalOpen && isCopyTasksOpen ? (
+      <CopyGameTasksModal
+        sourceGame={selectedGame}
+        isDirty={isDirty}
+        onSave={onSaveBeforeCopy}
+        onCopied={onTasksCopied}
+        onClose={() => setIsCopyTasksOpen(false)}
+        onOpenTarget={async (gameId) => {
+          await onOpenCopiedTasks(gameId)
+          setIsCopyTasksOpen(false)
+          setIsTaskSettingsModalOpen(false)
+        }}
+      />
+    ) : null}
     </>
   )
 }
 
 GameTasksEditModal.propTypes = {
+  onSaveBeforeCopy: PropTypes.func.isRequired,
+  onTasksCopied: PropTypes.func.isRequired,
+  onOpenCopiedTasks: PropTypes.func.isRequired,
   currentUserRole: PropTypes.string,
   selectedGame: PropTypes.shape({
     taskTheme: PropTypes.string,

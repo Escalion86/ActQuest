@@ -92,8 +92,10 @@ const sanitizeGameForPublicRead = (game) => {
   const prequel = prequels[0] || sanitizePrequel(source.prequel)
   const storyAccusation = source?.storyAccusation || {}
 
+  const { taskCopyOperations: _taskCopyOperations, ...publicSource } = source
+
   return {
-    ...source,
+    ...publicSource,
     classicItems: [],
     tasks,
     storyNodes,

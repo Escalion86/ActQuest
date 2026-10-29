@@ -1354,6 +1354,7 @@ const GamesPage = ({
   const [statusValidationResult, setStatusValidationResult] = useState(null)
   const [isStatusChanging, setIsStatusChanging] = useState(false)
   const [statusProgressMessage, setStatusProgressMessage] = useState('')
+  const [copiedTasksTargetGame, setCopiedTasksTargetGame] = useState(null)
   const [editingGame, setEditingGame] = useState(null)
   const [editingBaselineGame, setEditingBaselineGame] = useState(null)
   const [taskEditorDraft, setTaskEditorDraft] = useState(null)
@@ -1545,7 +1546,7 @@ const GamesPage = ({
     setPersistedGames(safeInitialGames)
     setHasMoreGames(Boolean(initialHasMore))
     setSelectedGameId((prev) => {
-      if (prev && safeInitialGames.some((game) => game.id === prev)) {
+      if (prev && (copiedTasksTargetGame?.id === prev || safeInitialGames.some((game) => game.id === prev))) {
         return prev
       }
       return safeInitialGames[0]?.id ?? null
@@ -1650,8 +1651,9 @@ const GamesPage = ({
   }, [gamesDisplayMode])
 
   const selectedGame = useMemo(
-    () => games.find((game) => game.id === selectedGameId) ?? null,
-    [games, selectedGameId],
+    () => (copiedTasksTargetGame?.id === selectedGameId ? copiedTasksTargetGame : null)
+      ?? games.find((game) => game.id === selectedGameId) ?? null,
+    [copiedTasksTargetGame, games, selectedGameId],
   )
   const activeEditGame = editingGame ?? selectedGame
   const registerModalGame = useMemo(
@@ -1817,6 +1819,7 @@ const GamesPage = ({
     if (!isEditModalOpen && !isTasksModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
+      setCopiedTasksTargetGame(null)
     }
     setIsStatusModalOpen(false)
     setIsGameHistoryModalOpen(false)
@@ -1982,6 +1985,7 @@ const GamesPage = ({
         return typeof updater === 'function' ? updater(game) : updater
       }
 
+      setCopiedTasksTargetGame((prev) => prev?.id === gameId ? applyUpdate(prev) : prev)
       setGames((prev) => prev.map(applyUpdate))
       setPersistedGames((prev) => prev.map(applyUpdate))
       queryClient.setQueriesData({ queryKey: ['cabinet-games'] }, (queryData) =>
@@ -2201,11 +2205,11 @@ const GamesPage = ({
     setPersistedGames(sorted)
     setHasMoreGames(Boolean(gamesQuery.hasNextPage))
     setSelectedGameId((prev) =>
-      prev && sorted.some((game) => game.id === prev)
+      prev && (copiedTasksTargetGame?.id === prev || sorted.some((game) => game.id === prev))
         ? prev
         : (sorted[0]?.id ?? null),
     )
-  }, [gamesQuery.data, gamesQuery.hasNextPage, sortGamesForCurrentView])
+  }, [copiedTasksTargetGame, gamesQuery.data, gamesQuery.hasNextPage, sortGamesForCurrentView])
 
   useEffect(() => {
     if (!gamesQuery.error) {
@@ -5511,6 +5515,25 @@ const GamesPage = ({
     [canViewGameTasksEditor, prepareGameDraftForModal],
   )
 
+  const handleSaveBeforeTaskCopy = useCallback(
+    () => handleSaveChanges({ keepTasksModalOpen: true }),
+    [handleSaveChanges],
+  )
+
+  const handleTasksCopied = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
+  }, [queryClient])
+
+  const handleOpenCopiedTasks = useCallback(async (gameId) => {
+    const game = await fetchCabinetGameDetails({ gameId, location: 'all' })
+    if (!canViewGameTasksEditor(game)) throw new Error('Нет права открыть задания целевой игры')
+    // Цель хранится отдельно от текущей страницы списка: refetch прошлых игр
+    // не должен возвращать выбранную игру к источнику.
+    setCopiedTasksTargetGame(game)
+    applyPersistedGameUpdate(game.id, game)
+    handleEditTasksFromList(game)
+  }, [applyPersistedGameUpdate, canViewGameTasksEditor, handleEditTasksFromList])
+
   const handleStartTestRun = useCallback(
     async (game) => {
       if (!game || !canManageGame(game) || testingGameId) return
@@ -8800,6 +8823,9 @@ const GamesPage = ({
                   ],
                 )}
                 handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+                onSaveBeforeCopy={handleSaveBeforeTaskCopy}
+                onTasksCopied={handleTasksCopied}
+                onOpenCopiedTasks={handleOpenCopiedTasks}
                 handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
                 canViewGameMap={
                   canEditAllGames &&
