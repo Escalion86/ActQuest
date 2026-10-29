@@ -1,9 +1,10 @@
 'use client'
 
 import PropTypes from 'prop-types'
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import { SessionProvider } from 'next-auth/react'
+import ActQuestAssistant from '@components/public/ActQuestAssistant'
 import { Provider as JotaiProvider } from 'jotai'
 import { SnackbarProvider } from 'lib/notistack'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -325,6 +326,7 @@ export default function AppProviders({ children, initialTheme }) {
                 onLoadedMetadata={() => setIsAudioReady(true)}
               />
               {children}
+              <Suspense fallback={null}><ActQuestAssistant /></Suspense>
             </ThemeBootstrapContext.Provider>
             {showAudioUnlockHint ? (
               <div className="fixed bottom-20 right-5 z-[9999] w-[min(92vw,320px)] rounded-2xl border border-[#00D1FF]/40 bg-[#0B001A]/88 p-3 text-[#d7f7ff] shadow-[0_0_24px_rgba(0,209,255,0.2)] backdrop-blur-sm">
@@ -354,7 +356,8 @@ export default function AppProviders({ children, initialTheme }) {
               <button
                 type="button"
                 onClick={handleAudioToggle}
-                className="fixed bottom-5 right-5 z-[9999] inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[#00D1FF]/50 bg-[#0B001A]/80 text-[#baf3ff] shadow-[0_0_18px_rgba(0,209,255,0.24)] backdrop-blur-sm transition hover:bg-[#12012a]"
+                className="fixed z-[9999] inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[#00D1FF]/50 bg-[#0B001A]/80 text-[#baf3ff] shadow-[0_0_18px_rgba(0,209,255,0.24)] backdrop-blur-sm transition hover:bg-[#12012a]"
+                style={{ right: 'var(--aq-site-audio-right, 20px)', bottom: 'var(--aq-site-audio-bottom, 20px)' }}
                 aria-label={isMuted ? 'Включить музыку' : 'Выключить музыку'}
                 title={isMuted ? 'Включить музыку' : 'Выключить музыку'}
                 data-audio-error={lastAudioError || undefined}

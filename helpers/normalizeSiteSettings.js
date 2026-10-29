@@ -57,6 +57,8 @@ const normalizeSiteSettings = (doc = null) => {
     allowSiteAuth: toBooleanOrDefault(settings.allowSiteAuth, true),
     allowSiteRegistration: toBooleanOrDefault(settings.allowSiteRegistration, true),
     allowSmsVerification: toBooleanOrDefault(settings.allowSmsVerification, true),
+    phoneVerificationPrimaryMethod: settings.phoneVerificationPrimaryMethod === 'sms' ? 'sms' : 'call',
+    assistantAiEnabled: settings.assistantAiEnabled === true,
     enableVkOneTap: toBooleanOrDefault(settings.enableVkOneTap, true),
   }
 }

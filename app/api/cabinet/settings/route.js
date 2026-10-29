@@ -111,6 +111,32 @@ export async function GET() {
   }
 }
 
+// Частичное обновление одного dev-поля: соседние настройки не затрагиваются.
+export async function PATCH(request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return NextResponse.json({ success: false, error: 'Необходима авторизация' }, { status: 401 })
+  if (normalizeRole(session.user.role) !== 'dev') return NextResponse.json({ success: false, error: 'Недостаточно прав' }, { status: 403 })
+  const body = await request.json().catch(() => null)
+  const field = body && Object.keys(body)[0]
+  const valid = field === 'assistantAiEnabled'
+    ? typeof body[field] === 'boolean'
+    : field === 'phoneVerificationPrimaryMethod' && ['call', 'sms'].includes(body[field])
+  if (!body || Array.isArray(body) || Object.keys(body).length !== 1 || !valid) {
+    return NextResponse.json({ success: false, error: 'Ожидается одно допустимое поле настройки разработчика' }, { status: 400 })
+  }
+  try {
+    const model = await getModel()
+    const existing = await model.findOne({}).lean()
+    const payload = { [field]: body[field] }
+    const updated = existing?._id
+      ? await model.findByIdAndUpdate(existing._id, { $set: payload }, { returnDocument: 'after' }).lean()
+      : await model.create(payload)
+    return NextResponse.json({ success: true, data: { [field]: normalizeSiteSettings(updated)[field] } }, { headers: { 'Cache-Control': 'no-store' } })
+  } catch {
+    return NextResponse.json({ success: false, error: 'Не удалось сохранить настройки' }, { status: 500 })
+  }
+}
+
 export async function PUT(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -129,6 +155,10 @@ export async function PUT(request) {
   try {
     const SiteSettingsModel = await getModel()
     const rawBody = await request.json().catch(() => ({}))
+    const body = rawBody?.data ?? rawBody
+    if ([rawBody, body].some(value => value && ['assistantAiEnabled', 'phoneVerificationPrimaryMethod'].some(field => Object.hasOwn(value, field)))) {
+      return NextResponse.json({ success: false, error: 'Используйте настройку разработчика' }, { status: normalizeRole(session.user.role) === 'dev' ? 400 : 403 })
+    }
     const payload = resolvePayload(rawBody)
     const existing = await SiteSettingsModel.findOne({}).lean()
 

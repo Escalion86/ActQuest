@@ -9,6 +9,14 @@ import useMergedSession from '@helpers/useMergedSession'
 
 const adminTools = [
   {
+    id: 'mini-sites',
+    title: 'HTML мини-сайты',
+    description:
+      'Публикуйте готовые статические ZIP-сайты на отдельных поддоменах, заменяйте архивы и управляйте версиями.',
+    action: 'Открыть мини-сайты',
+    href: '/cabinet/admin/mini-sites',
+  },
+  {
     id: 'game-reviews',
     title: 'Отзывы об играх',
     description:

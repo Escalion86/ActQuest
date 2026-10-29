@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
 
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
+import { callDeepSeek } from '@server/deepseekClient.mjs'
 const MAX_MESSAGE_LENGTH = 20_000
 const MAX_MESSAGES = 40
 const MAX_TOTAL_CONTENT_LENGTH = 60_000
@@ -111,20 +111,10 @@ export async function POST(request) {
     : [{ role: 'system', content: fallbackSystemPrompt }, ...messages]
 
   try {
-    const response = await fetch(DEEPSEEK_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: messagesWithSystem,
-      }),
-      cache: 'no-store',
-    })
-
-    const json = await response.json().catch(() => null)
+    const { response, json } = await callDeepSeek(
+      { model, messages: messagesWithSystem },
+      { apiKey },
+    )
 
     if (!response.ok || !json) {
       return NextResponse.json(

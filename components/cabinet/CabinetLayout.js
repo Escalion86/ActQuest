@@ -164,6 +164,11 @@ const adminSubmenuItems = [
     href: '/cabinet/admin/reports',
   },
   {
+    id: 'admin-mini-sites',
+    label: 'HTML мини-сайты',
+    href: '/cabinet/admin/mini-sites',
+  },
+  {
     id: 'admin-transactions',
     label: 'Транзакции',
     href: '/cabinet/admin/transactions',
@@ -1319,7 +1324,7 @@ const CabinetLayout = ({
                       <div
                         className={`overflow-hidden transition-all duration-300 ease-out ${
                           isAdminMenuOpen
-                            ? 'max-h-72 opacity-100 translate-y-0'
+                            ? 'max-h-96 opacity-100 translate-y-0'
                             : 'max-h-0 opacity-0 -translate-y-1'
                         }`}
                         aria-hidden={!isAdminMenuOpen}
