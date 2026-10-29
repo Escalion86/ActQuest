@@ -157,7 +157,6 @@ const execute = (request, { params }) => {
           return res.status(200).json({ success: true, message })
         }
       } catch (error) {
-        if (error.statusCode === 409) return res.status(409).json({ success: false, error: error.message })
         return res
           .status(500)
           .json({ success: false, error: 'Не удалось запустить игру' })

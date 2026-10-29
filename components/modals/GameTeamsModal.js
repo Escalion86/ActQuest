@@ -188,6 +188,8 @@ const GameTeamsModal = ({
   const [isSavingTeamDistribution, setIsSavingTeamDistribution] =
     useState(false)
   const [distributingTeamId, setDistributingTeamId] = useState('')
+  const [isDistributingAll, setIsDistributingAll] = useState(false)
+  const [distributionFeedback, setDistributionFeedback] = useState(null)
 
   const teamDetailsQuery = useQuery({
     queryKey: ['team', selectedTeamDetailsId],
@@ -255,13 +257,19 @@ const GameTeamsModal = ({
   const canAddTeams =
     !isReadOnly &&
     !isPlayerMode &&
-    gameStatus === 'active' &&
-    selectedGame?.registrationOpen !== false
+    ['admin', 'dev'].includes(String(currentUserRole || '').toLowerCase()) &&
+    ['active', 'started'].includes(gameStatus)
   const canEditRegisteredTeams =
     !isReadOnly &&
     ['dev', 'admin', 'moder'].includes(
       String(currentUserRole || '').toLowerCase(),
     )
+  const canDistributeAll =
+    !isReadOnly &&
+    ['admin', 'dev'].includes(String(currentUserRole || '').toLowerCase()) &&
+    selectedGame?.taskDistributionMode === 'random' &&
+    ['classic', 'photo'].includes(selectedGame?.type) &&
+    !['finished', 'closed', 'canceled'].includes(gameStatus)
   const canViewTeamStats =
     canEditRegisteredTeams &&
     (gameStatus === 'finished' || gameStatus === 'closed')
@@ -290,6 +298,7 @@ const GameTeamsModal = ({
     if (!isTeamsModalOpen) {
       setIsTeamDetailsModalOpen(false)
       setSelectedTeamDetails(null)
+      setDistributionFeedback(null)
       setSelectedTeamDetailsId('')
       setIsRestrictedDeleteModalOpen(false)
       setRestrictedDeleteTeamName('')
@@ -448,12 +457,57 @@ const GameTeamsModal = ({
     teamDistributionText,
   ])
 
+  const handleDistributeAllTasks = useCallback(async () => {
+    if (
+      !canDistributeAll ||
+      !selectedGame?.id ||
+      isDistributingAll ||
+      distributingTeamId ||
+      teamsModalState.isLoading ||
+      teamsModalState.gameTeams.length === 0
+    ) return
+    setIsDistributingAll(true)
+    setDistributionFeedback(null)
+    try {
+      const { json } = await requestApiJson('/api/cabinet/admin/task-distribution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: String(selectedGame.id) }),
+        fallbackMessage: 'Не удалось распределить задания',
+      })
+      setDistributionFeedback({
+        tone: 'success',
+        message: `Задания распределены. Команд обновлено: ${Number(json?.data?.teamsUpdated) || 0}`,
+      })
+      if (typeof handleRefreshTeamsModalData === 'function') {
+        await handleRefreshTeamsModalData()
+      }
+    } catch (error) {
+      setDistributionFeedback({
+        tone: 'error',
+        message: error?.message || 'Не удалось распределить задания',
+      })
+    } finally {
+      setIsDistributingAll(false)
+    }
+  }, [
+    canDistributeAll,
+    selectedGame?.id,
+    isDistributingAll,
+    distributingTeamId,
+    teamsModalState.isLoading,
+    teamsModalState.gameTeams.length,
+    handleRefreshTeamsModalData,
+  ])
+
   const handleDistributeTeamTasks = useCallback(
     async (team) => {
       if (!selectedGame?.id || !team?.id) {
         return
       }
 
+      if (isDistributingAll || distributingTeamId) return
+      setDistributionFeedback(null)
       setDistributingTeamId(String(team.id))
       try {
         await requestApiJson('/api/cabinet/admin/task-distribution', {
@@ -469,11 +523,16 @@ const GameTeamsModal = ({
         if (typeof handleRefreshTeamsModalData === 'function') {
           await handleRefreshTeamsModalData()
         }
+      } catch (error) {
+        setDistributionFeedback({
+          tone: 'error',
+          message: error?.message || 'Не удалось распределить задания команды',
+        })
       } finally {
         setDistributingTeamId('')
       }
     },
-    [handleRefreshTeamsModalData, selectedGame?.id],
+    [handleRefreshTeamsModalData, selectedGame?.id, isDistributingAll, distributingTeamId],
   )
 
   const handleOpenTeamStatsModal = useCallback(
@@ -1060,6 +1119,28 @@ const GameTeamsModal = ({
               </NoticeBanner>
             )}
 
+            {canDistributeAll && (
+              <div className="flex flex-wrap items-center gap-3">
+                <CabinetButton
+                  type="button"
+                  variant="secondary"
+                  onClick={handleDistributeAllTasks}
+                  disabled={
+                    isDistributingAll ||
+                    Boolean(distributingTeamId) ||
+                    teamsModalState.isLoading ||
+                    teamsModalState.gameTeams.length === 0
+                  }
+                >
+                  {isDistributingAll ? 'Распределяем…' : 'Распределить задания всем'}
+                </CabinetButton>
+              </div>
+            )}
+            {distributionFeedback && (
+              <NoticeBanner tone={distributionFeedback.tone} variant="neon">
+                {distributionFeedback.message}
+              </NoticeBanner>
+            )}
             <div className="space-y-4">
               {teamsModalState.isLoading ? (
                 <p className="text-sm text-slate-500 dark:text-slate-300">
@@ -1311,7 +1392,7 @@ const GameTeamsModal = ({
                                             handleDistributeTeamTasks(team)
                                           }
                                           disabled={
-                                            isReadOnly || isDistributingTeam
+                                            isReadOnly || isDistributingTeam || isDistributingAll
                                           }
                                         >
                                           {isDistributingTeam
@@ -1583,6 +1664,9 @@ const GameTeamsModal = ({
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   Добавить команду
                 </h3>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                  Ручное добавление разрешено при закрытой записи и сверх лимита команд.
+                </p>
                 {teamsModalState.availableTeams.length > 0 ? (
                   <div className="flex flex-col gap-3 mt-3 sm:flex-row sm:items-center">
                     <div className="w-full">

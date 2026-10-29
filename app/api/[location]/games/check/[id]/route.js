@@ -48,47 +48,37 @@ export async function GET(request, { params }) {
             .json({ success: false, error: 'Игра недоступна для выбранной площадки' })
         }
 
-        const errors = getGameValidationErrors(game)
         const maxTeamPlayers =
           game?.maxTeamPlayers === null || game?.maxTeamPlayers === undefined
             ? null
             : Number(game.maxTeamPlayers)
-
-        if (Number.isFinite(maxTeamPlayers) && maxTeamPlayers > 0) {
-          const gameTeamsDocs = await db
-            .model('GamesTeams')
-            .find({ gameId: String(id) })
-            .select({ teamId: 1 })
-            .lean()
-
-          const teamIds = Array.from(
-            new Set(
-              (Array.isArray(gameTeamsDocs) ? gameTeamsDocs : [])
-                .map((entry) =>
-                  entry?.teamId === null || entry?.teamId === undefined
-                    ? ''
-                    : String(entry.teamId).trim(),
-                )
-                .filter(Boolean),
-            ),
-          )
-
-          if (teamIds.length > 0) {
-            const teams = await fetchTeamsForCabinet({
-              db,
-              teamIds,
-              location: String(location).trim().toLowerCase(),
-            })
-
-            teams.forEach((team) => {
-              const membersCount = Number(team?.membersCount) || 0
-              if (membersCount > maxTeamPlayers) {
-                errors.push(
-                  `Команда «${team?.name || team?.id || 'Без названия'}»: ${membersCount} игроков, лимит — ${maxTeamPlayers}.`,
-                )
-              }
-            })
-          }
+        const checkDistribution = ['classic', 'photo'].includes(game.type) &&
+          game.taskDistributionMode === 'random'
+        const checkPlayersLimit = Number.isFinite(maxTeamPlayers) && maxTeamPlayers > 0
+        const gameTeamsDocs = checkDistribution || checkPlayersLimit
+          ? await db.model('GamesTeams').find({ gameId: String(id) })
+            .select({ teamId: 1, taskSequence: 1, taskDistributionTemplate: 1 }).lean()
+          : []
+        const teamIds = [...new Set(gameTeamsDocs.map((entry) => String(entry.teamId || '')).filter(Boolean))]
+        const teams = teamIds.length > 0 ? await fetchTeamsForCabinet({
+          db,
+          teamIds,
+          location: String(location).trim().toLowerCase(),
+        }) : []
+        const names = new Map(teams.map((team) => [String(team.id || team._id), team.name]))
+        const errors = getGameValidationErrors(game, gameTeamsDocs.map((entry) => ({
+          ...entry,
+          name: names.get(String(entry.teamId)),
+        })))
+        if (checkPlayersLimit) {
+          teams.forEach((team) => {
+            const membersCount = Number(team?.membersCount) || 0
+            if (membersCount > maxTeamPlayers) {
+              errors.push(
+                `Команда «${team?.name || team?.id || 'Без названия'}»: ${membersCount} игроков, лимит — ${maxTeamPlayers}.`,
+              )
+            }
+          })
         }
 
         return res.status(200).json({

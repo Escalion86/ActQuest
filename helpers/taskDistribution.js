@@ -232,24 +232,112 @@ export const getTeamTaskSequence = (game, gameTeam) => {
     : buildLinearTaskSequence(tasksCount)
 }
 
-export const getTaskDistributionStartErrors = (game, gameTeams = []) => {
-  if (normalizeTaskDistributionMode(game?.taskDistributionMode) !== 'random') {
-    return []
+// Совместимое имя: отсутствие маршрута больше не требует ручного распределения.
+export const getTaskDistributionStartErrors = (game, gameTeams = []) =>
+  validateTaskDistributionForGame(game, gameTeams).errors
+
+// Пустой индивидуальный шаблон означает использование общего шаблона.
+export const resolveTemplateForTeam = ({ gameTemplate, gameTeam, tasksCount }) => {
+  const raw = gameTeam?.taskDistributionTemplate
+  const hasTeamTemplate = raw != null && (!Array.isArray(raw) || raw.length > 0)
+  return {
+    template: hasTeamTemplate
+      ? normalizeStoredTaskDistributionTemplate(raw, tasksCount)
+      : gameTemplate,
+    source: hasTeamTemplate ? 'team_template' : 'game_template',
   }
+}
 
-  const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
-  const teams = Array.isArray(gameTeams) ? gameTeams : []
-  const invalidTeamsCount = teams.filter(
-    (gameTeam) => !isValidTaskSequence(gameTeam?.taskSequence, tasksCount),
-  ).length
+const isStoredTemplateWellFormed = (value) =>
+  Array.isArray(value) &&
+  value.every((block) =>
+    (Array.isArray(block) ? block : [block]).every(
+      (item) => toStoredIntegerOrNull(item) !== null,
+    ),
+  )
 
-  return invalidTeamsCount > 0
-    ? [
-        invalidTeamsCount === 1
-          ? 'Сначала распределите задания для команды.'
-          : `Сначала распределите задания для всех команд. Не распределено команд: ${invalidTeamsCount}.`,
-      ]
-    : []
+// Порядок блоков фиксирован, порядок заданий внутри блока несущественен.
+export const isTaskSequenceCompatibleWithTemplate = (sequence, template, tasksCount) => {
+  if (!isValidTaskSequence(sequence, tasksCount)) return false
+  if (!isStoredTemplateWellFormed(template)) return false
+  if (!validateTaskDistributionTemplate(template, tasksCount).valid) return false
+  let offset = 0
+  return template.every((block) => {
+    const items = new Set(block)
+    const matches = sequence.slice(offset, offset + block.length).every((index) => items.has(index))
+    offset += block.length
+    return matches
+  })
+}
+
+// Проверка без генерации и записей, общая для «Проверить игру» и старта.
+export const validateTaskDistributionForGame = (game, gameTeams = []) => {
+  const missing = []
+  const errors = []
+  if (
+    !['classic', 'photo'].includes(game?.type) ||
+    normalizeTaskDistributionMode(game?.taskDistributionMode) !== 'random'
+  ) {
+    return { missing, errors }
+  }
+  const tasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
+  const gameTemplate = normalizeStoredTaskDistributionTemplate(
+    game.taskDistributionTemplate,
+  )
+  const validate = (raw, template, label) => {
+    const validation = validateTaskDistributionTemplate(template, tasksCount)
+    if (!isStoredTemplateWellFormed(raw) || !validation.valid) {
+      errors.push(
+        `${label} некорректен: ${validation.messages.join('; ') || 'недопустимые значения'}`,
+      )
+    }
+  }
+  validate(game.taskDistributionTemplate, gameTemplate, 'Общий шаблон распределения')
+  for (const team of gameTeams) {
+    const label = team.name ? `«${team.name}»` : String(team.teamId || team._id)
+    const { template, source } = resolveTemplateForTeam({
+      gameTemplate,
+      gameTeam: team,
+      tasksCount,
+    })
+    if (source === 'team_template') {
+      validate(
+        team.taskDistributionTemplate,
+        template,
+        `Индивидуальный шаблон команды ${label}`,
+      )
+    }
+    if (isValidTaskSequence(team.taskSequence, tasksCount)) {
+      if (!isTaskSequenceCompatibleWithTemplate(team.taskSequence, template, tasksCount)) {
+        errors.push(`Маршрут команды ${label} не соответствует текущему шаблону. Распределите задания для команды заново.`)
+      }
+      continue
+    }
+    if (
+      team.taskSequence != null &&
+      (!Array.isArray(team.taskSequence) || team.taskSequence.length > 0)
+    ) {
+      errors.push(
+        `Маршрут команды ${label} повреждён. Распределите задания для команды заново.`,
+      )
+      continue
+    }
+    missing.push({ id: team._id, template, source })
+  }
+  return { missing, errors }
+}
+
+// Генерируем только отсутствующие маршруты после полной успешной проверки.
+export const prepareTaskDistributionForStart = (game, gameTeams = []) => {
+  const { missing, errors } = validateTaskDistributionForGame(game, gameTeams)
+  return {
+    errors,
+    updates: errors.length > 0 ? [] : missing.map(({ id, template, source }) => ({
+      id,
+      taskSequence: buildTaskSequenceFromTemplate(template),
+      taskSequenceSource: source,
+    })),
+  }
 }
 
 export const getTaskIndexForStep = (game, gameTeam, step) => {

@@ -231,13 +231,24 @@ export async function POST(request) {
 
       await assertHeld()
       for (const item of updates) {
-        await teamModel(item.id).findByIdAndUpdate(item.id, {
+        const updatedTeam = await teamModel(item.id).findByIdAndUpdate(item.id, {
           $set: {
             taskSequence: item.taskSequence,
             taskSequenceSource: item.taskSequenceSource,
             taskSequenceGeneratedAt: generatedAt,
           },
         })
+        // Молчаливая неудача записи выдала бы успех без изменённого маршрута.
+        if (!updatedTeam) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                'Не удалось сохранить распределение заданий. Обновите список команд и повторите.',
+            },
+            { status: 500 },
+          )
+        }
       }
 
       return NextResponse.json({

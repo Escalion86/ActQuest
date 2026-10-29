@@ -154,19 +154,22 @@ test('uses team template before game template and falls back to linear', () => {
   assert.deepEqual(buildLinearTaskSequence(3), [0, 1, 2])
 })
 
-test('blocks random game start until every team has a valid sequence', () => {
+test('random start fills missing sequences automatically but rejects corrupt saved routes', () => {
   const game = {
+    type: 'classic',
     tasks: [{}, {}, {}],
     taskDistributionMode: 'random',
+    taskDistributionTemplate: [[0, 1, 2]],
   }
 
-  assert.deepEqual(
+  assert.match(
     getTaskDistributionStartErrors(game, [
-      { taskSequence: [2, 0, 1] },
-      { taskSequence: [0, 1] },
-    ]),
-    ['Сначала распределите задания для команды.'],
+      { _id: 'valid', taskSequence: [2, 0, 1] },
+      { _id: 'broken', taskSequence: [0, 1] },
+    ])[0],
+    /broken.*повреждён.*Распределите/,
   )
+  assert.deepEqual(getTaskDistributionStartErrors(game, [{ _id: 'missing', taskSequence: [] }]), [])
   assert.deepEqual(
     getTaskDistributionStartErrors(game, [
       { taskSequence: [2, 0, 1] },

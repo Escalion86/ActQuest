@@ -1,3 +1,4 @@
+import { getTaskDistributionStartErrors } from './taskDistribution.js'
 import {
   getDuplicateCodeKindsLabel,
   getTaskDuplicateCodeConflicts,
@@ -832,8 +833,11 @@ export const getStoryValidationErrors = (game) => {
   return errors
 }
 
-export const getGameValidationErrors = (game) => {
-  const errors = validateClassicVariants(game || {})
+export const getGameValidationErrors = (game, gameTeams = []) => {
+  const errors = [
+    ...validateClassicVariants(game || {}),
+    ...getTaskDistributionStartErrors(game, gameTeams),
+  ]
   const safeGame = game && typeof game === 'object' ? game : {}
 
   if (!safeGame.startingPlace) {
@@ -939,7 +943,8 @@ export const getGameValidationErrors = (game) => {
   return errors
 }
 
-const isGameHaveErrors = (game) => getGameValidationErrors(game).length > 0
+const isGameHaveErrors = (game, gameTeams = []) =>
+  getGameValidationErrors(game, gameTeams).length > 0
 
 export default isGameHaveErrors
 import { validateClassicVariants } from './classicVariants.js'

@@ -4,7 +4,10 @@ import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
 import buildGameStartProgressUpdate from '@server/buildGameStartProgressUpdate'
-import { getTaskDistributionStartErrors } from '@helpers/taskDistribution'
+import {
+  isValidTaskSequence,
+  prepareTaskDistributionForStart,
+} from '@helpers/taskDistribution'
 import { buildInitialStoryProgress } from '@server/storyEngine'
 import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
 import {
@@ -20,6 +23,26 @@ const runInBackground = (label, job) => {
     .catch((error) => {
       console.error(`[background] ${label} failed`, error)
     })
+}
+
+// Ошибки распределения называют команду по имени, поэтому в документы GamesTeams
+// подмешивается название команды из Teams (в самой регистрации его нет).
+const withDistributionTeamNames = async (db, gameTeams) => {
+  const teams = Array.isArray(gameTeams) ? gameTeams : []
+  const teamIds = teams.map((team) => team.teamId).filter(Boolean)
+  if (teams.length === 0 || teamIds.length === 0) return teams
+
+  const teamDocs = await db
+    .model('Teams')
+    .find({ _id: { $in: teamIds } })
+    .select({ name: 1 })
+    .lean()
+  const names = new Map(teamDocs.map((doc) => [String(doc._id), doc.name]))
+
+  return teams.map((team) => ({
+    ...(typeof team.toObject === 'function' ? team.toObject() : team),
+    name: names.get(String(team.teamId)) || team.name,
+  }))
 }
 
 const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db }) => {
@@ -62,14 +85,49 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
     game = currentGame
     if (game.status === 'started') return { alreadyStarted: true, message: 'Игра уже запущена.' }
     if (game.status !== 'active') return { success: false, message: 'Запустить можно только ожидающую игру.' }
-    const errors = [
-      ...getGameValidationErrors(game),
-      ...(game.type === 'story' ? [] : getTaskDistributionStartErrors(game, teams)),
-    ]
+    const errors = getGameValidationErrors(game, teams)
     if (errors.length) return { success: false, errors, message: errors.join('\n') }
     const startedAt = new Date()
     const gameTasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
     const isIndividualStart = isIndividualGameStart(game)
+    // Пустые маршруты случайного распределения создаются здесь, до статуса started.
+    // Повреждённые и несовместимые с шаблоном блокируют запуск без каких-либо записей.
+    const {
+      updates: taskDistributionUpdates,
+      errors: taskDistributionErrors,
+    } = prepareTaskDistributionForStart(
+      game,
+      await withDistributionTeamNames(db, teams),
+    )
+    if (taskDistributionErrors.length > 0) {
+      return {
+        success: false,
+        errors: taskDistributionErrors,
+        message: taskDistributionErrors.join('\n'),
+      }
+    }
+    const routesGeneratedAt = new Date()
+    for (const update of taskDistributionUpdates) {
+      const savedTeam = await teamModel(update.id).findByIdAndUpdate(
+        update.id,
+        {
+          $set: {
+            taskSequence: update.taskSequence,
+            taskSequenceSource: update.taskSequenceSource,
+            taskSequenceGeneratedAt: routesGeneratedAt,
+          },
+        },
+        { new: true },
+      )
+      if (!savedTeam || !isValidTaskSequence(savedTeam.taskSequence, gameTasksCount)) {
+        throw new Error('Не удалось сохранить маршрут команды перед стартом')
+      }
+      const savedTeamIndex = teams.findIndex(
+        (team) => String(team._id) === String(update.id),
+      )
+      if (savedTeamIndex >= 0) teams[savedTeamIndex] = savedTeam
+    }
+    await assertHeld()
     // До окончания подготовки игра остаётся active: частичный сбой не запускает
     // часть команд. Повторная попытка безопасно повторит подготовку.
     for (const team of teams) {
