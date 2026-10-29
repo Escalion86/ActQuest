@@ -1,3 +1,4 @@
+import { registerGameTeam } from '../../server/registerGameTeam.js'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getAdmins from 'telegram/func/getAdmins'
@@ -68,11 +69,16 @@ const joinGame = async ({ telegramId, jsonCommand, location, db }) => {
       }
     }
 
-    // Создаем запись команды на игру
-    await db.model('GamesTeams').create({
-      teamId: jsonCommand.teamId,
-      gameId: jsonCommand.gameId,
-    })
+    // Обычный игрок не может выбрать чужую команду или обойти лимит через бота.
+    if (!teamsUser.some((membership) => String(membership.teamId) === String(jsonCommand.teamId))) {
+      return { message: 'Регистрация доступна только капитану выбранной команды' }
+    }
+    try {
+      await registerGameTeam({ db, teamId: jsonCommand.teamId, gameId: jsonCommand.gameId, role: 'client' })
+    } catch (error) {
+      if (error.registrationStatus) return { message: error.message, nextCommand: 'menuGames' }
+      throw error
+    }
 
     // Оповещаем администраторов
     const admins = await getAdmins(db)

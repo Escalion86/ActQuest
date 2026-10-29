@@ -2,6 +2,7 @@
 
 import { showClassicItemsAndVariants } from '@helpers/classicEditorSettings'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
+import GameTeamLimit from '@components/cabinet/GameTeamLimit'
 
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -1095,6 +1096,7 @@ const buildUpdatePayload = (game) => {
     showTasksCountInGame: Boolean(game.showTasksCountInGame),
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
+    maxTeams: game.maxTeams ?? null,
     registeredTeamsVisibility: normalizeRegisteredTeamsVisibility(
       game.registeredTeamsVisibility,
     ),
@@ -3005,6 +3007,7 @@ const GamesPage = ({
         registeredTeamsVisibility: REGISTERED_TEAMS_VISIBILITY.LIST,
         hideResult: false,
         registrationOpen: true,
+        maxTeams: null,
         allowJoinAfterStart: false,
         recordsVisibility: 'disabled',
         recordsShowNames: true,
@@ -3202,6 +3205,7 @@ const GamesPage = ({
               normalizedSource.registeredTeamsVisibility,
             )
           baseDraft.hideResult = Boolean(normalizedSource.hideResult)
+          baseDraft.maxTeams = normalizedSource.maxTeams ?? null
           baseDraft.registrationOpen = Boolean(
             normalizedSource.registrationOpen ?? true,
           )
@@ -6955,6 +6959,7 @@ const GamesPage = ({
                           : getNounTeams(game.teamsCount)}
                       </p>
                     ) : null}
+                    <GameTeamLimit game={game} role={userRole} />
                     {hasParticipation && (
                       <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">
                         {participationSummary}
@@ -7555,6 +7560,7 @@ const GamesPage = ({
                     : getNounTeams(game.teamsCount)}
                 </p>
               ) : null}
+              <GameTeamLimit game={game} role={userRole} />
               {hasParticipation && (
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300">
                   {participationSummary}
@@ -9085,6 +9091,7 @@ GamesPage.propTypes = {
       registeredTeamsVisibility: PropTypes.oneOf(['list', 'count', 'hidden']),
       hideResult: PropTypes.bool,
       registrationOpen: PropTypes.bool,
+      maxTeams: PropTypes.number,
       allowJoinAfterStart: PropTypes.bool,
       recordsVisibility: PropTypes.oneOf([
         'disabled',

@@ -1,3 +1,4 @@
+import { normalizeMaxTeams } from '@helpers/gameRegistration'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 import CRUD from '@server/CRUD'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -655,6 +656,15 @@ const execute = (request, params) =>
           .json({ success: false, error: 'Отсутствуют данные для обновления игры' })
       }
 
+      if (Object.keys(updatePayload).some((key) => key.startsWith('$') || key.includes('.') || key === 'registrationLock')) {
+        return res.status(400).json({ success: false, error: 'Некорректные поля игры' })
+      }
+      if (Object.prototype.hasOwnProperty.call(updatePayload, 'maxTeams')) {
+        try { updatePayload.maxTeams = normalizeMaxTeams(updatePayload.maxTeams) } catch (error) {
+          return res.status(400).json({ success: false, error: error.message })
+        }
+      }
+
       try {
         const db = await dbConnectGlobal()
 
@@ -681,6 +691,13 @@ const execute = (request, params) =>
             .json({ success: false, error: 'Игра недоступна для выбранной площадки' })
         }
 
+        if (!canManageGame({ session: req.session, game: existingGame })) {
+          return res.status(403).json({
+            success: false,
+            error: 'Недостаточно прав для изменения игры',
+          })
+        }
+
         const previousStatus = String(existingGame.status || '').toLowerCase()
         const beforeHistoryState = await fetchGameHistoryState({
           db,
@@ -698,6 +715,7 @@ const execute = (request, params) =>
         const nextStatusNormalized = String(resolvedStatus || '').toLowerCase()
         const isRestoringFinishedGame =
           previousStatus === 'canceled' && nextStatusNormalized === 'finished'
+
         if (isRestoringFinishedGame) {
           if (!hasResultSnapshots(existingGame.result)) {
             return res.status(409).json({
@@ -718,14 +736,14 @@ const execute = (request, params) =>
           (nextStatusNormalized === 'closed' ||
             (nextStatusNormalized === 'active' &&
               (hasResultSnapshots(existingGame.result) ||
-                hasComputedResult(existingGame.result) ||
-                existingGame.dateEndFact)))
+                hasComputedResult(existingGame.result) || existingGame.dateEndFact)))
         ) {
           return res.status(409).json({
             success: false,
             error: 'Сначала восстановите проведённую игру в «Завершена». Закрытие или перезапуск выполняются отдельным действием.',
           })
         }
+
         const shouldReset =
           (previousStatus === 'finished' || previousStatus === 'closed') &&
           nextStatusNormalized === 'active'
@@ -839,13 +857,6 @@ const execute = (request, params) =>
           )
         }
 
-
-        if (!canManageGame({ session: req.session, game: existingGame })) {
-          return res.status(403).json({
-            success: false,
-            error: 'Недостаточно прав для изменения игры',
-          })
-        }
 
         if (
           Object.prototype.hasOwnProperty.call(

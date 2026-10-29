@@ -4,6 +4,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import {
+  isTeamNameConflict,
+  prepareRegularTeamName,
+  teamNameConflictResponse,
+} from '@server/teamNameUniqueness'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { getCaptainRoleQuery } from '@helpers/teamRoles'
 import {
@@ -170,7 +175,7 @@ export async function PUT(request, { params }) {
     const TeamsUsersModel = db.model('TeamsUsers')
 
     const team = await TeamsModel.findById(teamId)
-      .select({ _id: 1, kind: 1, joinPolicy: 1 })
+      .select({ _id: 1, kind: 1, joinPolicy: 1, location: 1 })
       .lean()
     if (!team?._id) {
       return NextResponse.json(
@@ -213,12 +218,17 @@ export async function PUT(request, { params }) {
       }
     }
 
+    const nameFields = await prepareRegularTeamName({
+      TeamsModel,
+      name,
+      location: shouldUpdateLocation ? normalizedLocation : team.location,
+      teamId,
+    })
     const updatedTeam = await TeamsModel.findByIdAndUpdate(
       teamId,
       {
         $set: {
-          name,
-          name_lowered: name.toLowerCase(),
+          ...nameFields,
           description,
           image,
           open,
@@ -246,6 +256,9 @@ export async function PUT(request, { params }) {
       { status: 200 },
     )
   } catch (error) {
+    if (isTeamNameConflict(error)) {
+      return NextResponse.json(teamNameConflictResponse(), { status: 409 })
+    }
     console.error('Failed to update team from cabinet (app)', error)
     return NextResponse.json(
       { success: false, error: 'Не удалось сохранить команду' },

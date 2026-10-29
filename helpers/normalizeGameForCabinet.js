@@ -701,6 +701,10 @@ const normalizeGameForCabinet = (game) => {
     showTasksCountInGame: ensureBoolean(game.showTasksCountInGame, false),
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),
+    maxTeams:
+      Number.isSafeInteger(game.maxTeams) && game.maxTeams > 0
+        ? game.maxTeams
+        : null,
     registeredTeamsVisibility: normalizeRegisteredTeamsVisibility(
       game.registeredTeamsVisibility,
     ),

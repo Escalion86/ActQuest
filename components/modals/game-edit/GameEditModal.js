@@ -518,6 +518,22 @@ const GameEditModal = ({
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
             )}
+            {!isClosedGame && selectedGame.participationMode !== 'player' && (
+              <CabinetNumberField
+                id="game-max-teams"
+                label="Лимит команд (необязательно)"
+                min={1}
+                step={1}
+                disabled={!canEditSelectedGame || isSaving}
+                value={selectedGame.maxTeams ?? ''}
+                onChange={(event) => updateSelectedGame({
+                  maxTeams: event.target.value === '' ? null : Number(event.target.value),
+                })}
+                placeholder="Без ограничения"
+                labelClassName={fieldLabelClassName}
+                inputClassName={fieldInputClassName}
+              />
+            )}
             {!isClosedGame && (
               <NeonCheckbox
                 id="game-allow-join-after-start"
@@ -919,6 +935,7 @@ GameEditModal.propTypes = {
     }),
     participationMode: PropTypes.oneOf(['team', 'player']),
     teamsCount: PropTypes.number,
+    maxTeams: PropTypes.number,
     maxTeamPlayers: PropTypes.number,
     paymentMode: PropTypes.oneOf(['team', 'participant']),
   }),

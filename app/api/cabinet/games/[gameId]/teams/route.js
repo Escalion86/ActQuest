@@ -1,3 +1,4 @@
+import { registerGameTeam } from '@server/registerGameTeam'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -346,6 +347,17 @@ const hasGameManageAccess = ({ identity, game }) => {
   const creatorUserId = toStringId(game?.creatorUserId)
   if (identity.userId && creatorUserId && identity.userId === creatorUserId) {
     return true
+  }
+
+  const creatorTelegramId =
+    game?.creatorTelegramId !== null && game?.creatorTelegramId !== undefined
+      ? String(game.creatorTelegramId).trim()
+      : ''
+
+  if (identity.userTelegramId && creatorTelegramId) {
+    if (identity.userTelegramId === creatorTelegramId) {
+      return true
+    }
   }
 
   if (!identity.userId) {
@@ -1089,6 +1101,7 @@ export async function POST(request, { params }) {
       name: 1,
       status: 1,
       registrationOpen: 1,
+      maxTeams: 1,
       allowJoinAfterStart: 1,
       individualStart: 1,
       storyConfig: 1,
@@ -1109,7 +1122,10 @@ export async function POST(request, { params }) {
     }
     const normalizedResolvedGameId = toStringId(game._id)
 
-    const registrationError = getGameRegistrationError(game)
+    const identity = resolveSessionIdentity(session)
+    const registrationError = getGameRegistrationError(game, {
+      manual: isElevatedRole(identity.role) && game.participationMode !== 'player',
+    })
     if (registrationError) {
       return NextResponse.json(
         { success: false, error: registrationError },
@@ -1117,7 +1133,6 @@ export async function POST(request, { params }) {
       )
     }
 
-    const identity = resolveSessionIdentity(session)
     const participationMode =
       game?.participationMode === 'player' ? 'player' : 'team'
     let team = null
@@ -1332,7 +1347,9 @@ export async function POST(request, { params }) {
       createData.taskSequenceGeneratedAt = new Date()
     }
 
-    const created = await GamesTeamsModel.create(createData)
+    const created = await registerGameTeam({
+      db, gameId: normalizedResolvedGameId, teamId, role: identity.role, createData,
+    })
 
     if (isScheduledGameForTeamEvent(game)) {
       await logSiteEvent({
@@ -1383,6 +1400,9 @@ export async function POST(request, { params }) {
       { status: 201 },
     )
   } catch (error) {
+    if (error.registrationStatus) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.registrationStatus })
+    }
     console.error('Failed to register team for game (app)', error)
     return NextResponse.json(
       { success: false, error: 'Не удалось зарегистрироваться на игру' },

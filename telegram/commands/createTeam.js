@@ -1,4 +1,5 @@
 import { MAX_TEAMS } from 'telegram/constants'
+import { isTeamNameConflict, TEAM_NAME_CONFLICT_MESSAGE } from '@server/teamNameUniqueness'
 import createTeamFunc from 'telegram/func/createTeamFunc'
 import getAdmins from 'telegram/func/getAdmins'
 import keyboardFormer from 'telegram/func/keyboardFormer'
@@ -70,7 +71,17 @@ const createTeam = async ({ telegramId, jsonCommand, location, db }) => {
   }
 
   // Если все переменные на месте, то создаем команду
-  const team = await createTeamFunc(telegramId, jsonCommand, db)
+  let team
+  try {
+    team = await createTeamFunc(telegramId, jsonCommand, db, location)
+  } catch (error) {
+    if (!isTeamNameConflict(error)) throw error
+    return {
+      success: false,
+      message: TEAM_NAME_CONFLICT_MESSAGE,
+      nextCommand: { c: 'createTeam' },
+    }
+  }
 
   // Оповещаем администраторов
   const admins = await getAdmins(db)

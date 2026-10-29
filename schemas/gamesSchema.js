@@ -1024,6 +1024,12 @@ const gamesSchema = {
     type: Boolean,
     default: false,
   },
+  maxTeams: {
+    type: Number,
+    default: null,
+    validate: { validator: (value) => value === null || (Number.isSafeInteger(value) && value > 0), message: 'Лимит команд должен быть положительным целым числом' },
+  },
+  registrationLock: { type: Schema.Types.Mixed, default: null, select: false },
   registrationOpen: {
     type: Boolean,
     default: true,

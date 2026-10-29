@@ -1,3 +1,5 @@
+import { registerGameTeam } from './registerGameTeam.js'
+import { normalizeMaxTeams } from '../helpers/gameRegistration.js'
 import birthDateToAge from '@helpers/birthDateToAge'
 import { postData } from '@helpers/CRUD'
 import getUserFullName from '@helpers/getUserFullName'
@@ -6,6 +8,11 @@ import isUserAdmin from '@helpers/isUserAdmin'
 // import Histories from '@models/Histories'
 // import Users from '@models/Users'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import {
+  isTeamNameConflict,
+  prepareRegularTeamName,
+  teamNameConflictResponse,
+} from '@server/teamNameUniqueness'
 
 // Whitelist допустимых MongoDB-операторов для защиты от NoSQL-инъекций
 const ALLOWED_OPERATORS = new Set([
@@ -164,14 +171,14 @@ const isGameRegistrationClosedById = async (db, gameId) => {
   const game = await db
     .model('Games')
     .findById(gameId)
-    .select({ registrationOpen: 1 })
+    .select({ status: 1 })
     .lean()
 
   if (!game) {
     return true
   }
 
-  return game.registrationOpen === false
+  return !['active', 'started'].includes(String(game.status || '').toLowerCase())
 }
 
 export default async function handler(Schema, req, res, params = null) {
@@ -320,7 +327,33 @@ export default async function handler(Schema, req, res, params = null) {
             }
           }
 
-          data = await db.model(Schema).create(clearedBody)
+          if (Schema === 'Teams') {
+            Object.assign(clearedBody, await prepareRegularTeamName({
+              TeamsModel: db.model('Teams'),
+              name: clearedBody.name,
+              location: clearedBody.location || location,
+            }))
+            clearedBody.kind = 'regular'
+          }
+
+          if (Schema === 'Games') {
+            delete clearedBody.registrationLock
+            try { clearedBody.maxTeams = normalizeMaxTeams(clearedBody.maxTeams) } catch (error) {
+              return res?.status(400).json({ success: false, error: error.message })
+            }
+          }
+          if (Schema === 'GamesTeams') {
+            const role = String(req.session?.user?.role || '').trim().toLowerCase()
+            if (!['admin', 'dev'].includes(role)) return res?.status(403).json({ success: false, error: 'Недостаточно прав' })
+            try {
+              data = await registerGameTeam({ db, gameId: clearedBody.gameId, teamId: clearedBody.teamId, role, createData: clearedBody })
+            } catch (error) {
+              if (error.registrationStatus) return res?.status(error.registrationStatus).json({ success: false, error: error.message })
+              throw error
+            }
+          } else {
+            data = await db.model(Schema).create(clearedBody)
+          }
           if (!data) {
             return res?.status(400).json({ success: false })
           }
@@ -334,6 +367,9 @@ export default async function handler(Schema, req, res, params = null) {
           return res?.status(201).json({ success: true, data })
         }
       } catch (error) {
+        if (Schema === 'Teams' && isTeamNameConflict(error)) {
+          return res?.status(409).json(teamNameConflictResponse())
+        }
         console.log(error)
         return res?.status(400).json({ success: false, error })
       }
@@ -374,6 +410,34 @@ export default async function handler(Schema, req, res, params = null) {
           const afterUpdateNeedToNotificate = false
 
           const payload = { ...body.data }
+          if (Schema === 'Games') {
+            if (Object.keys(payload).some((key) => key.startsWith('$') || key.includes('.') || key === 'registrationLock')) {
+              return res?.status(400).json({ success: false, error: 'Некорректные поля игры' })
+            }
+            if (Object.prototype.hasOwnProperty.call(payload, 'maxTeams')) {
+              try { payload.maxTeams = normalizeMaxTeams(payload.maxTeams) } catch (error) {
+                return res?.status(400).json({ success: false, error: error.message })
+              }
+            }
+          }
+          if (Schema === 'Teams') {
+            if (data.kind === 'personal') {
+              return res?.status(403).json({
+                success: false,
+                error: 'Персональная команда управляется системой',
+              })
+            }
+            if (Object.keys(payload).some((key) => key.startsWith('$') || key.includes('.'))) {
+              return res?.status(400).json({ success: false, error: 'Некорректные поля команды' })
+            }
+            Object.assign(payload, await prepareRegularTeamName({
+              TeamsModel: db.model('Teams'),
+              name: payload.name ?? data.name,
+              location: payload.location ?? data.location ?? location,
+              teamId: id,
+            }))
+            payload.kind = 'regular'
+          }
           if (Schema === 'Games') {
             payload.location = location
 
@@ -519,6 +583,9 @@ export default async function handler(Schema, req, res, params = null) {
           return res?.status(400).json({ success: false, error: 'No Id' })
         }
       } catch (error) {
+        if (Schema === 'Teams' && isTeamNameConflict(error)) {
+          return res?.status(409).json(teamNameConflictResponse())
+        }
         console.log(error)
         return res?.status(400).json({ success: false })
       }

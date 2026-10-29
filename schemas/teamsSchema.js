@@ -28,6 +28,9 @@ const teamsSchema = {
     required: true,
     trim: true,
   },
+  nameKey: {
+    type: String,
+  },
   description: {
     type: String,
     default: '',

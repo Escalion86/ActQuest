@@ -5,6 +5,11 @@ import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import {
+  isTeamNameConflict,
+  prepareRegularTeamName,
+  teamNameConflictResponse,
+} from '@server/teamNameUniqueness'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { TEAM_ROLE_CAPTAIN } from '@helpers/teamRoles'
@@ -199,9 +204,13 @@ export async function POST(request) {
       )
     }
 
-    const createdTeam = await TeamsModel.create({
+    const nameFields = await prepareRegularTeamName({
+      TeamsModel,
       name,
-      name_lowered: name.toLowerCase(),
+      location,
+    })
+    const createdTeam = await TeamsModel.create({
+      ...nameFields,
       description,
       image,
       open,
@@ -259,6 +268,9 @@ export async function POST(request) {
       { status: 201 },
     )
   } catch (error) {
+    if (isTeamNameConflict(error)) {
+      return NextResponse.json(teamNameConflictResponse(), { status: 409 })
+    }
     console.error('Failed to create team via cabinet API (app)', error)
     return NextResponse.json(
       { success: false, error: 'Не удалось создать команду' },
