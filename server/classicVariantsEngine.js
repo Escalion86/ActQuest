@@ -1,7 +1,8 @@
 import { classicStageId, getClassicStageProgress, getClassicVariantChoices, resolveClassicTask } from '../helpers/classicVariants.js'
 import { normalizeClassicCode, resolveRequiredMainCodesCount, getClassicTaskEffectiveElapsedSeconds, getCaptainClueTimeSecondsForTask, resolveForceClueCost } from '../helpers/classicGameRules.js'
+import { buildLinearTaskSequence } from '../helpers/taskDistribution.js'
 
-export const CLASSIC_PROGRESS_FIELDS = ['activeNum', 'startTime', 'endTime', 'findedCodes', 'findedBonusCodes', 'findedPenaltyCodes', 'wrongCodes', 'codeAttempts', 'forcedClues', 'taskFailures', 'timeAddings', 'classicProgress']
+export const CLASSIC_PROGRESS_FIELDS = ['activeNum', 'taskSequence', 'startTime', 'endTime', 'findedCodes', 'findedBonusCodes', 'findedPenaltyCodes', 'wrongCodes', 'codeAttempts', 'forcedClues', 'taskFailures', 'timeAddings', 'classicProgress']
 const clone = (value) => JSON.parse(JSON.stringify(value))
 const stamp = (value) => new Date(value).getTime()
 
@@ -15,6 +16,8 @@ export const runClassicVariants = ({ game, gameTeam, action, message, stageId, v
     return { gameTeam: team, result: reply }
   }
   const count = game.tasks.length
+  // Движок вариантов проходит этапы линейно; старый случайный маршрут не должен менять экран.
+  team.taskSequence = buildLinearTaskSequence(count)
   for (const key of ['startTime', 'endTime', 'findedCodes', 'findedBonusCodes', 'findedPenaltyCodes', 'wrongCodes', 'forcedClues']) {
     team[key] = Array.from({ length: count }, (_, i) => team[key]?.[i] ?? (key.startsWith('finded') || key === 'wrongCodes' ? [] : key === 'forcedClues' ? 0 : null))
   }

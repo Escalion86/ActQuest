@@ -12,6 +12,8 @@ const IOS_USER_AGENT_RE = /\b(iPhone|iPad|iPod)\b/i
 const HEIC_HEIF_NAME_RE = /\.(heic|heif)$/i
 const isDevEnv = process.env.NODE_ENV !== 'production'
 const MAX_REQUEST_BYTES = 55 * 1024 * 1024
+const MAX_VIDEO_REQUEST_BYTES = 105 * 1024 * 1024
+const MAX_ADMIN_VIDEO_BYTES = 100 * 1024 * 1024
 const MAX_ADMIN_FILE_BYTES = 50 * 1024 * 1024
 const MAX_PLAYER_FILE_BYTES = 25 * 1024 * 1024
 const MAX_FILES = 5
@@ -166,6 +168,21 @@ const getFileMeta = (file) => {
   }
 }
 
+// Повышенный лимит требует совпадения MIME, расширения и сигнатуры контейнера.
+const isVerifiedVideo = async (file) => {
+  const { name, type } = getFileMeta(file)
+  if (!/^video\//i.test(type) || typeof file?.slice !== 'function') return false
+  const header = Buffer.from(await file.slice(0, 16).arrayBuffer())
+  if (/\.(mp4|m4v|mov|3gp|3g2)$/i.test(name)) {
+    return header.subarray(4, 8).toString('ascii') === 'ftyp'
+  }
+  if (/\.(webm|mkv)$/i.test(name)) return header.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]))
+  if (/\.(ogv|ogg)$/i.test(name)) return header.subarray(0, 4).toString('ascii') === 'OggS'
+  if (/\.avi$/i.test(name)) return header.subarray(0, 4).toString('ascii') === 'RIFF' && header.subarray(8, 12).toString('ascii') === 'AVI '
+  if (/\.(mpeg|mpg)$/i.test(name)) return header[0] === 0 && header[1] === 0 && header[2] === 1 && [0xba, 0xb3].includes(header[3])
+  return false
+}
+
 export async function POST(request) {
   const requestId = getRequestId()
   const userAgent = String(request.headers.get('user-agent') || '')
@@ -185,7 +202,8 @@ export async function POST(request) {
     identity.role === 'admin' ||
     identity.role === 'dev'
   const requestBytes = Number(contentLength)
-  if (Number.isFinite(requestBytes) && requestBytes > MAX_REQUEST_BYTES) {
+  const maxRequestBytes = hasElevatedAccess ? MAX_VIDEO_REQUEST_BYTES : MAX_REQUEST_BYTES
+  if (Number.isFinite(requestBytes) && requestBytes > maxRequestBytes) {
     return NextResponse.json(
       buildError('FILE_TOO_LARGE', 'Слишком большой объём загрузки'),
       { status: 413 },
@@ -283,11 +301,19 @@ export async function POST(request) {
       }
     }
 
-    const maxFileBytes = hasElevatedAccess
-      ? MAX_ADMIN_FILE_BYTES
-      : MAX_PLAYER_FILE_BYTES
+    const largeVideos = new Set()
+    if (hasElevatedAccess) {
+      for (const file of files) {
+        if (file.size > MAX_ADMIN_FILE_BYTES && file.size <= MAX_ADMIN_VIDEO_BYTES && await isVerifiedVideo(file)) {
+          largeVideos.add(file)
+        }
+      }
+    }
     const invalidFile = files.find((file) => {
       const meta = getFileMeta(file)
+      const maxFileBytes = !hasElevatedAccess
+        ? MAX_PLAYER_FILE_BYTES
+        : largeVideos.has(file) ? MAX_ADMIN_VIDEO_BYTES : MAX_ADMIN_FILE_BYTES
       if (meta.size === null || meta.size <= 0 || meta.size > maxFileBytes) {
         return true
       }
@@ -305,6 +331,15 @@ export async function POST(request) {
             : 'Разрешены только изображения размером до 25 МБ',
         ),
         { status: 400 },
+      )
+    }
+
+    const totalBytes = files.reduce((total, file) => total + file.size, 0)
+    const maxTotalBytes = largeVideos.size ? MAX_ADMIN_VIDEO_BYTES : MAX_REQUEST_BYTES
+    if (totalBytes > maxTotalBytes) {
+      return NextResponse.json(
+        buildError('FILE_TOO_LARGE', 'Слишком большой объём загрузки'),
+        { status: 413 },
       )
     }
 

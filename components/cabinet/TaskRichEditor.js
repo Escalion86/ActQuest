@@ -62,7 +62,7 @@ const SLASH_COMMANDS = [
 const ESCALIONCLOUD_PUBLIC_ORIGIN =
   process.env.NEXT_PUBLIC_ESCALIONCLOUD_PUBLIC_ORIGIN ||
   'https://cloud.escalion.ru'
-const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
+const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024
 const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'
 const LINK_BUTTON_VARIANT = 'button'
@@ -2446,7 +2446,7 @@ const TaskRichEditor = ({
         resolvedMode === 'video' &&
         Number(file.size) > MAX_VIDEO_SIZE_BYTES
       ) {
-        setUploadError('Видео слишком большое. Максимальный размер: 40 МБ.')
+        setUploadError('Видео слишком большое. Максимальный размер: 100 МБ.')
         return
       }
 
@@ -2460,6 +2460,7 @@ const TaskRichEditor = ({
         null,
         process.env.NEXT_PUBLIC_ESCALIONCLOUD_PROJECT || 'actquest',
         (message) => setUploadError(message || 'Не удалось загрузить файл'),
+        resolvedMode === 'video' ? 300000 : 45000,
       )
 
       setIsUploading(false)

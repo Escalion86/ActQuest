@@ -32,7 +32,8 @@ export const sendImage = async (
   folder = null,
   imageName = null,
   project = 'actquest',
-  onError = null
+  onError = null,
+  timeoutMs = 45000
 ) => {
   if (isObject(image)) {
     const formData = new FormData()
@@ -48,7 +49,7 @@ export const sendImage = async (
 
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 45000)
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
       const response = await fetch('/api/escalioncloud', {
         method: 'POST',
