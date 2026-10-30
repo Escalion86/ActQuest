@@ -1077,8 +1077,7 @@ const ProfilePage = ({ initialProfile }) => {
                 </NoticeBanner>
               ) : null}
               {phoneVerifyStatus !== 'sms_pending' &&
-              phoneVerifyStatus !== 'ok' &&
-              siteAccess.allowSmsVerification ? (
+              phoneVerifyStatus !== 'ok' ? (
                 <CabinetButton
                   type="button"
                   variant="secondary"
@@ -1098,7 +1097,7 @@ const ProfilePage = ({ initialProfile }) => {
                     }
                   }}
                 >
-                  Не получилось позвонить — получить код по SMS
+                  Получить код по SMS
                 </CabinetButton>
               ) : null}
             </div>

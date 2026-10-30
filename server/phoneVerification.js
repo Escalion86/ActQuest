@@ -33,8 +33,8 @@ export async function startPhoneVerification(request, { smsOnly = false } = {}) 
     const controls = await getSiteAccessControlsByLocation(location)
     if (flow === 'register' && !controls.allowSiteRegistration) return errorJson(403, 'forbidden', 'Регистрация на сайте временно отключена для выбранного региона.')
     if (flow === 'recovery' && !controls.allowSiteAuth) return errorJson(403, 'forbidden', 'Восстановление пароля временно недоступно.')
-    if (smsOnly && !controls.allowSmsVerification) return errorJson(403, 'forbidden', 'Подтверждение номера по SMS временно отключено.')
-    const method = smsOnly || (body?.method === 'preferred' && controls.phoneVerificationPrimaryMethod === 'sms' && controls.allowSmsVerification) ? 'sms' : 'call'
+    // Оба способа доступны всегда: приоритет решает только, какой предложить первым.
+    const method = smsOnly || (body?.method === 'preferred' && controls.phoneVerificationPrimaryMethod === 'sms') ? 'sms' : 'call'
     const db = await dbConnectGlobal()
     if (!db) return errorJson(503, 'unknown', 'Не удалось подключиться к базе. Попробуйте позже.')
     const Users = db.model('Users')
@@ -54,7 +54,6 @@ export async function startPhoneVerification(request, { smsOnly = false } = {}) 
     if (flow === 'recovery' && !existingUser) return errorJson(404, 'not_found', 'Аккаунт с таким номером не найден.')
 
     const latest = await Verifications.findOne({ phone, flow }).sort({ updatedAt: -1 }).lean()
-    if (smsOnly && !latest && controls.phoneVerificationPrimaryMethod !== 'sms') return errorJson(404, 'not_found', 'Сначала запустите подтверждение номера звонком.')
     const now = new Date()
     // Общий cooldown не обходится сменой метода; учитываются и старые записи.
     const lastStart = Math.max(...[latest?.startRequestedAt || latest?.createdAt || latest?.updatedAt, latest?.smsSentAt].map(value => value ? new Date(value).getTime() : 0))

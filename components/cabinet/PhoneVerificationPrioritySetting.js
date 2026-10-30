@@ -5,7 +5,6 @@ import CabinetButton from '@components/cabinet/CabinetButton'
 
 export default function PhoneVerificationPrioritySetting() {
   const [method, setMethod] = useState('call')
-  const [smsAllowed, setSmsAllowed] = useState(true)
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -22,7 +21,6 @@ export default function PhoneVerificationPrioritySetting() {
         if (!response.ok || !json.success) throw new Error()
         if (!controller.signal.aborted) {
           setMethod(json.data?.phoneVerificationPrimaryMethod === 'sms' ? 'sms' : 'call')
-          setSmsAllowed(json.data?.allowSmsVerification !== false)
           setReady(true)
         }
       } catch {
@@ -60,8 +58,7 @@ export default function PhoneVerificationPrioritySetting() {
         </label>)}
       </div>
     </fieldset>
-    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Первый способ при регистрации, восстановлении пароля и смене номера. Если СМС отключены в общих настройках, используется звонок.</p>
-    {!smsAllowed && <p className="mt-2 text-sm">СМС сейчас отключены: подтверждение начинается со звонка при любом приоритете.</p>}
+    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Оба способа работают всегда, здесь выбирается только тот, который предлагается первым при регистрации, восстановлении пароля и смене номера. Второй способ остаётся доступен на форме и в профиле.</p>
     {busy && <p role="status" className="mt-2 text-sm">Сохраняем…</p>}
     {!ready && !error && <p role="status" className="mt-2 text-sm">Загружаем…</p>}
     {error && <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}

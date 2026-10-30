@@ -227,26 +227,6 @@ const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
             />
 
             <NeonCheckbox
-              id="settings-allow-sms-verification"
-              checked={Boolean(siteSettings.allowSmsVerification)}
-              onChange={(event) =>
-                handleSettingsChange('allowSmsVerification', event.target.checked)
-              }
-              className="w-full items-start justify-between gap-4"
-              boxAfter
-              label={(
-                <div>
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                    Включить подтверждение по SMS
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-300">
-                    Если отключено, резервная кнопка SMS не показывается, а отправка кода блокируется сервером.
-                  </p>
-                </div>
-              )}
-            />
-
-            <NeonCheckbox
               id="settings-enable-vk-one-tap"
               checked={Boolean(siteSettings.enableVkOneTap)}
               onChange={(event) => handleSettingsChange('enableVkOneTap', event.target.checked)}

@@ -1009,8 +1009,7 @@ const CabinetRegisterPage = ({
                       </p>
                     </div>
                   ) : null}
-                  {phoneVerifyStatus !== 'sms_pending' &&
-                  siteAccess.allowSmsVerification ? (
+                  {phoneVerifyStatus !== 'sms_pending' ? (
                     <button
                       type="button"
                       disabled={isSubmitting}
@@ -1028,7 +1027,7 @@ const CabinetRegisterPage = ({
                       }}
                       className="w-full cursor-pointer rounded-lg border border-[#7A00FF]/45 px-3 py-2 font-semibold text-[#d9c8ff] hover:bg-[#7A00FF]/12 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Не получилось позвонить — получить код по SMS
+                      Получить код по SMS
                     </button>
                   ) : null}
                 </div>

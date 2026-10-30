@@ -82,7 +82,7 @@ for (const flow of ['register', 'recovery', 'change_phone']) for (const withFall
     globalThis.setInterval = (fn, delay) => { assert.equal(delay, 3000); tick = fn; return 123 }
     try { [...f.effects].reverse().find(fn => String(fn).includes('3000'))() } finally { globalThis.setInterval = originalInterval }
     assert.ok(tick); tick(); await flush(); assert.ok(resolvePolling)
-    const sms = f.nodes().find(n => n.props?.children === 'Не получилось позвонить — получить код по SMS'); assert.ok(sms); await sms.props.onClick(); f.render()
+    const sms = f.nodes().find(n => n.props?.children === 'Получить код по SMS'); assert.ok(sms); await sms.props.onClick(); f.render()
     resolvePolling(Response.json({ success: true, data: { status: 'ok' } })); await flush(); f.render(); assert.ok(otp(), 'запоздалый polling не закрывает SMS')
     }
     otp().props.onChange({ target: { value: '4826' } }); f.render(); await submit(); f.render()
@@ -90,5 +90,29 @@ for (const flow of ['register', 'recovery', 'change_phone']) for (const withFall
     assert.equal(requests.filter(r => r.url.endsWith('/start') && !r.url.includes('/sms/')).length, withFallback ? 2 : 1)
     if (!profile) assert.ok(f.nodes().find(n => n.props?.type === 'password'))
     else assert.ok(f.nodes().find(n => n.props?.children === 'Сохранить номер'))
+  } finally { globalThis.fetch = original }
+})
+
+test('SMS-кнопка видна и при выключенном старом флаге allowSmsVerification', async () => {
+  const f = componentFixture('@components/cabinet/app-router/CabinetRegisterPageClient', mocks, { authIntent: 'register', isVkAuthVisible: false })
+  const original = globalThis.fetch
+  globalThis.fetch = async url => {
+    const target = String(url)
+    if (target.includes('site-access')) return Response.json({ success: true, data: { allowSiteAuth: true, allowSiteRegistration: true, allowSmsVerification: false, enableVkOneTap: false } })
+    if (target.endsWith('/precheck')) return Response.json({ success: true, data: { allowed: true } })
+    if (target.endsWith('/check') && !target.includes('/sms/')) return Response.json({ success: true, data: { status: 'pending' } })
+    if (target.endsWith('/start') && !target.includes('/sms/')) return Response.json({ success: true, data: { method: 'call', id: 123, auth_phone: '88005553535' } })
+    return Response.json({ success: true, data: { status: 'ok' } })
+  }
+  try {
+    f.render()
+    for (const effect of [...f.effects]) effect()
+    f.states[0] = 'krsk'; f.render()
+    for (const effect of [...f.effects]) effect()
+    await flush(); f.render()
+    const phone = f.nodes().find(n => n.props?.type === 'tel' && typeof n.props.onChange === 'function'); assert.ok(phone); phone.props.onChange({ target: { value: '+7 900 123-45-67' } }); f.render()
+    const form = f.nodes().find(n => n.type === 'form' && n.props.onSubmit); assert.ok(form, 'форма регистрации')
+    await form.props.onSubmit({ preventDefault() {} }); f.render(); await flush(); f.render()
+    assert.ok(f.nodes().find(n => n.props?.children === 'Получить код по SMS'), 'кнопка SMS доступна всегда')
   } finally { globalThis.fetch = original }
 })

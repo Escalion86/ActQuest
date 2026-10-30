@@ -42,7 +42,7 @@ test('настройки независимы: PATCH ИИ, PATCH телефон�
   const body = await (await route.GET()).json()
   assert.equal(body.data.phoneVerificationPrimaryMethod, 'call'); assert.equal(body.data.assistantAiEnabled, false); assert.equal(body.data.supportPhone, 'new')
 })
-for (const [primary, allowed, method, expected] of [['call', true, 'preferred', 'call'], ['sms', false, 'preferred', 'call'], ['invalid', true, 'preferred', 'call'], ['sms', true, 'call', 'call']]) test(`выбор ${primary}/${allowed}/${method}`, async () => {
+for (const [primary, allowed, method, expected] of [['call', true, 'preferred', 'call'], ['sms', false, 'preferred', 'sms'], ['call', false, 'preferred', 'call'], ['invalid', true, 'preferred', 'call'], ['sms', true, 'call', 'call']]) test(`выбор ${primary}/${allowed}/${method}`, async () => {
   const f = fixture(); Object.assign(f.settings, { phoneVerificationPrimaryMethod: primary, allowSmsVerification: allowed })
   await providerRun(f, async () => { const r = await f.load('@app/api/phone/verify/start/route').POST(request({ ...input, method })); assert.equal(r.status, 200); assert.equal((await r.json()).data.method, expected) })
 })
@@ -65,8 +65,8 @@ for (const endpoint of ['start', 'sms/start']) {
     ['смена', { ...input, flow: 'change_phone' }, f => { f.role('client'); f.users.push({ _id: 'me', phone: 79000000000 }) }, 200],
   ]) test(`${endpoint}: ${label}`, async () => { const f = fixture(); setup(f); await run(f, body, status) })
 }
-test('sms/start: первичный SMS разрешён, call-first без записи запрещён, выключенный SMS запрещён', async () => {
-  for (const [primary, allowed, status] of [['sms', true, 200], ['call', true, 404], ['sms', false, 403]]) {
+test('sms/start: SMS доступен при любом приоритете и при снятом старом флаге', async () => {
+  for (const [primary, allowed, status] of [['sms', true, 200], ['call', true, 200], ['sms', false, 200], ['call', false, 200]]) {
     const f = fixture(); Object.assign(f.settings, { phoneVerificationPrimaryMethod: primary, allowSmsVerification: allowed })
     await providerRun(f, async () => assert.equal((await f.load('@app/api/phone/verify/sms/start/route').POST(request(input))).status, status))
   }
