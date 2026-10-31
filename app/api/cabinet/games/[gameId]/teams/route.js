@@ -28,7 +28,6 @@ import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import {
-  buildTaskSequenceFromTemplate,
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionTemplate,
   validateTaskDistributionTemplate,
@@ -1342,9 +1341,6 @@ export async function POST(request, { params }) {
           { status: 409 },
         )
       }
-      createData.taskSequence = buildTaskSequenceFromTemplate(template)
-      createData.taskSequenceSource = 'game_template'
-      createData.taskSequenceGeneratedAt = new Date()
     }
 
     const created = await registerGameTeam({

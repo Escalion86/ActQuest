@@ -178,7 +178,7 @@ test('batch API сохраняет маршруты и считает тольк
   let role = 'admin'
   let missing = false
   const game = { _id: 'game', taskDistributionMode: 'random', taskDistributionTemplate: [[0], [1], [2]] , tasks: [{}, {}, {}] }
-  const teams = [{ _id: 'one', teamId: 'one' }, { _id: 'two', teamId: 'two', taskDistributionTemplate: [[2], [1], [0]], taskSequence: [0, 1, 2], startTime: [new Date(1)] }]
+  const teams = [{ _id: 'one', teamId: 'one' }, { _id: 'two', teamId: 'two', taskDistributionTemplate: [[2], [1], [0]], taskSequence: [0, 1, 2], taskSequenceSource: 'team_template', startTime: [new Date(1)] }]
   const query = (value) => ({ select: () => query(value), lean: async () => value })
   const db = { model: (name) => name === 'Games' ? { findOne: () => query(game) } : { find: () => query(teams), findByIdAndUpdate: async (id, update) => { if (missing && id === 'two') return null; const row = teams.find((team) => team._id === id); Object.assign(row, update.$set); return row } } }
   const api = await load('app/api/cabinet/admin/task-distribution/route.js', {
@@ -202,6 +202,12 @@ test('batch API сохраняет маршруты и считает тольк
   assert.equal(result.status, 200)
   assert.equal(result.body.data.teamsUpdated, 2)
   assert.deepEqual(teams.map((team) => team.taskSequence), [[0, 1, 2], [0, 2, 1]])
+  const manual = { _id: 'manual', teamId: 'manual', taskSequence: [2, 1, 0], taskSequenceSource: 'linear', taskSequenceGeneratedAt: new Date(1) }
+  teams.push(structuredClone(manual))
+  assert.equal((await api.POST(request)).body.data.teamsUpdated, 2)
+  assert.deepEqual(teams[2], manual)
+  assert.equal((await api.POST({ json: async () => ({ gameId: 'game', teamId: 'manual' }) })).body.data.teamsUpdated, 0)
+  assert.deepEqual(teams[2], manual)
   missing = true
   assert.equal((await api.POST(request)).status, 500)
 })

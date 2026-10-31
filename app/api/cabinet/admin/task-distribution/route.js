@@ -7,10 +7,10 @@ import withGameTeamsLocked from '@server/withGameTeamsLocked'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import { toStringId } from '@helpers/idAndDate'
 import {
-  buildTaskSequenceFromTemplate,
+  buildBalancedTaskSequences,
   getLockedTaskSequencePrefix,
   isValidTaskSequence,
-  mergeTaskSequenceWithLockedPrefix,
+  isManualTaskSequence,
   normalizeStoredTaskDistributionTemplate,
   validateTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
@@ -181,9 +181,10 @@ export async function POST(request) {
       }
 
       const generatedAt = new Date()
-      const updates = []
+      const requests = []
 
       for (const gameTeam of gameTeams) {
+        if (isManualTaskSequence(gameTeam)) continue
         const { template, source } = resolveTemplateForTeam({
           gameTemplate,
           gameTeam,
@@ -204,11 +205,16 @@ export async function POST(request) {
           )
         }
 
-        const generatedSequence = buildTaskSequenceFromTemplate(template)
-        const taskSequence = mergeTaskSequenceWithLockedPrefix(
-          generatedSequence,
-          getLockedTaskSequencePrefix(gameTeam),
-        )
+        requests.push({ gameTeam, template, source, lockedPrefix: getLockedTaskSequencePrefix(gameTeam) })
+      }
+
+      const selectedIds = new Set(gameTeams.map(team => String(team._id)))
+      const sequences = buildBalancedTaskSequences(requests, teams
+        .filter(team => !selectedIds.has(String(team._id)) && !isManualTaskSequence(team) && isValidTaskSequence(team.taskSequence, tasksCount))
+        .map(team => ({ taskSequence: team.taskSequence, template: resolveTemplateForTeam({ gameTemplate, gameTeam: team, tasksCount }).template })))
+      const updates = []
+      for (const [index, { gameTeam, source }] of requests.entries()) {
+        const taskSequence = sequences[index]
 
         if (!isValidTaskSequence(taskSequence, tasksCount)) {
           return NextResponse.json(

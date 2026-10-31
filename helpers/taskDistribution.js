@@ -192,6 +192,101 @@ export const buildTaskSequenceFromTemplate = (template, random = Math.random) =>
     return items
   })
 
+// Минимальная суммарная занятость точек: одна строка на шаг маршрута,
+// один столбец на задание. Венгерский алгоритм не перебирает n! перестановок.
+const assignLeastOccupied = (items, offset, occupancy) => {
+  const size = items.length
+  const u = Array(size + 1).fill(0), v = Array(size + 1).fill(0)
+  const matched = Array(size + 1).fill(0), previous = Array(size + 1).fill(0)
+  for (let row = 1; row <= size; row += 1) {
+    matched[0] = row
+    let column = 0
+    const distance = Array(size + 1).fill(Infinity)
+    const used = Array(size + 1).fill(false)
+    do {
+      used[column] = true
+      const currentRow = matched[column]
+      let delta = Infinity, nextColumn = 0
+      for (let candidate = 1; candidate <= size; candidate += 1) {
+        if (used[candidate]) continue
+        const cost = (occupancy[offset + currentRow - 1]?.get(items[candidate - 1]) || 0) - u[currentRow] - v[candidate]
+        if (cost < distance[candidate]) {
+          distance[candidate] = cost
+          previous[candidate] = column
+        }
+        if (distance[candidate] < delta) { delta = distance[candidate]; nextColumn = candidate }
+      }
+      for (let candidate = 0; candidate <= size; candidate += 1) {
+        if (used[candidate]) { u[matched[candidate]] += delta; v[candidate] -= delta }
+        else distance[candidate] -= delta
+      }
+      column = nextColumn
+    } while (matched[column] !== 0)
+    do {
+      const nextColumn = previous[column]
+      matched[column] = matched[nextColumn]
+      column = nextColumn
+    } while (column !== 0)
+  }
+  const result = Array(size)
+  for (let column = 1; column <= size; column += 1) result[matched[column] - 1] = items[column - 1]
+  return result
+}
+
+// Балансируем каждый шаг случайного блока, а не только стартовую точку.
+// Готовые маршруты и начатые префиксы участвуют в подсчёте, но не меняются.
+const buildBalancedGroup = (requests, fixedSequences = [], random = Math.random) => {
+  const occupancy = []
+  const record = (sequence, offset = 0) => sequence.forEach((task, index) => {
+    const counts = occupancy[offset + index] ||= new Map()
+    counts.set(task, (counts.get(task) || 0) + 1)
+  })
+  fixedSequences.forEach(sequence => record(sequence))
+  requests.forEach(request => record(request.lockedPrefix || []))
+  const result = new Map()
+  const shuffled = buildTaskSequenceFromTemplate([requests.map((_, index) => index)], random)
+  for (const index of shuffled) {
+    const request = requests[index]
+    const sequence = [...(request.lockedPrefix || [])]
+    const locked = new Set(sequence)
+    for (const block of request.template) {
+      const remaining = block.filter(task => !locked.has(task))
+      const items = buildTaskSequenceFromTemplate([remaining], random)
+      const assigned = assignLeastOccupied(items, sequence.length, occupancy)
+      record(assigned, sequence.length)
+      sequence.push(...assigned)
+    }
+    result.set(index, sequence)
+  }
+  return requests.map((_, index) => result.get(index))
+}
+
+// Порядок блоков значим; порядок перечисления заданий внутри блока — нет.
+export const taskDistributionGroupKey = template => JSON.stringify(
+  template.map(block => [...block].sort((a, b) => a - b)),
+)
+
+// Сохранённый маршрут без признака автоматической генерации считаем ручным.
+export const isManualTaskSequence = team => Boolean(team?.taskSequence?.length) &&
+  !['game_template', 'team_template'].includes(team.taskSequenceSource)
+
+export const buildBalancedTaskSequences = (requests, fixedRoutes = [], random = Math.random) => {
+  const groups = new Map()
+  requests.forEach((request, index) => {
+    const key = taskDistributionGroupKey(request.template)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push({ request, index })
+  })
+  const result = Array(requests.length)
+  for (const [key, entries] of groups) {
+    const fixed = fixedRoutes.filter(route => taskDistributionGroupKey(route.template) === key)
+      .map(route => route.taskSequence)
+    const sequences = buildBalancedGroup(entries.map(entry => entry.request), fixed, random)
+    entries.forEach((entry, index) => { result[entry.index] = sequences[index] })
+  }
+  return result
+}
+
 export const mergeTaskSequenceWithLockedPrefix = (generatedSequence, lockedPrefix) => {
   const locked = Array.isArray(lockedPrefix)
     ? lockedPrefix
@@ -330,11 +425,18 @@ export const validateTaskDistributionForGame = (game, gameTeams = []) => {
 // Генерируем только отсутствующие маршруты после полной успешной проверки.
 export const prepareTaskDistributionForStart = (game, gameTeams = []) => {
   const { missing, errors } = validateTaskDistributionForGame(game, gameTeams)
+  if (errors.length > 0) return { errors, updates: [] }
+  const pendingIds = new Set(missing.map(item => String(item.id)))
+  const sequences = buildBalancedTaskSequences(missing, gameTeams
+    .filter(team => !pendingIds.has(String(team._id)) && !isManualTaskSequence(team) && isValidTaskSequence(team.taskSequence, game.tasks?.length))
+    .map(team => ({ taskSequence: team.taskSequence, template: resolveTemplateForTeam({
+      gameTemplate: normalizeStoredTaskDistributionTemplate(game.taskDistributionTemplate), gameTeam: team, tasksCount: game.tasks?.length,
+    }).template })))
   return {
     errors,
-    updates: errors.length > 0 ? [] : missing.map(({ id, template, source }) => ({
+    updates: missing.map(({ id, source }, index) => ({
       id,
-      taskSequence: buildTaskSequenceFromTemplate(template),
+      taskSequence: sequences[index],
       taskSequenceSource: source,
     })),
   }

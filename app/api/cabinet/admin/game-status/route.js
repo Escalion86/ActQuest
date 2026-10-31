@@ -910,6 +910,7 @@ export async function GET(request) {
         name: 1,
         status: 1,
         type: 1,
+        taskDistributionMode: 1,
         dateStartFact: 1,
         taskTheme: 1,
         taskDuration: 1,

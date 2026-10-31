@@ -56,6 +56,7 @@ const fixture = (overrides = {}) => {
     },
   }
   const teams = {
+    find: () => query(registrations),
     findOne: ({ gameId, teamId }) => query(registrations.find((row) => row.gameId === gameId && row.teamId === teamId)),
     countDocuments: async () => registrations.length,
     create: async (data) => {
@@ -69,6 +70,18 @@ const fixture = (overrides = {}) => {
   return { game, registrations, db: { model: (name) => name === 'Games' ? games : teams }, fail: () => { failCreate = true } }
 }
 const register = (state, teamId, role = 'client') => registerGameTeam({ db: state.db, gameId: 'game', teamId, role })
+
+test('поздняя регистрация балансирует маршруты последовательно под блокировкой игры', async () => {
+  const state = fixture({ status: 'started', type: 'classic', maxTeams: null,
+    taskDistributionMode: 'random', taskDistributionTemplate: [[0, 1, 2], [3]], tasks: [{}, {}, {}, {}] })
+  for (let i = 0; i < 23; i++) await register(state, `team-${i}`, 'admin')
+  for (let step = 0; step < 3; step++) {
+    const counts = [0, 1, 2].map(task => state.registrations.filter(row => row.taskSequence[step] === task).length)
+    assert.ok(Math.max(...counts) - Math.min(...counts) <= 1)
+  }
+  assert.ok(state.registrations.every(row => row.taskSequence[3] === 3 && row.taskSequenceSource === 'game_template'))
+  assert.equal(state.game.registrationLock, undefined)
+})
 
 test('лимит необязателен, принимает только положительные безопасные целые числа', () => {
   for (const value of [undefined, null, '']) assert.equal(normalizeMaxTeams(value), null)
@@ -342,4 +355,26 @@ test('оба вида карточек, копирование, проекции
   for (const path of ['helpers/fetchGamesForCabinet.js', 'app/api/cabinet/game-details/route.js', 'app/api/cabinet/games/[gameId]/teams/route.js']) assert.match(await readFile(new URL(path, root), 'utf8'), /maxTeams: 1/)
   for (const path of ['server/CRUD.js', 'app/api/cabinet/games/[gameId]/teams/route.js']) assert.match(await readFile(new URL(path, root), 'utf8'), /await registerGameTeam\(/)
   assert.match(await readFile(new URL('app/api/[location]/games/[id]/route.js', root), 'utf8'), /normalizeMaxTeams\(updatePayload.maxTeams\)/)
+})
+
+
+test('поздняя регистрация исключает ручные и чужие шаблоны из балансировки', async () => {
+  const state = fixture({ status: 'started', type: 'classic', maxTeams: null,
+    taskDistributionMode: 'random', taskDistributionTemplate: [[0, 1, 2], [3]], tasks: [{}, {}, {}, {}] })
+  for (let i = 0; i < 20; i++) {
+    state.registrations.push({ gameId: 'game', teamId: `manual-${i}`, taskSequence: [0, 1, 2, 3], taskSequenceSource: 'linear' })
+    state.registrations.push({ gameId: 'game', teamId: `custom-${i}`, taskSequence: [0, 1, 2, 3], taskSequenceSource: 'team_template', taskDistributionTemplate: [[0], [1, 2], [3]] })
+  }
+  const before = structuredClone(state.registrations)
+  for (let i = 0; i < 23; i++) await register(state, `new-${i}`, 'admin')
+  assert.deepEqual(state.registrations.slice(0, 40), before)
+  for (let step = 0; step < 3; step++) {
+    const counts = [0, 1, 2].map(task => state.registrations.slice(40).filter(row => row.taskSequence[step] === task).length)
+    assert.ok(Math.max(...counts) - Math.min(...counts) <= 1)
+  }
+  const route = [2, 1, 0, 3]
+  const added = await registerGameTeam({ db: state.db, gameId: 'game', teamId: 'manual-new', role: 'admin', createData: { taskSequence: route, taskSequenceSource: 'linear' } })
+  assert.deepEqual(added.taskSequence, route)
+  assert.equal(added.taskSequenceSource, 'linear')
+  assert.equal(state.game.registrationLock, undefined)
 })
