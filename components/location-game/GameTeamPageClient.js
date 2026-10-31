@@ -486,7 +486,6 @@ const StoryQuestProcess = ({ gameId, teamId, testRunId, isActive }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [error, setError] = useState('')
-  const [scheduleGame, setScheduleGame] = useState(game)
   const [codeDrafts, setCodeDrafts] = useState({})
   const [openedClues, setOpenedClues] = useState({})
   const [resultMessageHtml, setResultMessageHtml] = useState('')
@@ -978,6 +977,7 @@ function GameTeamPage({
   const searchParams = useSearchParams()
 
   const [isTestRunUpdating, setIsTestRunUpdating] = useState(false)
+  const [scheduleGame, setScheduleGame] = useState(game)
   const isTestMode = Boolean(testRunId)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)

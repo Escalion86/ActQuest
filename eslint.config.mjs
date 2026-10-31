@@ -32,4 +32,8 @@ export default [
       'no-extra-boolean-cast': 'off',
     },
   },
+  {
+    files: ['components/location-game/GameTeamPageClient.js'],
+    rules: { 'no-undef': 'error' },
+  },
 ]

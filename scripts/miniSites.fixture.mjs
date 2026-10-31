@@ -12,7 +12,7 @@ export function loader(env, mocks = {}) {
   const cache = new Map()
   function load(id) {
     if (Object.hasOwn(mocks, id)) return mocks[id]
-    if (!id.startsWith('@') && !id.startsWith('/') && !id.startsWith('.')) return require(id)
+    if (!id.startsWith('@') && !path.isAbsolute(id) && !id.startsWith('.')) return require(id)
     let filename = id.startsWith('@') ? path.join(process.cwd(), id.slice(1)) : id
     if (!path.extname(filename)) filename += '.js'
     if (cache.has(filename)) return cache.get(filename).exports

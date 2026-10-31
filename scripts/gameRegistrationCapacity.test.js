@@ -26,6 +26,7 @@ const load = async (path) => {
     const id = match[1]
     let dependency = id.startsWith('@') ? id.replace('@helpers/', 'helpers/').replace('@components/', 'components/') : id.startsWith('.') ? fileURLToPath(new URL(id, new URL(path, root))).replace(fileURLToPath(root), '') : null
     if (!dependency) continue
+    dependency = dependency.replace(/\\/g, '/')
     if (!dependency.endsWith('.js')) dependency += '.js'
     if (path.includes('GameEditModal') && (dependency.startsWith('components/') && !realComponents.includes(dependency))) {
       dependencies.set(id, { __esModule: true, default: ({ children }) => createElement('div', null, children), DEFAULT_MONEY_INPUT_CLASS_NAME: '' })

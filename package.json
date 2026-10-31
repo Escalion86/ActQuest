@@ -32,7 +32,7 @@
     "audio:story-last-broadcast:generate": "node --no-warnings scripts/generateStoryLastBroadcastVoices.mjs",
     "audio:story-last-broadcast:package": "node --no-warnings scripts/generateStoryLastBroadcastScenePack.mjs",
     "premerge:app": "npm run lint && npm run build && npm run smoke:app && npm run verify:api-contracts && npm run verify:location-api-contracts && npm run verify:critical-security && npm run test:public-game-sanitizer && npm run test:game-process-lock && npm run test:classic-game-process && npm run test:story-engine && npm run test:game-registration && npm run test:prequel && npm run test:game-reviews && npm run test:telegram-identity && npm run test:game-participation && npm run test:team-membership-limit && npm run test:rating && npm run test:closed-game-protection && npm run test:task-themes && npm run test:game-task-overview && npm run test:rich-text-comparison",
-    "lint": "eslint app components/cabinet/app-router components/cabinet/CabinetLayout.js components/cabinet/GameSelectField.js components/cabinet/UserSelectField.js helpers/fetchCabinetGameDetails.js helpers/fetchCabinetTeamDetails.js helpers/fetchCabinetUserDetails.js helpers/getSessionSafe.js scripts/smokeAppRoutes.js --ext .js,.jsx --no-error-on-unmatched-pattern",
+    "lint": "eslint app components/cabinet/app-router components/cabinet/CabinetLayout.js components/cabinet/GameSelectField.js components/cabinet/UserSelectField.js components/location-game/GameTeamPageClient.js helpers/fetchCabinetGameDetails.js helpers/fetchCabinetTeamDetails.js helpers/fetchCabinetUserDetails.js helpers/getSessionSafe.js scripts/smokeAppRoutes.js --ext .js,.jsx --no-error-on-unmatched-pattern",
     "start": "next start",
     "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js",
     "audit:users:global-merge": "node scripts/auditGlobalUsersMerge.js",
@@ -45,7 +45,9 @@
     "migrate:multiple-prequels": "node scripts/migrateMultiplePrequels.js",
     "migrate:multiple-prequels:apply": "node scripts/migrateMultiplePrequels.js --apply",
     "migrate:team-join-policy": "node scripts/migrateTeamJoinPolicy.js",
-    "migrate:team-join-policy:apply": "node scripts/migrateTeamJoinPolicy.js --apply"
+    "migrate:team-join-policy:apply": "node scripts/migrateTeamJoinPolicy.js --apply",
+    "test:mini-sites": "node --no-warnings --test scripts/miniSites.test.mjs",
+    "test:mini-sites-navigation": "node --no-warnings --test scripts/miniSitesNavigation.test.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
@@ -86,7 +88,8 @@
     "sanitize-html": "^2.17.6",
     "tailwindcss-scoped-groups": "^2.0.0",
     "uuid": "^13.0.2",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "yauzl": "^3.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -94,6 +97,7 @@
     "cross-env": "^10.1.0",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
+    "playwright": "^1.64.1",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2"
   }

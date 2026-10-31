@@ -3,11 +3,16 @@ import assert from 'node:assert/strict'
 import { readFile, readdir, rm, readlink, mkdir, symlink, chmod } from 'node:fs/promises'
 import path from 'node:path'
 import { fixture, zip, upload, action, loader } from './miniSites.fixture.mjs'
+// Хранилище рассчитано на POSIX: uid/gid, setgid, симлинки и fsync каталогов.
+// HTTP/auth-проверки ниже выполняются на всех платформах.
+const storageTest = (name, run) => test(name, {
+  skip: process.platform === 'win32' ? 'Нужна POSIX-файловая система (Linux/WSL)' : false,
+}, run)
 const get = api => api.GET(new Request('http://localhost/api/cabinet/admin/mini-sites'))
 const data = async response => { const json = await response.json(); assert.equal(response.status, 200, JSON.stringify(json)); assert.equal(json.success, true); return json.data }
 const visible = root => readFile(path.join(root, 'active/test-site/public/index.html'), 'utf8')
 
-test('публикация, wrapper/JS/CSS/SVG, повторное чтение, замена, откат и enabled', async () => {
+storageTest('публикация, wrapper/JS/CSS/SVG, повторное чтение, замена, откат и enabled', async () => {
   const f = await fixture()
   try {
     const api = f.api()
@@ -53,7 +58,7 @@ test('реальные handlers: роли и CSRF проверяются до ч
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('вредоносные архивы отклоняются и предыдущая публикация не повреждается', async () => {
+storageTest('вредоносные архивы отклоняются и предыдущая публикация не повреждается', async () => {
   const f = await fixture()
   try {
     const api = f.api(); await data(await api.POST(upload()))
@@ -69,7 +74,7 @@ test('вредоносные архивы отклоняются и предыд
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('конкурентные операции и дубль slug', async () => {
+storageTest('конкурентные операции и дубль slug', async () => {
   const f = await fixture()
   try {
     const api = f.api()
@@ -81,7 +86,7 @@ test('конкурентные операции и дубль slug', async () =>
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('опасные конфиги и симлинки fail-closed', async () => {
+storageTest('опасные конфиги и симлинки fail-closed', async () => {
   for (const config of [{ MINI_SITES_ROOT: '' }, { MINI_SITES_ROOT: process.cwd() }, { MINI_SITES_ROOT: '/' }, { MINI_SITES_BASE_DOMAIN: 'actquest.ru/path' }, { NEXTAUTH_URL: '' }, { NEXTAUTH_URL: 'https://test-site.actquest.ru' }]) {
     const f = await fixture(config)
     try { assert.ok((await f.api().POST(upload())).status >= 400) } finally { await rm(f.root, { recursive: true, force: true }) }
@@ -122,7 +127,7 @@ test('реальные байты HTTP: chunked, поддельный Content-Le
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('allowlist полей, типы, служебные slug, Host/forwarding не влияют на доверие', async () => {
+storageTest('allowlist полей, типы, служебные slug, Host/forwarding не влияют на доверие', async () => {
   const f = await fixture()
   try {
     const api = f.api()
@@ -143,7 +148,7 @@ test('allowlist полей, типы, служебные slug, Host/forwarding �
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('лимиты распаковки, записи, CRC, методы, шифрование, фактический размер и cleanup', async () => {
+storageTest('лимиты распаковки, записи, CRC, методы, шифрование, фактический размер и cleanup', async () => {
   const f = await fixture()
   try {
     const api = f.api(); await data(await api.POST(upload()))
@@ -167,7 +172,7 @@ test('лимиты распаковки, записи, CRC, методы, шиф
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('квота временного пика, резерв диска и настоящий ENOSPC при записи', async () => {
+storageTest('квота временного пика, резерв диска и настоящий ENOSPC при записи', async () => {
   const fs = await import('node:fs/promises')
   let noSpace = false, lowSpace = false, renameFailure = false
   const storageFs = { ...fs, statfs: async (...args) => lowSpace ? { bavail: 1, bsize: 1 } : fs.statfs(...args), open: async (filename, ...args) => {
@@ -196,7 +201,7 @@ test('квота временного пика, резерв диска и на�
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('только активная и предыдущая версии; выключенная замена; lock без автоперехвата', async () => {
+storageTest('только активная и предыдущая версии; выключенная замена; lock без автоперехвата', async () => {
   const f = await fixture()
   try {
     const api = f.api(); await data(await api.POST(upload()))
@@ -231,7 +236,7 @@ test('серверная страница: guest redirect и роли, без ч
   }
 })
 
-test('abort во время распаковки убирает staging и сохраняет текущую версию', async () => {
+storageTest('abort во время распаковки убирает staging и сохраняет текущую версию', async () => {
   const fs = await import('node:fs/promises')
   const controller = new AbortController(); let interrupt = false
   const storageFs = { ...fs, open: async (filename, ...args) => {
@@ -252,7 +257,7 @@ test('abort во время распаковки убирает staging и со�
 })
 
 
-test('опасные права root/родителя и root-symlink отклоняются', async () => {
+storageTest('опасные права root/родителя и root-symlink отклоняются', async () => {
   const f = await fixture()
   try {
     await chmod(f.root, 0o777)
@@ -269,7 +274,7 @@ test('опасные права root/родителя и root-symlink откло
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('root и все существующие service dirs требуют setgid и group r-x до распаковки', async () => {
+storageTest('root и все существующие service dirs требуют setgid и group r-x до распаковки', async () => {
   for (const target of ['', 'staging', 'states', 'versions', 'active']) {
     for (const mode of [0o750, 0o2700, 0o2740, 0o2710]) {
       const f = await fixture()
@@ -287,7 +292,7 @@ test('root и все существующие service dirs требуют setgid
   }
 })
 
-test('несовпадающий gid служебного каталога отклоняется до записи', async () => {
+storageTest('несовпадающий gid служебного каталога отклоняется до записи', async () => {
   const fs = await import('node:fs/promises'); let wrong = ''
   const f = await fixture({}, { 'node:fs/promises': { ...fs, lstat: async filename => {
     const info = await fs.lstat(filename)
@@ -304,7 +309,7 @@ test('несовпадающий gid служебного каталога от�
   } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('фактическое наследование root gid и прав у файлов/директорий, в том числе после rename', async () => {
+storageTest('фактическое наследование root gid и прав у файлов/директорий, в том числе после rename', async () => {
   const fs = await import('node:fs/promises')
   const f = await fixture()
   try {

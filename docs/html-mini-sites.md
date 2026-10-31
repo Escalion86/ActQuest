@@ -268,6 +268,13 @@ output, чтобы сохранить прежние доказательств�
   настоящее временное хранилище, без БД/.env/VPS. Негативный GID моделируется
   контролируемым lstat; фактические GID, setgid и group r-x/read проверяются
   на настоящих созданных файлах/каталогах, включая вложенные и rename.
+  Проверки хранилища требуют Linux/WSL с POSIX-правами; на Windows они
+  явно пропускаются, HTTP/auth-проверки продолжают выполняться.
+- `npm run test:mini-sites-navigation` — браузерная проверка навигации кабинета.
+  Использует локальный devDependency `playwright`; перед первым запуском
+  выполните `npx playwright install chromium` или задайте `MINI_SITES_CHROMIUM`
+  абсолютным путём к установленному Chromium/Edge. Артефакты пишутся во
+  временный каталог ОС, либо в `MINI_SITES_NAV_OUTPUT`, вне репозитория.
 - `node scripts/miniSites.browserHarness.mjs` — изолированный сервер на
   127.0.0.1:3293, настоящие JSX/CSS/CabinetLayout/CabinetButton и API handlers,
   admin-сессия — явно названная фикстура. Хранилище настоящее временное.

@@ -1,4 +1,4 @@
-import getTelegramUserHref from '@helpers/getTelegramUserHref'
+import getTelegramUserHref from './getTelegramUserHref.js'
 
 const normalizeContactValue = (value) =>
   typeof value === 'string' ? value.trim() : ''

@@ -17,12 +17,12 @@ test('getGameOrderPhoneHref uses normalized tel link', () => {
   assert.equal(getGameOrderPhoneHref(''), '')
 })
 
-test('getGameOrderTelegramHref converts username to t.me link', () => {
-  assert.equal(getGameOrderTelegramHref('@actquest'), 'https://t.me/actquest')
-  assert.equal(getGameOrderTelegramHref('actquest'), 'https://t.me/actquest')
+test('контакт Telegram открывает профиль через общий deep link', () => {
+  assert.equal(getGameOrderTelegramHref('@actquest'), 'tg://resolve?domain=actquest')
+  assert.equal(getGameOrderTelegramHref('actquest'), 'tg://resolve?domain=actquest')
   assert.equal(
     getGameOrderTelegramHref('https://t.me/actquest'),
-    'https://t.me/actquest',
+    'tg://resolve?domain=actquest',
   )
   assert.equal(getGameOrderTelegramHref(''), '')
 })

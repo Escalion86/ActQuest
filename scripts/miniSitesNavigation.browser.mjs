@@ -4,16 +4,17 @@ import { createRequire } from 'node:module'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import path from 'node:path'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const root = process.cwd()
-export const output = path.resolve(process.env.MINI_SITES_NAV_OUTPUT || '../evidence/navigation')
+export const output = path.resolve(process.env.MINI_SITES_NAV_OUTPUT || path.join(os.tmpdir(), 'actquest-navigation'))
 export const target = '/cabinet/admin/mini-sites'
 export const label = 'HTML мини-сайты'
-export const { chromium } = require(process.env.MINI_SITES_PLAYWRIGHT || '/home/aleksei/projects/ux-ui-agent-skills/node_modules/playwright')
+export const { chromium } = require(process.env.MINI_SITES_PLAYWRIGHT || 'playwright')
 export const launchBrowser = () => chromium.launch({
-  executablePath: process.env.MINI_SITES_CHROMIUM || '/home/aleksei/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux-arm64/chrome-headless-shell',
+  executablePath: process.env.MINI_SITES_CHROMIUM || undefined,
   headless: true,
   args: ['--no-sandbox', '--no-zygote', '--disable-gpu'],
 })

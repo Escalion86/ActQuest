@@ -172,7 +172,7 @@ test('восстановление требует права управлять 
 })
 
 const loadClientCallback = async (name, dependencies) => {
-  const source = await readFile(new URL('../components/cabinet/app-router/GamesPageClient.js', import.meta.url), 'utf8')
+  const source = (await readFile(new URL('../components/cabinet/app-router/GamesPageClient.js', import.meta.url), 'utf8')).replace(/\r\n/g, '\n')
   const start = source.indexOf(`  const ${name} = `)
   const bodyStart = source.indexOf('(', start) + 1
   const end = name === 'statusModalActions'

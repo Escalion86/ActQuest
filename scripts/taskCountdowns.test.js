@@ -43,9 +43,10 @@ test('досрочная подсказка сокращает оба тайме
   assert.ok(timers[1].seconds <= 3300 && timers[1].seconds >= 3299)
 })
 test('панель показывает оба таймера и обновляет их каждую секунду', () => {
-  const source = readFileSync(new URL('../components/location-game/GameTeamPageClient.js', import.meta.url), 'utf8')
+  const source = readFileSync(new URL('../components/location-game/GameTeamPageClient.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
   const start = source.indexOf('  useEffect(() => {\n    if (!isClient) return\n    const container = taskContentRef.current')
   const end = source.indexOf('\n  }, [', start)
+  assert.ok(start >= 0 && end > start, 'Эффект обновления таймеров должен присутствовать в компоненте')
   const body = source.slice(start + '  useEffect(() => {'.length, end)
   const panel = { style: {}, innerHTML: '' }
   let now = 100000
