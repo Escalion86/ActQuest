@@ -93,3 +93,47 @@ test('break state exposes remaining break time for completed task', () => {
   assert.equal(breakState.isTeamOnBreak, true)
   assert.equal(breakState.breakTimeLeftSeconds, 120)
 })
+
+const routeNow = new Date('2026-10-31T13:00:00Z')
+const routeOptions = {
+  tasksCount: 4,
+  breakDurationSeconds: 180,
+  taskDurationSeconds: 3600,
+  now: routeNow,
+}
+
+test('статусы агента учитывают индивидуальный маршрут команды', () => {
+  const gameTeam = {
+    taskSequence: [2, 0, 1, 3],
+    activeNum: 1,
+    startTime: [new Date(routeNow - 60000), null, new Date(routeNow - 600000)],
+    endTime: [],
+  }
+  for (const [taskIndex, expected] of [[0, 'active'], [1, 'approaching'], [2, 'passed'], [3, 'waiting']]) {
+    const result = resolveTeamAgentStatus({ ...routeOptions, gameTeam, assignedTaskIndexes: [taskIndex] })
+    assert.equal(result.status, expected)
+    assert.equal(result.taskIndex, taskIndex)
+  }
+})
+
+test('последний шаг маршрута не означает прохождение задания с меньшим номером', () => {
+  const result = resolveTeamAgentStatus({
+    ...routeOptions,
+    gameTeam: { taskSequence: [2, 0, 3, 1], activeNum: 3, startTime: [null, new Date(routeNow - 60000)], endTime: [] },
+    assignedTaskIndexes: [1],
+  })
+  assert.equal(result.status, 'active')
+})
+
+test('перерыв определяется по заданию маршрута, а не номеру шага', () => {
+  const gameTeam = {
+    taskSequence: [2, 0, 1, 3], activeNum: 0,
+    startTime: [null, null, new Date(routeNow - 120000)],
+    endTime: [null, null, new Date(routeNow - 60000)],
+  }
+  assert.deepEqual(resolveTeamBreakState({ ...routeOptions, gameTeam }), {
+    isTeamOnBreak: true, breakTimeLeftSeconds: 120,
+  })
+  assert.equal(resolveTeamAgentStatus({ ...routeOptions, gameTeam, assignedTaskIndexes: [2] }).status, 'passed')
+  assert.equal(resolveTeamAgentStatus({ ...routeOptions, gameTeam, assignedTaskIndexes: [0] }).status, 'approaching')
+})

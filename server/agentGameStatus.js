@@ -1,3 +1,4 @@
+import { getTaskIndexForStep, getTeamTaskSequence } from '@helpers/taskDistribution'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import { toStringId } from '@helpers/idAndDate'
 import {
@@ -87,7 +88,8 @@ export const hasTeamPassedTask = (gameTeam, taskIndex, tasksCount) => {
     return true
   }
 
-  return activeNum > taskIndex || Boolean(endTime[taskIndex])
+  const taskStep = getTeamTaskSequence({ tasks: Array(tasksCount) }, gameTeam).indexOf(taskIndex)
+  return (taskStep >= 0 && activeNum > taskStep) || Boolean(endTime[taskIndex])
 }
 
 const resolveTeamStoryAgentStatus = ({ game, gameTeam, assignedStoryNodes }) => {
@@ -237,9 +239,10 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
           breakDurationSeconds,
           taskDurationSeconds,
         })
-    const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
+    const activeStep = Number.isInteger(gameTeam?.activeNum)
       ? gameTeam.activeNum
       : Number(gameTeam?.activeNum) || 0
+    const activeTaskIndex = getTaskIndexForStep(game, gameTeam, activeStep) ?? tasks.length
     const currentStoryNodeIds = getAvailableStoryNodes(
       game,
       gameTeam?.storyProgress || {},

@@ -1,3 +1,4 @@
+import { getTeamTaskSequence } from './taskDistribution.js'
 import getSecondsBetween from './getSecondsBetween.js'
 
 const ensureArray = (value) => (Array.isArray(value) ? value : [])
@@ -94,7 +95,8 @@ const hasTeamFinishedAgentWorkForTask = ({
     return true
   }
 
-  if (activeNum > taskIndex || Boolean(endTime[taskIndex])) {
+  const taskStep = getTeamTaskSequence({ tasks: Array(tasksCount) }, gameTeam).indexOf(taskIndex)
+  if ((taskStep >= 0 && activeNum > taskStep) || Boolean(endTime[taskIndex])) {
     return true
   }
 
@@ -118,9 +120,10 @@ const resolveTeamBreakState = ({
   taskDurationSeconds,
   now = new Date(),
 }) => {
-  const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
+  const activeStep = Number.isInteger(gameTeam?.activeNum)
     ? gameTeam.activeNum
     : Number(gameTeam?.activeNum) || 0
+  const activeTaskIndex = getTeamTaskSequence({ tasks: Array(tasksCount) }, gameTeam)[activeStep] ?? tasksCount
 
   if (
     !Number.isInteger(activeTaskIndex) ||
@@ -184,9 +187,11 @@ const resolveTeamAgentStatus = ({
   taskDurationSeconds,
   now = new Date(),
 }) => {
-  const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
+  const activeStep = Number.isInteger(gameTeam?.activeNum)
     ? gameTeam.activeNum
     : Number(gameTeam?.activeNum) || 0
+  const taskSequence = getTeamTaskSequence({ tasks: Array(tasksCount) }, gameTeam)
+  const activeTaskIndex = taskSequence[activeStep] ?? tasksCount
   const startTime = ensureArray(gameTeam?.startTime)
   const endTime = ensureArray(gameTeam?.endTime)
   const isFinished = tasksCount > 0 && activeTaskIndex >= tasksCount
@@ -218,7 +223,7 @@ const resolveTeamAgentStatus = ({
 
   const approachingTaskIndex = assignedTaskIndexes.find(
     (taskIndex) =>
-      activeTaskIndex + 1 === taskIndex &&
+      taskSequence[activeStep + 1] === taskIndex &&
       Boolean(startTime[activeTaskIndex]) &&
       !isFinished,
   )
