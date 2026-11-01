@@ -699,6 +699,8 @@ const normalizeGameForCabinet = (game) => {
     showTasksAudience:
       game.showTasksAudience === 'participants' ? 'participants' : 'all',
     showTasksCountInGame: ensureBoolean(game.showTasksCountInGame, false),
+    showResultAudience:
+      game.showResultAudience === 'participants' ? 'participants' : 'all',
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),
     maxTeams:

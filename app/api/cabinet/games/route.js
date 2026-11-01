@@ -1,3 +1,4 @@
+import { normalizeShowResultAudience } from '@helpers/cabinetGameVisibility'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -156,6 +157,7 @@ export async function POST(request) {
     })
     const createData = {
       ...payload,
+      showResultAudience: normalizeShowResultAudience(payload?.showResultAudience),
       name,
       location: location.toLowerCase(),
       type: gameType,

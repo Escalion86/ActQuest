@@ -2339,7 +2339,15 @@ export function ResultPageContent({ gameId, location }) {
       </div>
       {/* <StateLoader {...props}>
         <Header /> */}
-      {game ? (
+      {game && !game.result ? (
+        <p className="mx-auto mt-24 max-w-xl px-4 text-center text-slate-600 dark:text-slate-300">
+          {game.hideResult
+            ? 'Просмотр результатов отключён в настройках игры.'
+            : game.showResultAudience === 'participants'
+              ? 'Результаты доступны только участникам игры. Войдите в аккаунт участника.'
+              : 'Результаты игры ещё не сформированы.'}
+        </p>
+      ) : game ? (
         <>
           {game?.type === 'story' ||
           game?.result?.computed?.summary?.scoringMode === 'story' ? (

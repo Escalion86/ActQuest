@@ -1,3 +1,5 @@
+import { canViewPublishedGameResults } from './cabinetGameVisibility.js'
+
 const omitCodeValue = (value) => {
   if (!value || typeof value !== 'object') {
     return value
@@ -32,7 +34,7 @@ const sanitizePrequel = (prequel, now = new Date()) => {
 
 // Публичные страницы используют общую информацию об игре и данные результата,
 // но правильные ответы должны приходить участникам только через game-task state.
-const sanitizeGameForPublicRead = (game) => {
+const sanitizeGameForPublicRead = (game, viewer = {}) => {
   const source = game?.toObject ? game.toObject() : game
   if (!source || typeof source !== 'object') {
     return source
@@ -96,6 +98,7 @@ const sanitizeGameForPublicRead = (game) => {
 
   return {
     ...publicSource,
+    result: canViewPublishedGameResults(source, viewer) ? source.result : null,
     classicItems: [],
     tasks,
     storyNodes,

@@ -72,11 +72,19 @@ const forceCompleteActiveTask = async ({ GamesTeams, game, gameTeam }) => {
       : 0
 
   const now = new Date()
-  if (!startTime[activeTaskIndex]) {
-    startTime[activeTaskIndex] = now
-  }
   if (endTime[activeTaskIndex]) {
     return { success: false, message: 'Текущее задание уже завершено.' }
+  }
+  const startedAt = startTime[activeTaskIndex]
+    ? new Date(startTime[activeTaskIndex])
+    : null
+  if (!startedAt || !Number.isFinite(startedAt.getTime()) || startedAt > now) {
+    return {
+      success: false,
+      statusCode: 409,
+      message:
+        'Нельзя зачесть задание: отсутствует корректное время начала. Проверьте таймер команды перед зачётом.',
+    }
   }
   endTime[activeTaskIndex] = now
 

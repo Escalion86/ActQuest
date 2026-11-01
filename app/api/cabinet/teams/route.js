@@ -80,8 +80,10 @@ export async function GET(request) {
       throw new Error('Соединение с базой данных не установлено')
     }
 
+    const session = await getServerSession(authOptions)
     const teams = await fetchTeamsForCabinet({
       db,
+      currentUserId: session?.user?.globalUserId ?? session?.user?.userId ?? session?.user?._id ?? session?.user?.id,
       teamIds,
       location: typeof location === 'string' ? location : null,
     })

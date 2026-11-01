@@ -8,6 +8,18 @@ import {
   applyGameDraftPatch,
   areGameDraftsEqual,
 } from '../helpers/gameDraftDirtyState.js'
+
+test('аудитория результатов сохраняется в черновике закрытой игры', () => {
+  const game = { status: 'closed', hideResult: false, showResultAudience: 'all', isRated: true, hidden: false }
+  const { nextGame, hasUnsavedChanges } = applyGameDraftPatch({
+    prevGame: game,
+    baselineGame: game,
+    patch: { hideResult: false, showResultAudience: 'participants' },
+  })
+  assert.equal(nextGame.showResultAudience, 'participants')
+  assert.equal(nextGame.hideResult, false)
+  assert.equal(hasUnsavedChanges, true)
+})
 import {
   areComparableMediaListsEqual,
   isInitialEditorHtmlNormalization,

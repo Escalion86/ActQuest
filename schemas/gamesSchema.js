@@ -1020,6 +1020,11 @@ const gamesSchema = {
     },
     default: null,
   },
+  showResultAudience: {
+    type: String,
+    enum: ['all', 'participants'],
+    default: 'all',
+  },
   hideResult: {
     type: Boolean,
     default: false,

@@ -1392,6 +1392,12 @@ const computeTaskHtmlUnlocked = async ({
           game,
         )
         taskState = 'break'
+      } else if (!activeTaskStartTime) {
+        // Не выдаём задание с отсчётом от открытия страницы: начало должно
+        // быть сохранено сервером при старте или переходе по маршруту.
+        taskHtml =
+          '<b>Не удалось определить время начала задания.</b><br />Обновите экран. Если сообщение повторяется, обратитесь к организатору.'
+        taskState = 'idle'
       } else {
         let elapsedSeconds = 0
         if (activeTaskStartTime) {

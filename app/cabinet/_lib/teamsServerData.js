@@ -52,6 +52,7 @@ export const loadCabinetAppTeams = async (session) => {
   const teams = await fetchTeamsForCabinet({
     db,
     teamIds,
+    currentUserId: userId,
     // Для страницы "Мои команды" показываем все команды пользователя,
     // независимо от города команды.
     location: null,

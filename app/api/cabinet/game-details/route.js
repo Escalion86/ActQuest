@@ -1,3 +1,7 @@
+import {
+  resolveUserParticipationTeams,
+  resolveParticipationPlace,
+} from '@helpers/gameParticipation'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -174,6 +178,7 @@ export async function GET(request) {
         showTasksAudience: 1,
         showTasksCountInGame: 1,
         hideResult: 1,
+        showResultAudience: 1,
         registrationOpen: 1,
         maxTeams: 1,
         registeredTeamsVisibility: 1,
@@ -241,55 +246,35 @@ export async function GET(request) {
       registeredTeamsVisibility !== REGISTERED_TEAMS_VISIBILITY.HIDDEN
         ? actualTeamsCount
         : 0
-    let userTeamPlace = null
-    if (
-      canExposeCabinetGamePlace(gameDoc, { canViewRestrictedGameInfo }) &&
-      gameDoc?.result?.teamsPlaces &&
-      gameTeams.length > 0
-    ) {
-      const currentUserIdString = toStringId(currentUserId)
-      const hasUserId = Boolean(currentUserIdString)
-
-      if (hasUserId) {
-        const teamIds = Array.from(
-          new Set(
-            gameTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean),
-          ),
-        )
-
-        const memberships =
-          teamIds.length
-            ? await TeamsUsersModel.find({
-                teamId: { $in: teamIds },
-                userId: currentUserIdString,
-              })
-                .select({ teamId: 1 })
-                .lean()
-            : []
-
-        const userTeamIdsSet = new Set(
-          memberships.map((doc) => toStringId(doc?.teamId)).filter(Boolean),
-        )
-
-        const places = teamIds
-          .filter((teamId) => userTeamIdsSet.has(teamId))
-          .map((teamId) => {
-            const teamsPlaces = gameDoc?.result?.teamsPlaces
-            const value =
-              teamsPlaces && typeof teamsPlaces.get === 'function'
-                ? teamsPlaces.get(teamId)
-                : teamsPlaces?.[teamId]
-            const numeric = Number(value)
-            return Number.isFinite(numeric) ? numeric : null
+    const teamIds = Array.from(
+      new Set(gameTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean)),
+    )
+    const memberships =
+      currentUserIdString && teamIds.length
+        ? await TeamsUsersModel.find({
+            teamId: { $in: teamIds },
+            userId: currentUserIdString,
           })
-          .filter((value) => Number.isFinite(value))
-          .map(Number)
-
-        if (places.length > 0) {
-          userTeamPlace = Math.min(...places)
-        }
-      }
-    }
+            .select({ teamId: 1 })
+            .lean()
+        : []
+    const userParticipationTeams = resolveUserParticipationTeams({
+      game: gameDoc,
+      userId: currentUserIdString,
+      currentParticipation: memberships.map((membership) => ({
+        teamId: toStringId(membership.teamId),
+      })),
+    })
+    const hasUserParticipation = userParticipationTeams.length > 0
+    const userTeamPlace = canExposeCabinetGamePlace(gameDoc, {
+      canViewRestrictedGameInfo,
+      hasUserParticipation,
+    })
+      ? resolveParticipationPlace({
+          game: gameDoc,
+          teamIds: userParticipationTeams.map((team) => team.teamId),
+        })
+      : null
 
     const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
     const normalizedStatus =
@@ -342,11 +327,13 @@ export async function GET(request) {
     const normalizedGame = normalizeGameForCabinet({
       ...sanitizeCabinetGameForViewer(gameDoc, {
         canViewRestrictedGameInfo,
+        hasUserParticipation,
       }),
       tasksStats: buildGameTasksStats(gameDoc?.tasks),
       status: normalizedStatus,
       teamsCount,
       userTeamPlace,
+      userParticipationTeams,
       creator: creatorDoc,
       agents: enrichedAgents,
     })

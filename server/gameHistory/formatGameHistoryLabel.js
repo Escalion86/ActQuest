@@ -37,6 +37,7 @@ const EXACT_LABELS = new Map([
   ['game.result.computed', 'Результаты игры'],
   ['game.result.teamsPlaces', 'Места команд'],
   ['game.isResultGenerated', 'Результаты сформированы'],
+  ['game.showResultAudience', 'Кому доступны результаты'],
   ['gameTeams', 'Команды в игре'],
 ])
 
@@ -78,6 +79,7 @@ const SEGMENT_LABELS = new Map([
   ['computed', 'Рассчитанные результаты'],
   ['teamsPlaces', 'Места команд'],
   ['isResultGenerated', 'Результаты сформированы'],
+  ['showResultAudience', 'Кому доступны результаты'],
 ])
 
 const HUMANIZED_ARRAY_PREFIXES = [

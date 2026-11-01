@@ -3,10 +3,46 @@ import assert from 'node:assert/strict'
 
 import {
   canManageCabinetGameFinances,
+  canViewPublishedGameResults,
   canOpenRestrictedTeamGamePreview,
   canViewCabinetGameRestrictedInfo,
   sanitizeCabinetGameForViewer,
 } from '../helpers/cabinetGameVisibility.js'
+import sanitizeGameForPublicRead from '../helpers/sanitizeGameForPublicRead.js'
+import { collectSnapshotTeamIdsForUser } from '../helpers/gameParticipation.js'
+
+test('результаты доступны согласно аудитории, включая прямой публичный API', () => {
+  for (const hideResult of [false, true]) {
+    for (const showResultAudience of [undefined, 'all', 'participants']) {
+      for (const hasUserParticipation of [false, true]) {
+        for (const canViewRestrictedGameInfo of [false, true]) {
+          const game = {
+            hideResult, showResultAudience,
+            result: { computed: { teams: [] }, teamsPlaces: { team: 1 } },
+          }
+          const viewer = { hasUserParticipation, canViewRestrictedGameInfo }
+          const expected = canViewRestrictedGameInfo ||
+            (!hideResult && (showResultAudience !== 'participants' || hasUserParticipation))
+          assert.equal(canViewPublishedGameResults(game, viewer), expected)
+          assert.equal(Boolean(sanitizeGameForPublicRead(game, viewer).result), expected)
+          assert.equal(Boolean(sanitizeCabinetGameForViewer(game, viewer).result), expected)
+        }
+      }
+    }
+  }
+})
+
+test('участие для результатов определяется по snapshot, независимо от текущего состава команды', () => {
+  const game = {
+    hideResult: false,
+    showResultAudience: 'participants',
+    result: { teamsUsers: [{ userId: 'player', teamId: 'old-team' }] },
+  }
+  const participant = collectSnapshotTeamIdsForUser({ game, userId: 'player' }).length > 0
+  const newcomer = collectSnapshotTeamIdsForUser({ game, userId: 'new-player' }).length > 0
+  assert.equal(canViewPublishedGameResults(game, { hasUserParticipation: participant }), true)
+  assert.equal(canViewPublishedGameResults(game, { hasUserParticipation: newcomer }), false)
+})
 
 test('public cabinet game view strips financial and restricted fields', () => {
   const sanitized = sanitizeCabinetGameForViewer(

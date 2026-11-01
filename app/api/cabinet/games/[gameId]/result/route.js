@@ -1,3 +1,4 @@
+import { canViewPublishedGameResults } from '@helpers/cabinetGameVisibility'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -306,6 +307,7 @@ const handleRequest = async ({ request, params, method }) => {
         location: 1,
         status: 1,
         hideResult: 1,
+        showResultAudience: 1,
         dateStartFact: 1,
         dateEndFact: 1,
         taskDuration: 1,
@@ -362,7 +364,10 @@ const handleRequest = async ({ request, params, method }) => {
     const identity = normalizeSessionIdentity(session)
     const canManageThisGame = hasGameManageAccess({ identity, game })
 
-    if (method === 'GET' && Boolean(game.hideResult) && !canManageThisGame) {
+    if (method === 'GET' && !canViewPublishedGameResults(game, {
+      canViewRestrictedGameInfo: canManageThisGame,
+      hasUserParticipation: resolveUserParticipationTeamIds({ result: game.result, session }).length > 0,
+    })) {
       return NextResponse.json(
         {
           success: false,

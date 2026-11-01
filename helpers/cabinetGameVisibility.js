@@ -8,6 +8,19 @@ import { canBypassGameAssignments } from './gameAssignmentAccess.js'
 const normalizeShowTasksAudience = (value) =>
   value === 'participants' ? 'participants' : 'all'
 
+const normalizeShowResultAudience = (value) =>
+  value === 'participants' ? 'participants' : 'all'
+
+const canViewPublishedGameResults = (
+  game,
+  { hasUserParticipation = false, canViewRestrictedGameInfo = false } = {},
+) => Boolean(
+  canViewRestrictedGameInfo ||
+    (!game?.hideResult &&
+      (normalizeShowResultAudience(game?.showResultAudience) === 'all' ||
+        hasUserParticipation)),
+)
+
 const isCompletedGameStatus = (status) => {
   const normalized =
     typeof status === 'string' ? status.toLowerCase() : String(status)
@@ -84,8 +97,8 @@ const canViewCabinetGameRestrictedInfo = ({
 
 const canExposeCabinetGamePlace = (
   game,
-  { canViewRestrictedGameInfo = false } = {},
-) => Boolean(canViewRestrictedGameInfo || !game?.hideResult)
+  options = {},
+) => canViewPublishedGameResults(game, options)
 
 const sanitizeCabinetGameForViewer = (
   game,
@@ -111,6 +124,10 @@ const sanitizeCabinetGameForViewer = (
     showTasks: canViewPublishedTasks,
     showTasksAudience: normalizeShowTasksAudience(game.showTasksAudience),
     hideResult: Boolean(game?.hideResult),
+    showResultAudience: normalizeShowResultAudience(game.showResultAudience),
+    result: canViewPublishedGameResults(game, { hasUserParticipation })
+      ? game.result
+      : null,
     finances: [],
     tasks: canViewPublishedTasks && Array.isArray(game.tasks) ? game.tasks : [],
     prequel: {
@@ -141,7 +158,9 @@ export {
   canManageCabinetGameFinances,
   canOpenRestrictedTeamGamePreview,
   canViewPublishedGameTasks,
+  canViewPublishedGameResults,
   canViewCabinetGameRestrictedInfo,
   normalizeShowTasksAudience,
+  normalizeShowResultAudience,
   sanitizeCabinetGameForViewer,
 }

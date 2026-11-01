@@ -6,6 +6,7 @@ const CLOSED_GAME_EDITABLE_KEYS = [
   'showTasksCountInGame',
   'registeredTeamsVisibility',
   'hideResult',
+  'showResultAudience',
   'registrationOpen',
 ]
 

@@ -176,6 +176,7 @@ export const loadCabinetAppOverview = async (session) => {
     ? await fetchTeamsForCabinet({
         db,
         teamIds,
+        currentUserId: normalizedUserId,
         location,
         limit: 500,
         offset: 0,
@@ -223,6 +224,7 @@ export const loadCabinetAppOverview = async (session) => {
       loadTeamsRatingBreakdown({
         db,
         teamIds,
+        currentUserId: normalizedUserId,
         location,
         seasonId: null,
       }),

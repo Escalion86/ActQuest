@@ -286,6 +286,7 @@ const fetchGamesForCabinet = async ({
       showTasksAudience: 1,
       showTasksCountInGame: 1,
       hideResult: 1,
+      showResultAudience: 1,
       registrationOpen: 1,
       maxTeams: 1,
       registeredTeamsVisibility: 1,
@@ -653,7 +654,10 @@ const fetchGamesForCabinet = async ({
     })
     const userTeamPlace =
       isCompletedParticipationStatus(gameStatus) &&
-      canExposeCabinetGamePlace(game, { canViewRestrictedGameInfo })
+      canExposeCabinetGamePlace(game, {
+        canViewRestrictedGameInfo,
+        hasUserParticipation: resolvedParticipation.length > 0,
+      })
       ? resolveParticipationPlace({
           game,
           teamIds: resolvedParticipation.map((team) => team.teamId),

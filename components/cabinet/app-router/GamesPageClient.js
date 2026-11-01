@@ -3,6 +3,9 @@
 import { showClassicItemsAndVariants } from '@helpers/classicEditorSettings'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 import GameTeamLimit from '@components/cabinet/GameTeamLimit'
+import GamePrequelCardAction from '@components/cabinet/GamePrequelCardAction'
+import GamePrequelPanel from '@components/modals/GamePrequelPanel'
+import Modal from '@components/Modal'
 
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -61,6 +64,7 @@ import { getRequiredMainCodesValidationError } from '@helpers/classicGameRules'
 import {
   canManageCabinetGameFinances,
   canViewPublishedGameTasks,
+  canViewPublishedGameResults,
 } from '@helpers/cabinetGameVisibility'
 import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
@@ -1094,6 +1098,8 @@ const buildUpdatePayload = (game) => {
     showTasksAudience:
       game.showTasksAudience === 'participants' ? 'participants' : 'all',
     showTasksCountInGame: Boolean(game.showTasksCountInGame),
+    showResultAudience:
+      game.showResultAudience === 'participants' ? 'participants' : 'all',
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
     maxTeams: game.maxTeams ?? null,
@@ -1414,6 +1420,7 @@ const GamesPage = ({
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [selectedAgentToAdd, setSelectedAgentToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
+  const [prequelModalGameId, setPrequelModalGameId] = useState(null)
   const [reviewModalGame, setReviewModalGame] = useState(null)
   const [isFinancesModalOpen, setIsFinancesModalOpen] = useState(false)
   const [isGameHistoryModalOpen, setIsGameHistoryModalOpen] = useState(false)
@@ -1657,6 +1664,10 @@ const GamesPage = ({
     () => (copiedTasksTargetGame?.id === selectedGameId ? copiedTasksTargetGame : null)
       ?? games.find((game) => game.id === selectedGameId) ?? null,
     [copiedTasksTargetGame, games, selectedGameId],
+  )
+  const prequelModalGame = useMemo(
+    () => games.find((game) => game.id === prequelModalGameId) ?? null,
+    [games, prequelModalGameId],
   )
   const activeEditGame = editingGame ?? selectedGame
   const registerModalGame = useMemo(
@@ -3204,6 +3215,7 @@ const GamesPage = ({
             normalizeRegisteredTeamsVisibility(
               normalizedSource.registeredTeamsVisibility,
             )
+          baseDraft.showResultAudience = normalizedSource.showResultAudience
           baseDraft.hideResult = Boolean(normalizedSource.hideResult)
           baseDraft.maxTeams = normalizedSource.maxTeams ?? null
           baseDraft.registrationOpen = Boolean(
@@ -6074,7 +6086,9 @@ const GamesPage = ({
         return true
       }
 
-      return !Boolean(game.hideResult)
+      return canViewPublishedGameResults(game, {
+        hasUserParticipation: getUserParticipationTeams(game).length > 0,
+      })
     },
     [canManageGameStatus],
   )
@@ -6852,6 +6866,7 @@ const GamesPage = ({
             tabIndex={0}
             onClick={() => handleSelectGameCard(game)}
             onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
                 handleSelectGameCard(game)
@@ -6960,6 +6975,10 @@ const GamesPage = ({
                       </p>
                     ) : null}
                     <GameTeamLimit game={game} role={userRole} />
+                    <GamePrequelCardAction
+                      game={game}
+                      onOpen={(game) => setPrequelModalGameId(game.id)}
+                    />
                     {hasParticipation && (
                       <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">
                         {participationSummary}
@@ -7479,6 +7498,7 @@ const GamesPage = ({
             tabIndex={0}
             onClick={() => handleSelectGameCard(game)}
             onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
                 handleSelectGameCard(game)
@@ -7561,6 +7581,10 @@ const GamesPage = ({
                 </p>
               ) : null}
               <GameTeamLimit game={game} role={userRole} />
+              <GamePrequelCardAction
+                game={game}
+                onOpen={(game) => setPrequelModalGameId(game.id)}
+              />
               {hasParticipation && (
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300">
                   {participationSummary}
@@ -8634,6 +8658,19 @@ const GamesPage = ({
 
           <div className="md:col-span-5">
             <div className="space-y-6">
+              <Modal
+                isOpen={Boolean(prequelModalGame)}
+                title={`Приквел — ${prequelModalGame?.name || 'Без названия'}`}
+                onClose={() => setPrequelModalGameId(null)}
+              >
+                {prequelModalGame ? (
+                  <GamePrequelPanel
+                    key={prequelModalGame.id}
+                    selectedGame={prequelModalGame}
+                    isOpen
+                  />
+                ) : null}
+              </Modal>
               <GameModals
                 selectedGame={selectedGame}
                 editGame={taskEditorDraft ?? editingGame}
@@ -9090,6 +9127,7 @@ GamesPage.propTypes = {
       showTasksCountInGame: PropTypes.bool,
       registeredTeamsVisibility: PropTypes.oneOf(['list', 'count', 'hidden']),
       hideResult: PropTypes.bool,
+      showResultAudience: PropTypes.oneOf(['all', 'participants']),
       registrationOpen: PropTypes.bool,
       maxTeams: PropTypes.number,
       allowJoinAfterStart: PropTypes.bool,

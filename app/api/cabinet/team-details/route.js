@@ -56,6 +56,7 @@ export async function GET(request) {
     const teams = await fetchTeamsForCabinet({
       db,
       teamIds: [teamId],
+      currentUserId: session.user.globalUserId ?? session.user.userId ?? session.user._id ?? session.user.id,
       // Для запроса конкретной команды по teamId не фильтруем по городу сессии,
       // иначе команда из другого города может "пропадать".
       location: null,
@@ -108,6 +109,7 @@ export async function GET(request) {
       loadTeamsRatingBreakdown({
         db,
         teamIds: [teamId],
+      currentUserId: session.user.globalUserId ?? session.user.userId ?? session.user._id ?? session.user.id,
         location: ratingLocation,
         seasonId: null,
       }),

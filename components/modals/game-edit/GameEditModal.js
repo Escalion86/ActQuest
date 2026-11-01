@@ -152,6 +152,52 @@ const GameEditModal = ({
       </div>
     )
   }
+  const renderResultVisibility = (idPrefix) => {
+    const value = selectedGame?.hideResult
+      ? 'hidden'
+      : selectedGame?.showResultAudience === 'participants' ? 'participants' : 'all'
+    const options = [
+      { value: 'all', label: 'Показывать всем' },
+      { value: 'participants', label: 'Показывать только участникам' },
+      { value: 'hidden', label: 'Не показывать' },
+    ]
+    return (
+      <div className="md:col-span-2">
+        <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-white">
+          Показывать результаты
+        </p>
+        <div
+          className="grid gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900/70 sm:grid-cols-3"
+          role="radiogroup"
+          aria-label="Показывать результаты"
+        >
+          {options.map((option) => {
+            const isSelected = value === option.value
+            return (
+              <button
+                key={option.value}
+                id={`${idPrefix}-${option.value}`}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => updateSelectedGame({
+                  hideResult: option.value === 'hidden',
+                  showResultAudience: option.value === 'participants' ? 'participants' : 'all',
+                })}
+                className={`min-h-10 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  isSelected
+                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                    : 'text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
   const renderShowTasksAudienceToggle = (idPrefix) => {
     if (!Boolean(selectedGame?.showTasks)) {
       return null
@@ -298,20 +344,7 @@ const GameEditModal = ({
               {renderRegisteredTeamsVisibility(
                 'game-registered-teams-visibility-closed',
               )}
-              <NeonCheckbox
-                id="game-hide-result-closed"
-                checked={!Boolean(selectedGame.hideResult)}
-                onChange={(eventOrChecked) => {
-                  const payload = debugCheckboxUpdate(
-                    'hideResult',
-                    getCheckboxChecked(eventOrChecked),
-                    (checked) => ({ hideResult: !checked }),
-                  )
-                  if (payload) updateSelectedGame(payload)
-                }}
-                label="Показать результаты"
-                labelClassName="text-sm text-slate-600 dark:text-slate-200"
-              />
+              {renderResultVisibility('game-result-visibility-closed')}
             </div>
           </ModalSection>
         </fieldset>
@@ -488,20 +521,7 @@ const GameEditModal = ({
             {renderRegisteredTeamsVisibility(
               'game-registered-teams-visibility',
             )}
-            <NeonCheckbox
-              id="game-hide-result"
-              checked={!Boolean(selectedGame.hideResult)}
-              onChange={(eventOrChecked) => {
-                const payload = debugCheckboxUpdate(
-                  'hideResult',
-                  getCheckboxChecked(eventOrChecked),
-                  (checked) => ({ hideResult: !checked }),
-                )
-                if (payload) updateSelectedGame(payload)
-              }}
-              label="Показать результаты"
-              labelClassName="text-sm text-slate-600 dark:text-slate-200"
-            />
+            {renderResultVisibility('game-result-visibility')}
             {!isClosedGame && (
               <NeonCheckbox
                 id="game-registration-open"
@@ -925,6 +945,7 @@ GameEditModal.propTypes = {
     id: PropTypes.string,
     showTasks: PropTypes.bool,
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
+    showResultAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
     registeredTeamsVisibility: PropTypes.oneOf(['list', 'count', 'hidden']),
     allowJoinAfterStart: PropTypes.bool,

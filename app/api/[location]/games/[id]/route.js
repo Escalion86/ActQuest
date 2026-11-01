@@ -1,3 +1,8 @@
+import { normalizeShowResultAudience } from '@helpers/cabinetGameVisibility'
+import { collectSnapshotTeamIdsForUser } from '@helpers/gameParticipation'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@server/auth/authOptions'
+import { resolveSessionIdentity } from '@server/gameHistory/gameManageAccess'
 import { normalizeMaxTeams } from '@helpers/gameRegistration'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 import CRUD from '@server/CRUD'
@@ -543,9 +548,17 @@ const execute = (request, params) =>
             )
           }
 
+          const session = await getServerSession(authOptions)
+          const identity = resolveSessionIdentity(session)
+          const viewer = {
+            canViewRestrictedGameInfo: canManageGame({ session, game: existingGame }),
+            hasUserParticipation: collectSnapshotTeamIdsForUser({
+              game: existingGame, userId: identity.userId,
+            }).length > 0,
+          }
           return res.status(200).json({
             success: true,
-            data: sanitizeGameForPublicRead(existingGame),
+            data: sanitizeGameForPublicRead(existingGame, viewer),
           })
         } catch (error) {
           console.error('Failed to read public game', { error, gameId: id, location })
@@ -889,6 +902,10 @@ const execute = (request, params) =>
             updateData.paymentMode = 'participant'
             updateData.maxTeamPlayers = 1
           }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'showResultAudience')) {
+          updateData.showResultAudience = normalizeShowResultAudience(updateData.showResultAudience)
         }
 
         if (Object.prototype.hasOwnProperty.call(updateData, 'showTasksAudience')) {

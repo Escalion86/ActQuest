@@ -1,3 +1,5 @@
+import { canViewPublishedGameResults } from '@helpers/cabinetGameVisibility'
+import { collectSnapshotTeamIdsForUser } from '@helpers/gameParticipation'
 import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 
@@ -103,6 +105,7 @@ const fetchTeamsForCabinet = async ({
   returnMeta = false,
   includePersonal = false,
   includeHiddenGameResults = false,
+  currentUserId = null,
 }) => {
   if (!db) {
     return returnMeta ? { teams: [], hasMore: false } : []
@@ -311,6 +314,8 @@ const fetchTeamsForCabinet = async ({
           image: 1,
           hidden: 1,
           hideResult: 1,
+          showResultAudience: 1,
+          'result.teamsUsers': 1,
           'result.teamsPlaces': 1,
         })
         .lean()
@@ -347,7 +352,10 @@ const fetchTeamsForCabinet = async ({
       rawPlaces instanceof Map ? rawPlaces.get(teamId) : rawPlaces[teamId]
     const numericPlace = Number(rawPlace)
     const isResultPublished =
-      includeHiddenGameResults || !Boolean(game?.hideResult)
+      canViewPublishedGameResults(game, {
+        canViewRestrictedGameInfo: includeHiddenGameResults,
+        hasUserParticipation: collectSnapshotTeamIdsForUser({ game, userId: currentUserId }).length > 0,
+      })
 
     acc[teamId].push({
       ...game,
