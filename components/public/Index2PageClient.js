@@ -2629,7 +2629,7 @@ const Index2Page = ({ seoFooter }) => {
                     </p>
                     {isTelemetryComplete ? (
                       <div className="mt-3 rounded-xl border border-[#00D1FF]/30 bg-[#00D1FF]/10 px-3 py-2 text-xs uppercase tracking-[0.1em] text-[#c8f8ff]">
-                        бонус-код: OBSERVER-07
+                        бонус-код: 12A8359Q
                       </div>
                     ) : null}
                   </div>
