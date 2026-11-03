@@ -483,6 +483,9 @@ const ScenarioCard = ({
               <p className="mt-1 text-xs text-slate-300">
                 {nearestGame.dateLabel}
               </p>
+              <p className="mt-2 text-xs text-slate-300">
+                Время указано по местному времени города проведения.
+              </p>
             </>
           ) : (
             <p className="text-sm text-slate-300">
@@ -1103,7 +1106,7 @@ const Index2Page = ({ seoFooter }) => {
           location: selectedScenarioLocation,
           sort: 'dateStart',
           limit: '120',
-          select: '_id,name,dateStart,status,hidden',
+          select: '_id,name,location,dateStart,status,hidden',
         })
 
         const response = await fetch(
@@ -1135,7 +1138,7 @@ const Index2Page = ({ seoFooter }) => {
               id,
               name: item?.name || 'Без названия',
               dateStart: Number.isFinite(startTs) ? startTs : 0,
-              location: item?.location || location,
+              location: item?.location || selectedScenarioLocation,
             }
           })
           .filter((item) => item.id)
