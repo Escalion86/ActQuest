@@ -1666,7 +1666,9 @@ const GamesPage = ({
     [copiedTasksTargetGame, games, selectedGameId],
   )
   const prequelModalGame = useMemo(
-    () => games.find((game) => game.id === prequelModalGameId) ?? null,
+    () => games.find(
+      (game) => game.id === prequelModalGameId && getUserParticipationTeams(game).length > 0,
+    ) ?? null,
     [games, prequelModalGameId],
   )
   const activeEditGame = editingGame ?? selectedGame
@@ -6975,10 +6977,12 @@ const GamesPage = ({
                       </p>
                     ) : null}
                     <GameTeamLimit game={game} role={userRole} />
-                    <GamePrequelCardAction
-                      game={game}
-                      onOpen={(game) => setPrequelModalGameId(game.id)}
-                    />
+                    {hasParticipation && (
+                      <GamePrequelCardAction
+                        game={game}
+                        onOpen={(game) => setPrequelModalGameId(game.id)}
+                      />
+                    )}
                     {hasParticipation && (
                       <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">
                         {participationSummary}
@@ -7581,10 +7585,12 @@ const GamesPage = ({
                 </p>
               ) : null}
               <GameTeamLimit game={game} role={userRole} />
-              <GamePrequelCardAction
-                game={game}
-                onOpen={(game) => setPrequelModalGameId(game.id)}
-              />
+              {hasParticipation && (
+                <GamePrequelCardAction
+                  game={game}
+                  onOpen={(game) => setPrequelModalGameId(game.id)}
+                />
+              )}
               {hasParticipation && (
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300">
                   {participationSummary}
