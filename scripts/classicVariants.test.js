@@ -86,7 +86,7 @@ test('права капитана, слив без выбора и однора�
   game.tasks[1].outcomeRewards = { captain_failed: [{ itemId: 'coin', quantity: 2 }] }
   const choosing = play(game, prepared(game), 13).gameTeam
   assert.equal(play(game, choosing, 14, { isCaptain: false, action: 'selectVariant', stageId: 'two', variantId: 'b' }).result.statusCode, 403)
-  const failed = play(game, choosing, 14, { action: 'failTask' }).gameTeam
+  const failed = play(game, choosing, 14, { action: 'failTask', stageId: 'two' }).gameTeam
   assert.equal(failed.endTime[1], null)
   assert.equal(failed.classicProgress.inventory[0].quantity, 5)
   assert.equal(play(game, failed, 15).gameTeam.classicProgress.inventory[0].quantity, 5)
@@ -197,11 +197,11 @@ test('подсказки отсчитываются с начала выбора
   const game = makeGame()
   let team = play(game, prepared(game), 13).gameTeam
   team = play(game, team, 25, { action: 'selectVariant', stageId: 'two', variantId: 'b' }).gameTeam
-  const clue = play(game, team, 25, { action: 'forceClue' })
+  const clue = play(game, team, 25, { action: 'forceClue', stageId: 'two' })
   assert.equal(clue.result.statusCode, 409)
-  team = play(game, team, 26, { action: 'failTask' }).gameTeam
+  team = play(game, team, 26, { action: 'failTask', stageId: 'two' }).gameTeam
   assert.equal(team.classicProgress.stages[1].outcome, 'captain_failed')
-  team = play(game, team, 27, { action: 'finishBreak' }).gameTeam
+  team = play(game, team, 27, { action: 'finishBreak', stageId: 'two' }).gameTeam
   assert.equal(team.activeNum, 2)
   assert.equal(new Date(team.startTime[2]).getTime(), at(27).getTime())
 })

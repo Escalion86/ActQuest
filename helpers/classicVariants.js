@@ -1,4 +1,6 @@
 import { normalizeClassicCode, getRequiredMainCodesValidationError } from './classicGameRules.js'
+import { getTaskTimingErrors } from './taskTiming.js'
+import { getClassicEffectValidationError, getPublicClassicEffect } from './classicItemDefinitions.js'
 
 export const classicStageId = (task, index) => String(task?.stageKey || task?._id || task?.id || index)
 export const hasClassicVariants = (game) => game?.type === 'classic' && (
@@ -14,7 +16,7 @@ export const resolveClassicTask = (task, team, index) => {
   const selected = getClassicStageProgress(team, task, index)?.selectedVariantId
   const content = selected === 'default' ? task : task.variants?.find((v) => v.id === selected)?.content
   return {
-    ...(content || {}), _id: task._id, canceled: task.canceled, isBonusTask: task.isBonusTask,
+    ...(content || {}), _id: task._id, stageKey: task.stageKey, taskDuration: task.taskDuration, clueIntervals: task.clueIntervals, canceled: task.canceled, isBonusTask: task.isBonusTask,
     selectedVariantId: selected || null,
     variantTitle: selected === 'default' ? task.variantConfig?.title || 'Обычный путь'
       : task.variants?.find((v) => v.id === selected)?.title || '',
@@ -59,7 +61,7 @@ export const classicPublicInventory = (game, team) => (team?.classicProgress?.in
   .filter((entry) => entry.quantity > 0)
   .map((entry) => {
     const item = game.classicItems?.find((item) => item.id === entry.itemId)
-    return { itemId: entry.itemId, quantity: entry.quantity, title: item?.title || '', description: item?.description || '' }
+    return { itemId: entry.itemId, quantity: entry.quantity, title: item?.title || '', description: item?.description || '', effect: getPublicClassicEffect(item?.effect) }
   })
 export const classicPublicChoices = (game, team, index) => getClassicVariantChoices(game, team, index).map((variant) => ({
   id: variant.id, title: variant.title, description: variant.description || '',
@@ -80,6 +82,12 @@ const validateClassicVariantsUnchecked = (game) => {
   for (const item of items) {
     if (!item.id || ids.has(item.id) || !item.title?.trim() || !['unique', 'stackable'].includes(item.kind)) errors.push('Проверьте название, тип и уникальность ID предметов.')
     ids.add(item.id)
+    if (item.effect) {
+      const effect = item.effect
+      const effectError = getClassicEffectValidationError(effect)
+      if (effectError) errors.push(`Предмет «${item.title}»: ${effectError}`)
+      if (effect.allowedStageIds !== undefined && (!Array.isArray(effect.allowedStageIds) || effect.allowedStageIds.some((id) => !stageIds.includes(id)))) errors.push(`Предмет «${item.title}»: проверьте задания для применения.`)
+    }
   }
   const quantities = (entries = [], label) => {
     if (!Array.isArray(entries)) { errors.push(`${label}: ожидается список предметов.`); return }
@@ -134,6 +142,6 @@ const validateClassicVariantsUnchecked = (game) => {
 }
 
 export const validateClassicVariants = (game) => {
-  try { return validateClassicVariantsUnchecked(game) }
+  try { return [...getTaskTimingErrors(game), ...validateClassicVariantsUnchecked(game)] }
   catch { return ['Некорректная структура вариантов, условий или предметов.'] }
 }

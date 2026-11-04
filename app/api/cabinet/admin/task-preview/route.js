@@ -104,6 +104,7 @@ export async function GET(request) {
         status: 1,
         taskDuration: 1,
         cluesDuration: 1,
+        clueIntervals: 1,
         breakDuration: 1,
         taskTheme: 1,
         useCustomTaskPublicTitles: 1,
@@ -183,6 +184,7 @@ export async function GET(request) {
             status: normalizeString(game.status),
             taskDuration: Number(game.taskDuration) || 3600,
             cluesDuration: Number(game.cluesDuration) || 1200,
+            clueIntervals: game.clueIntervals ?? null,
             breakDuration: Number(game.breakDuration) || 0,
             useCustomTaskPublicTitles:
               game.useCustomTaskPublicTitles === true,
@@ -190,6 +192,8 @@ export async function GET(request) {
           },
           task: {
             index: safeTaskIndex,
+            taskDuration: task.taskDuration ?? null,
+            clueIntervals: task.clueIntervals ?? null,
             isBonusTask: task.isBonusTask === true,
             publicTitle: normalizeString(task.publicTitle),
             title: normalizeString(task.title),

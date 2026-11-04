@@ -136,6 +136,7 @@ const fetchTaskPreviewData = async ({ gameId, draftKey, taskIndex }) => {
         status: String(parsed?.game?.status || ''),
         taskDuration: Number(parsed?.game?.taskDuration) || 3600,
         cluesDuration: Number(parsed?.game?.cluesDuration) || 1200,
+        clueIntervals: parsed?.game?.clueIntervals ?? null,
         breakDuration: Number(parsed?.game?.breakDuration) || 0,
         useCustomTaskPublicTitles:
           parsed?.game?.useCustomTaskPublicTitles === true,

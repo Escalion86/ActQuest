@@ -503,6 +503,9 @@ const normalizeTasks = (tasks = []) => {
     howToSolve: ensureString(task?.howToSolve, ''),
     stageKey: task.stageKey || ensureString(task._id ?? task.id, `task-${index}`),
     variantConfig: task.variantConfig || null,
+    taskDuration: task.taskDuration ?? null,
+    clueIntervals: task.clueIntervals ?? null,
+    allowIncompleteClues: task.allowIncompleteClues === true,
     variants: task.variants || [],
     itemRewards: task.itemRewards || null,
     outcomeRewards: task.outcomeRewards || null,
@@ -665,6 +668,7 @@ const normalizeGameForCabinet = (game) => {
     showFinishingPlace: ensureBoolean(game.showFinishingPlace, false),
     taskDuration: ensureNumber(game.taskDuration, 3600),
     cluesDuration: ensureNumber(game.cluesDuration, 1200),
+    clueIntervals: game.clueIntervals ?? null,
     clueEarlyAccessMode:
       game?.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time',
     clueEarlyPenalty: ensureNumber(game.clueEarlyPenalty, 0),

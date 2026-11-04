@@ -13,7 +13,7 @@ export const classicEditorContent = (content, prefix) => ({
 export const copyClassicContent = (task) => {
   const { id: _id, _id: _mongoId, mongoId: _draftMongoId, stageKey: _stage, variants: _variants,
     variantConfig: _config, outcomeRewards: _outcomes, canceled: _canceled,
-    isBonusTask: _bonus, publicTitle: _publicTitle, ...content } = task
+    isBonusTask: _bonus, publicTitle: _publicTitle, taskDuration: _duration, clueIntervals: _intervals, ...content } = task
   return structuredClone(content)
 }
 

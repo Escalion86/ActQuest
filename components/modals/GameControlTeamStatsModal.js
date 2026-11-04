@@ -18,11 +18,12 @@ const formatDateTime = (value) => {
 
 const formatSeconds = (value) => {
   const sec = Number(value)
-  if (!Number.isFinite(sec) || sec < 0) return '—'
-  const hours = Math.floor(sec / 3600)
-  const minutes = Math.floor((sec % 3600) / 60)
-  const seconds = sec % 60
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+  if (!Number.isFinite(sec)) return '—'
+  const absolute = Math.abs(Math.round(sec))
+  const hours = Math.floor(absolute / 3600)
+  const minutes = Math.floor((absolute % 3600) / 60)
+  const seconds = absolute % 60
+  return `${sec < 0 ? '-' : ''}${String(hours).padStart(2, '0')}:${String(minutes).padStart(
     2,
     '0',
   )}:${String(seconds).padStart(2, '0')}`
@@ -255,7 +256,7 @@ const GameControlTeamStatsModal = ({
           </div>
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center">
             <div className="text-lg font-semibold text-emerald-200">
-              -{formatSeconds(stats?.totalBonusSeconds)}
+              -{formatSeconds((Number(stats?.totalBonusSeconds) || 0) + (Number(stats?.totalTimeBonusSeconds) || 0))}
             </div>
             <div className="text-xs text-slate-400">Бонусы (сумма)</div>
           </div>
@@ -371,6 +372,7 @@ const GameControlTeamStatsModal = ({
                 </div>
                 <div className="mb-3 grid gap-1 text-xs text-slate-500 sm:grid-cols-2">
                   <p>Старт: {formatDateTime(task.startedAt)}</p>
+                  {task.taskDurationSeconds > 0 && <p>Лимит: {formatSeconds(task.taskDurationSeconds)}</p>}
                   <p>Завершение: {formatDateTime(task.endedAt)}</p>
                   {task.isFailedTask && (
                     <p className="sm:col-span-2 text-red-300">
@@ -384,6 +386,9 @@ const GameControlTeamStatsModal = ({
                   )}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
+                  {(task.virtualCodesCount > 0 || task.completionSource === 'portal') && <p className="text-xs sm:col-span-2">{task.completionSource === 'portal' ? 'Задание завершено порталом. ' : ''}{task.virtualCodesCount > 0 ? `Обязательных кодов закрыто отмычкой: ${task.virtualCodesCount}.` : ''}</p>}
+                  {task.itemEffects?.length > 0 && <div className="space-y-1 rounded-lg border border-cyan-200 p-2 text-xs dark:border-cyan-800 sm:col-span-2"><p className="font-semibold">Применение предметов</p>{task.itemEffects.map((effect) => <p key={effect.key}>{effect.title}: {effect.description} · {formatDateTime(effect.at)}</p>)}</div>}
+                  {task.timeBonuses?.length > 0 && <div className="space-y-1 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200 sm:col-span-2"><p className="font-semibold">Бонусы предметов — уже учтены во времени задания</p>{task.timeBonuses.map((bonus, index) => <p key={index}>{bonus.name}: −{formatSeconds(bonus.seconds)} · {formatDateTime(bonus.createdAt)}</p>)}</div>}
                   <CodeList title="Основные коды" tone="main" items={task.mainCodes} />
                   {task.hasConfiguredBonusCodes && (
                     <CodeList
@@ -419,6 +424,7 @@ GameControlTeamStatsModal.propTypes = {
     completedTasksCount: PropTypes.number,
     totalTasksCount: PropTypes.number,
     totalTasksTimeSeconds: PropTypes.number,
+    totalTimeBonusSeconds: PropTypes.number,
     totalPenaltySeconds: PropTypes.number,
     totalBonusSeconds: PropTypes.number,
     totalFinalSeconds: PropTypes.number,
@@ -453,11 +459,16 @@ GameControlTeamStatsModal.propTypes = {
         startedAt: PropTypes.string,
         endedAt: PropTypes.string,
         completedSeconds: PropTypes.number,
+        taskDurationSeconds: PropTypes.number,
         isFailedTask: PropTypes.bool,
         failedByCaptain: PropTypes.bool,
         failedByTimeout: PropTypes.bool,
         failedAt: PropTypes.string,
         penaltyByTaskFailureSeconds: PropTypes.number,
+        timeBonuses: PropTypes.arrayOf(PropTypes.shape({ name: PropTypes.string, seconds: PropTypes.number, createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]) })),
+        virtualCodesCount: PropTypes.number,
+        completionSource: PropTypes.string,
+        itemEffects: PropTypes.arrayOf(PropTypes.shape({ key: PropTypes.string, title: PropTypes.string, description: PropTypes.string, at: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]) })),
         hasConfiguredBonusCodes: PropTypes.bool,
         hasConfiguredPenaltyCodes: PropTypes.bool,
         mainCodes: PropTypes.array,

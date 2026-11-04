@@ -38,6 +38,7 @@ const resolveTaskEventsForTeam = ({ game, gameTeam, now = new Date() }) => {
   const breakDurationSeconds = Number(game?.breakDuration) || 0
   const taskDurationSeconds = Number(game?.taskDuration) || 3600
   const isBreakActiveOnCurrentTask = isTaskBreakActive({
+    tasks,
     gameTeam,
     taskIndex: activeTaskIndex,
     breakDurationSeconds,
@@ -71,6 +72,7 @@ const resolveTaskEventsForTeam = ({ game, gameTeam, now = new Date() }) => {
     if (
       settings.onTaskCompleted &&
       hasTeamFinishedAgentWorkForTask({
+        tasks,
         gameTeam,
         taskIndex,
         tasksCount,

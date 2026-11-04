@@ -6,6 +6,10 @@ import {
 } from '../helpers/normalizePrequel.js'
 import { getTeamTaskSequence } from '../helpers/taskDistribution.js'
 import { normalizeClassicCode } from '../helpers/classicGameRules.js'
+import { isTimeAddingForTask as matchesTaskTimeAdding } from '../helpers/taskTimeAdjustments.js'
+import { getTimeAddingSeconds } from '../helpers/taskTimeAdjustments.js'
+import { getClassicItemStage, getVirtualMainCodesCount } from '../helpers/classicItemProgress.js'
+import { getTaskDurationSeconds } from '../helpers/taskTiming.js'
 
 const secondsToTime = (sec) => {
   const numeric = Number(sec)
@@ -59,6 +63,7 @@ const UNFINISHED_TASK_STATUSES = new Set([
 ])
 
 const isUnfinishedTaskEntry = (entry) => {
+  if (entry?.isFailedTask) return true
   const status = typeof entry?.status === 'string' ? entry.status.trim() : ''
   if (UNFINISHED_TASK_STATUSES.has(status)) {
     return true
@@ -87,9 +92,6 @@ const compareTaskBoardEntries = (first, second) => {
     'ru',
   )
 }
-
-const getTaskIdValue = (task) =>
-  task?._id !== null && task?._id !== undefined ? String(task._id) : ''
 
 const isCaptainForceClueAdding = (item) => {
   const source = typeof item?.source === 'string' ? item.source.trim() : ''
@@ -123,17 +125,11 @@ const shouldShowTimeAddingInAdjustments = (item) => {
   return !isCaptainForceClueAdding(item)
 }
 
-const normalizeTimeAddingTaskIndex = (item) =>
-  Number.isInteger(Number(item?.taskIndex)) ? Number(item.taskIndex) : null
-
 const isTimeAddingForTask = (item, taskIndex, task) => {
-  const itemTaskId = typeof item?.taskId === 'string' ? item.taskId.trim() : ''
-  const taskId = getTaskIdValue(task)
-  if (taskId && itemTaskId) return itemTaskId === taskId
-  return normalizeTimeAddingTaskIndex(item) === taskIndex
+  return matchesTaskTimeAdding(item, taskIndex, task)
 }
 
-const getTaskElapsedAdjustmentSeconds = (gameTeam, taskIndex, task) => {
+const getTaskElapsedAdjustmentSeconds = (gameTeam, taskIndex, task, now = new Date()) => {
   const addings = Array.isArray(gameTeam?.timeAddings)
     ? gameTeam.timeAddings
     : []
@@ -141,14 +137,13 @@ const getTaskElapsedAdjustmentSeconds = (gameTeam, taskIndex, task) => {
   return addings.reduce((sum, item) => {
     if (normalizeTimeAddingScope(item) !== 'task_elapsed') return sum
     if (!isTimeAddingForTask(item, taskIndex, task)) return sum
-    const seconds = Number(item?.time)
+    const seconds = getTimeAddingSeconds(item, now)
     return Number.isFinite(seconds) ? sum + Math.round(seconds) : sum
   }, 0)
 }
 
 const buildTaskDurations = (gameTeam, game) => {
   const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
-  const taskDuration = Number(game?.taskDuration) || 3600
   const startTime = Array.isArray(gameTeam?.startTime) ? gameTeam.startTime : []
   const endTime = Array.isArray(gameTeam?.endTime) ? gameTeam.endTime : []
   const taskFailures = Array.isArray(gameTeam?.taskFailures)
@@ -169,6 +164,7 @@ const buildTaskDurations = (gameTeam, game) => {
   const result = []
 
   for (let index = 0; index < tasksCount; index += 1) {
+    const taskDuration = getTaskDurationSeconds(game, game.tasks[index])
     const isFailedByDecision = taskFailures.some(
       (item) => Number(item?.taskIndex) === index && item?.failedAt,
     )
@@ -177,9 +173,10 @@ const buildTaskDurations = (gameTeam, game) => {
       gameTeam,
       index,
       Array.isArray(game?.tasks) ? game.tasks[index] : null,
+      endTime[index] || game.dateEndFact || new Date(),
     )
     const applyTaskElapsedAdjustment = (seconds) =>
-      Math.max(0, Math.min(taskDuration, seconds + taskElapsedAdjustmentSeconds))
+      Math.max(0, taskDuration > 0 ? Math.min(taskDuration, seconds + taskElapsedAdjustmentSeconds) : seconds + taskElapsedAdjustmentSeconds)
 
     if (completedTaskIndexes.has(index)) {
       if (!endTime[index]) {
@@ -425,7 +422,6 @@ const getPrequelResult = (game, gameTeam) => {
 }
 
 const buildEmptyTeamResult = (team, game) => {
-  const taskDuration = Number(game?.taskDuration) || 3600
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
   const teamId = toStringId(team?._id ?? team?.id) || ''
 
@@ -437,7 +433,8 @@ const buildEmptyTeamResult = (team, game) => {
     status: 'not_started',
     raw: '[не начато]',
     seconds: null,
-    normalizedSeconds: task?.isBonusTask || task?.canceled ? 0 : taskDuration,
+    normalizedSeconds: task?.isBonusTask || task?.canceled ? 0 : getTaskDurationSeconds(game, task),
+    taskDurationSeconds: getTaskDurationSeconds(game, task),
     penaltySeconds: 0,
     bonusSeconds: 0,
     manyWrongCodePenaltySeconds: 0,
@@ -497,7 +494,6 @@ const buildTeamResult = (team, gameTeam, game) => {
   }
 
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
-  const taskDuration = Number(game?.taskDuration) || 3600
   const taskFailurePenalty = Number(game?.taskFailurePenalty) || 0
   const taskSequence = getTeamTaskSequence(game, gameTeam)
   const durations = buildTaskDurations(gameTeam, game)
@@ -511,11 +507,14 @@ const buildTeamResult = (team, gameTeam, game) => {
   const prequelResult = getPrequelResult(game, gameTeam)
 
   const taskResults = tasks.map((task, taskIndex) => {
+    const taskDuration = getTaskDurationSeconds(game, task)
     const raw = durations[taskIndex] ?? '[не начато]'
     const numericDuration = isNumeric(raw) ? raw : null
     const isCanceled = Boolean(task?.canceled)
     const isBonusTask = Boolean(task?.isBonusTask)
     const shouldCountInTotals = !isCanceled && !isBonusTask
+    const failedByDecision = (gameTeam.taskFailures || []).some((failure) => Number(failure.taskIndex) === taskIndex && failure.failedAt)
+    const isFailedTask = Boolean(failedByDecision || (!gameTeam.endTime?.[taskIndex] && numericDuration !== null))
 
     const normalizedSeconds = shouldCountInTotals
       ? numericDuration === null
@@ -542,7 +541,7 @@ const buildTeamResult = (team, gameTeam, game) => {
     let taskFailurePenaltySeconds = 0
     if (
       shouldCountInTotals &&
-      (numericDuration === null || normalizedSeconds >= taskDuration)
+      (isFailedTask || numericDuration === null || (taskDuration > 0 && normalizedSeconds >= taskDuration))
     ) {
       taskFailurePenaltySeconds = taskFailurePenalty
       failurePenaltySeconds += taskFailurePenaltySeconds
@@ -569,6 +568,14 @@ const buildTeamResult = (team, gameTeam, game) => {
         display: secondsToTime(item.seconds),
       })),
     ]
+    const itemTimeAdjustments = (gameTeam.timeAddings || [])
+      .filter((item) => ['item_time_rewind', 'item_time_freeze'].includes(item.source) && isTimeAddingForTask(item, taskIndex, task))
+      .map((item) => { const seconds = Math.abs(getTimeAddingSeconds(item, gameTeam.endTime?.[taskIndex] || game.dateEndFact || new Date())); return { type: 'bonus', source: item.source, description: item.name, seconds, display: secondsToTime(seconds), includedInTaskTime: true } })
+    adjustments.push(...itemTimeAdjustments)
+    const itemRefunds = (gameTeam.timeAddings || []).filter((item) => ['item_penalty_shield', 'item_penalty_erase'].includes(item.source) && isTimeAddingForTask(item, taskIndex, task))
+    adjustments.push(...itemRefunds.map((item) => ({ type: 'bonus', source: item.source, description: item.name, seconds: Math.abs(item.time), display: secondsToTime(Math.abs(item.time)) })))
+    const itemStage = getClassicItemStage(gameTeam, task, taskIndex)
+    const itemEffects = (gameTeam.classicProgress?.history || []).filter((event) => ['item_used', 'penalty_blocked'].includes(event.type) && event.stageId === String(task.stageKey || task._id || task.id || taskIndex)).map((event) => ({ key: event.key, title: event.itemTitle, description: event.description || event.itemTitle, type: event.effect?.type || 'penalty_shield', at: event.at }))
 
     if (wrongCodePenaltySeconds > 0) {
       adjustments.push({
@@ -593,6 +600,7 @@ const buildTeamResult = (team, gameTeam, game) => {
     return {
       taskIndex,
       taskTitle: typeof task?.title === 'string' ? task.title : '',
+      taskDurationSeconds: taskDuration,
       variantId: task?.selectedVariantId || null,
       variantTitle: task?.variantTitle || '',
       isBonusTask,
@@ -601,6 +609,13 @@ const buildTeamResult = (team, gameTeam, game) => {
       raw,
       seconds: numericDuration,
       normalizedSeconds,
+      realSeconds: toDate(gameTeam.startTime?.[taskIndex]) && toDate(gameTeam.endTime?.[taskIndex]) ? getSecondsBetween(gameTeam.startTime[taskIndex], gameTeam.endTime[taskIndex]) : null,
+      timeBonusSeconds: itemTimeAdjustments.reduce((sum, item) => sum + item.seconds, 0),
+      itemBonusSeconds: itemRefunds.reduce((sum, item) => sum + Math.abs(item.time), 0),
+      itemEffects,
+      completionSource: itemStage?.completionSource || null,
+      isFailedTask,
+      virtualCodesCount: getVirtualMainCodesCount(gameTeam, task, taskIndex),
       penaltySeconds:
         taskFailurePenaltySeconds +
         codeResult.penaltySeconds +
@@ -616,7 +631,8 @@ const buildTeamResult = (team, gameTeam, game) => {
     ? gameTeam.timeAddings
         .filter((item) => shouldShowTimeAddingInAdjustments(item))
         .map((item) => {
-          const seconds = Number(item?.time)
+          const taskIndex = Number(item?.taskIndex)
+          const seconds = getTimeAddingSeconds(item, gameTeam.endTime?.[taskIndex] || game.dateEndFact || new Date())
           if (!Number.isFinite(seconds) || seconds === 0) {
             return null
           }
@@ -632,6 +648,7 @@ const buildTeamResult = (team, gameTeam, game) => {
               : null,
             scope: normalizeTimeAddingScope(item),
             showInAdjustments: shouldShowTimeAddingInAdjustments(item),
+            source: item.source || null,
           }
         })
         .filter(Boolean)
@@ -670,6 +687,7 @@ const buildTeamResult = (team, gameTeam, game) => {
     failurePenaltySeconds,
     codePenaltySeconds,
     codeBonusSeconds,
+    taskTimeBonusSeconds: taskResults.reduce((sum, task) => sum + task.timeBonusSeconds, 0),
     manyWrongCodePenaltySeconds,
     prequelBonusSeconds: prequelResult.bonusValue,
     prequelPenaltySeconds: prequelResult.penaltyValue,
@@ -843,6 +861,7 @@ const buildTaskBoards = (teamsResults, game) => {
           teamId: teamResult.teamId,
           teamName: teamResult.teamName,
           status: taskResult.status,
+          isFailedTask: Boolean(taskResult.isFailedTask),
           seconds: taskResult.seconds,
           display: taskResult.display,
           penaltySeconds: Number(taskResult.penaltySeconds) || 0,

@@ -1,6 +1,7 @@
 import { getNounBonusTasks, getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
+import { getTaskDurationSeconds } from './taskTiming.js'
 
 const gameDescription = (game, creator) => {
   const tasksCount = game?.tasks
@@ -46,9 +47,11 @@ const gameDescription = (game, creator) => {
         }`
       : ''
   }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
-    game?.taskDuration ?? 3600
+    game?.tasks?.length ? Math.max(...game.tasks.map((task) => getTaskDurationSeconds(game, task))) : game?.taskDuration ?? 3600
   )}\n${
-    game?.cluesDuration === 0
+      Array.isArray(game?.clueIntervals) || game?.tasks?.some((task) => Array.isArray(task.clueIntervals))
+        ? '<b>Подсказки</b>: по расписанию заданий'
+        : game?.cluesDuration === 0
       ? '<b>Подсказки</b>: отключены'
       : `<b>Время до подсказки</b>: ${secondsToTimeStr(
           game?.cluesDuration ?? 1200

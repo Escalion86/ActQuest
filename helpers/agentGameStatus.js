@@ -1,5 +1,10 @@
 import { getTeamTaskSequence } from './taskDistribution.js'
 import getSecondsBetween from './getSecondsBetween.js'
+import { getTaskDurationSeconds } from './taskTiming.js'
+import { getTaskTimeAdjustmentSeconds } from './taskTimeAdjustments.js'
+
+const getAgentTaskSeconds = (gameTeam, taskIndex, startTime, now) =>
+  Math.max(0, getSecondsBetween(startTime, now) + getTaskTimeAdjustmentSeconds({ timeAddings: gameTeam?.timeAddings, taskIndex, now }))
 
 const ensureArray = (value) => (Array.isArray(value) ? value : [])
 
@@ -33,6 +38,7 @@ const getTaskFailureEntry = (gameTeam, taskIndex) =>
 
 const isTaskBreakActive = ({
   gameTeam,
+  tasks = [],
   taskIndex,
   breakDurationSeconds,
   taskDurationSeconds,
@@ -42,6 +48,7 @@ const isTaskBreakActive = ({
     return false
   }
 
+  taskDurationSeconds = getTaskDurationSeconds({ taskDuration: taskDurationSeconds }, tasks[taskIndex])
   const nowDate = ensureDateValue(now) || new Date()
   const nowMs = nowDate.getTime()
   const startTime = ensureDateValue(ensureArray(gameTeam?.startTime)[taskIndex])
@@ -65,10 +72,7 @@ const isTaskBreakActive = ({
   }
 
   if (startTime && taskDurationSeconds > 0) {
-    const elapsedSinceStart = Math.max(
-      Math.floor((nowMs - startTime.getTime()) / 1000),
-      0,
-    )
+    const elapsedSinceStart = getAgentTaskSeconds(gameTeam, taskIndex, startTime, nowDate)
     return (
       elapsedSinceStart >= taskDurationSeconds &&
       elapsedSinceStart < taskDurationSeconds + breakDurationSeconds
@@ -80,6 +84,7 @@ const isTaskBreakActive = ({
 
 const hasTeamFinishedAgentWorkForTask = ({
   gameTeam,
+  tasks = [],
   taskIndex,
   tasksCount,
   breakDurationSeconds,
@@ -106,6 +111,7 @@ const hasTeamFinishedAgentWorkForTask = ({
 
   return isTaskBreakActive({
     gameTeam,
+    tasks,
     taskIndex,
     breakDurationSeconds,
     taskDurationSeconds,
@@ -115,6 +121,7 @@ const hasTeamFinishedAgentWorkForTask = ({
 
 const resolveTeamBreakState = ({
   gameTeam,
+  tasks = [],
   tasksCount,
   breakDurationSeconds,
   taskDurationSeconds,
@@ -136,8 +143,10 @@ const resolveTeamBreakState = ({
     }
   }
 
+  taskDurationSeconds = getTaskDurationSeconds({ taskDuration: taskDurationSeconds }, tasks[activeTaskIndex])
   const isTeamOnBreak = isTaskBreakActive({
     gameTeam,
+    tasks,
     taskIndex: activeTaskIndex,
     breakDurationSeconds,
     taskDurationSeconds,
@@ -159,7 +168,7 @@ const resolveTeamBreakState = ({
 
   if (!breakStartedAt && startTime && taskDurationSeconds > 0) {
     breakStartedAt = new Date(
-      startTime.getTime() + taskDurationSeconds * 1000,
+      startTime.getTime() + Math.max(0, taskDurationSeconds - getTaskTimeAdjustmentSeconds({ timeAddings: gameTeam?.timeAddings, taskIndex: activeTaskIndex, now })) * 1000,
     )
   }
 
@@ -181,6 +190,7 @@ const resolveTeamBreakState = ({
 
 const resolveTeamAgentStatus = ({
   gameTeam,
+  tasks = [],
   assignedTaskIndexes,
   tasksCount,
   breakDurationSeconds,
@@ -197,6 +207,7 @@ const resolveTeamAgentStatus = ({
   const isFinished = tasksCount > 0 && activeTaskIndex >= tasksCount
   const isBreakActiveOnCurrentTask = isTaskBreakActive({
     gameTeam,
+    tasks,
     taskIndex: activeTaskIndex,
     breakDurationSeconds,
     taskDurationSeconds,
@@ -214,7 +225,7 @@ const resolveTeamAgentStatus = ({
     return {
       status: 'active',
       taskIndex: activeAssignedTaskIndex,
-      currentTaskSeconds: getSecondsBetween(
+      currentTaskSeconds: getAgentTaskSeconds(gameTeam, activeAssignedTaskIndex,
         startTime[activeAssignedTaskIndex],
         now,
       ),
@@ -232,7 +243,7 @@ const resolveTeamAgentStatus = ({
       status: 'approaching',
       taskIndex: approachingTaskIndex,
       currentTaskSeconds: startTime[activeTaskIndex]
-        ? getSecondsBetween(startTime[activeTaskIndex], now)
+        ? getAgentTaskSeconds(gameTeam, activeTaskIndex, startTime[activeTaskIndex], now)
         : 0,
     }
   }
@@ -241,6 +252,7 @@ const resolveTeamAgentStatus = ({
     (taskIndex) =>
       !hasTeamFinishedAgentWorkForTask({
         gameTeam,
+        tasks,
         taskIndex,
         tasksCount,
         breakDurationSeconds,
@@ -264,6 +276,7 @@ const resolveTeamAgentStatus = ({
         (taskIndex) =>
           !hasTeamFinishedAgentWorkForTask({
             gameTeam,
+            tasks,
             taskIndex,
             tasksCount,
             breakDurationSeconds,
@@ -272,7 +285,7 @@ const resolveTeamAgentStatus = ({
           }),
       ) ?? null,
     currentTaskSeconds: startTime[activeTaskIndex]
-      ? getSecondsBetween(startTime[activeTaskIndex], now)
+      ? getAgentTaskSeconds(gameTeam, activeTaskIndex, startTime[activeTaskIndex], now)
       : 0,
   }
 }

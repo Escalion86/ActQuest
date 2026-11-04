@@ -3,6 +3,11 @@ import fetchGame from '@server/fetchGame'
 import fetchTeam from '@server/fetchTeam'
 import webGameProcess from '@server/webGameProcess'
 import processClassicVariants from '@server/processClassicVariants'
+import { getClassicItemUseBlockReason } from '@helpers/classicItemEffects'
+import { getTaskTimeAdjustmentSeconds } from '@helpers/taskTimeAdjustments'
+import { getActiveTaskFreeze } from '@helpers/taskTimeAdjustments'
+import { getVirtualMainCodesCount, getClassicPenaltyCandidates } from '@helpers/classicItemProgress'
+import { getTaskDurationSeconds, getClueTimesSeconds, getTimedCluesCountForTask } from '@helpers/taskTiming'
 import getLocationTimeZone from '@helpers/locationTimeZone'
 import { hasClassicVariants, resolveClassicGame, classicStageId, classicPublicChoices, classicPublicInventory, getClassicStageProgress } from '@helpers/classicVariants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -160,6 +165,7 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex, game) => {
     Array.isArray(task?.penaltyCodes) ? task.penaltyCodes : [],
     acceptedPenaltyCodes,
   )
+  const virtualCodesCount = getVirtualMainCodesCount(gameTeam, task, safeTaskIndex)
 
   return {
     taskTheme: normalizeTaskTheme(game?.taskTheme),
@@ -180,6 +186,7 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex, game) => {
       ? task.penaltyCodes.length
       : 0,
     acceptedMainCodes,
+    virtualCodesCount,
     acceptedBonusCodes,
     acceptedPenaltyCodes,
     acceptedBonusCodeItems,
@@ -250,30 +257,8 @@ const getTaskFailureEntry = (gameTeam, taskIndex) =>
 const getTaskIdValue = (task) =>
   task?._id !== null && task?._id !== undefined ? String(task._id) : ''
 
-const getClueAdvanceSecondsForTask = ({ gameTeam, taskIndex, task }) => {
-  const taskId = getTaskIdValue(task)
-  const addings = Array.isArray(gameTeam?.timeAddings)
-    ? gameTeam.timeAddings
-    : []
-
-  return addings.reduce((sum, adding) => {
-    const source = typeof adding?.source === 'string' ? adding.source : ''
-    const name = typeof adding?.name === 'string' ? adding.name : ''
-    const isCaptainForceClue =
-      source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
-    if (!isCaptainForceClue) return sum
-
-    if (taskId && adding?.taskId) {
-      if (String(adding.taskId) !== taskId) return sum
-    } else if (typeof adding?.taskIndex === 'number') {
-      if (adding.taskIndex !== taskIndex) return sum
-    } else {
-      return sum
-    }
-
-    const seconds = Number(adding?.time)
-    return Number.isFinite(seconds) && seconds > 0 ? sum + seconds : sum
-  }, 0)
+const getClueAdvanceSecondsForTask = ({ gameTeam, taskIndex, task, now = new Date() }) => {
+  return getTaskTimeAdjustmentSeconds({ timeAddings: gameTeam?.timeAddings, taskIndex, task, now })
 }
 
 const getEffectiveTaskElapsedSeconds = ({
@@ -298,11 +283,13 @@ const getEffectiveTaskElapsedSeconds = ({
       gameTeam,
       taskIndex,
       task,
+      now,
     })
   )
 }
 
 const getVisibleCluesCountForTask = ({
+  game,
   gameTeam,
   task,
   taskIndex,
@@ -319,10 +306,7 @@ const getVisibleCluesCountForTask = ({
     task,
     startTime,
   })
-  const timedCluesCount =
-    cluesDurationSeconds > 0
-      ? Math.max(Math.floor(elapsedSeconds / cluesDurationSeconds), 0)
-      : 0
+  const timedCluesCount = getTimedCluesCountForTask(game || { cluesDuration: cluesDurationSeconds }, task, elapsedSeconds)
 
   return Math.min(
     totalClues,
@@ -414,7 +398,9 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
     ? activeTask.clues.length
     : 0
   const cluesDurationSeconds = parseDurationSeconds(game?.cluesDuration, 1200)
+  const clueTimes = getClueTimesSeconds(game, activeTask)
   const visibleCluesCount = getVisibleCluesCountForTask({
+    game,
     gameTeam,
     task: activeTask,
     taskIndex: activeTaskIndex,
@@ -449,9 +435,9 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
     game?.clueEarlyAccessFrom,
   )
   const secondsUntilNextClue =
-    nextClueNumber && cluesDurationSeconds > 0
+    nextClueNumber && clueTimes.length > 0
       ? Math.max(
-          nextClueNumber * cluesDurationSeconds - effectiveElapsedSeconds,
+          clueTimes[nextClueNumber - 1] - effectiveElapsedSeconds,
           0,
         )
       : 0
@@ -463,7 +449,7 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
   const canForceClue =
     game?.allowCaptainForceClue !== false &&
     totalClues > 0 &&
-    cluesDurationSeconds > 0 &&
+    clueTimes.length > 0 &&
     visibleCluesCount < totalClues &&
     nextClueNumber >= clueEarlyAccessFrom &&
     secondsUntilNextClue > 0 &&
@@ -478,7 +464,6 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
     nextClueNumber: canForceClue ? nextClueNumber : null,
     canFailTask:
       game?.allowCaptainFailTask !== false &&
-      totalClues > 0 &&
       visibleCluesCount >= totalClues &&
       canMutateActiveTask,
   }
@@ -511,7 +496,6 @@ const finishBreakForCaptain = async ({
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
   const tasksCount = tasks.length
   const breakDurationSeconds = parseDurationSeconds(game?.breakDuration, 0)
-  const taskDurationSeconds = parseDurationSeconds(game?.taskDuration, 3600)
 
   if (tasksCount === 0 || breakDurationSeconds <= 0) {
     return {
@@ -523,6 +507,7 @@ const finishBreakForCaptain = async ({
   const nextStep = getNextTaskStep(gameTeam)
   const activeTaskIndex = getActiveSourceTaskIndex(game, gameTeam)
   const nextTaskIndex = getNextSourceTaskIndex(game, gameTeam)
+  const taskDurationSeconds = getTaskDurationSeconds(game, tasks[activeTaskIndex])
 
   if (activeTaskIndex === null || nextTaskIndex === null) {
     return {
@@ -662,7 +647,8 @@ const forceClueForCaptain = async ({
     : 0
   const cluesDurationSeconds = parseDurationSeconds(game?.cluesDuration, 1200)
 
-  if (totalClues <= 0 || cluesDurationSeconds <= 0) {
+  const clueTimes = getClueTimesSeconds(game, activeTask)
+  if (totalClues <= 0 || !clueTimes.length) {
     return {
       gameTeam,
       result: { message: 'Подсказки для этого задания недоступны.' },
@@ -688,6 +674,7 @@ const forceClueForCaptain = async ({
   }
 
   const visibleCluesCount = getVisibleCluesCountForTask({
+    game,
     gameTeam,
     task: activeTask,
     taskIndex: activeTaskIndex,
@@ -741,7 +728,7 @@ const forceClueForCaptain = async ({
     }
   }
   const secondsUntilNextClue = Math.max(
-    nextClueNumber * cluesDurationSeconds - effectiveElapsedSeconds,
+    clueTimes[nextClueNumber - 1] - effectiveElapsedSeconds,
     0,
   )
 
@@ -859,6 +846,7 @@ const failTaskForCaptain = async ({
     ? activeTask.clues.length
     : 0
   const visibleCluesCount = getVisibleCluesCountForTask({
+    game,
     gameTeam,
     task: activeTask,
     taskIndex: activeTaskIndex,
@@ -899,7 +887,7 @@ const failTaskForCaptain = async ({
     }
   }
 
-  if (totalClues <= 0 || visibleCluesCount < totalClues) {
+  if (visibleCluesCount < totalClues) {
     return {
       gameTeam,
       result: {
@@ -986,7 +974,6 @@ const computeTaskHtmlUnlocked = async ({
   const tasksCount = tasks.length
 
   const breakDurationSeconds = parseDurationSeconds(game.breakDuration, 0)
-  const taskDurationSeconds = parseDurationSeconds(game.taskDuration, 3600)
   const cluesDurationSeconds = parseDurationSeconds(game.cluesDuration, 1200)
 
   const autoProgressMessages = []
@@ -996,6 +983,7 @@ const computeTaskHtmlUnlocked = async ({
 
     const activeNumValue = getActiveTaskStep(teamState)
     const activeTaskIndex = getActiveSourceTaskIndex(game, teamState)
+    const taskDurationSeconds = getTaskDurationSeconds(game, tasks[activeTaskIndex])
 
     if (activeNumValue >= tasksCount || activeTaskIndex === null) {
       return teamState
@@ -1314,6 +1302,7 @@ const computeTaskHtmlUnlocked = async ({
       )
 
       const activeTaskIndex = getActiveSourceTaskIndex(game, effectiveGameTeam)
+      const taskDurationSeconds = getTaskDurationSeconds(game, tasks[activeTaskIndex])
       if (activeTaskIndex === null) {
         taskHtml = '<b>Поздравляем! Вы завершили игру.</b>'
         taskState = 'completed'
@@ -1410,10 +1399,7 @@ const computeTaskHtmlUnlocked = async ({
         }
 
         const forcedCluesCount = Math.max(forcedClues[activeTaskIndex] ?? 0, 0)
-        const timedCluesCount =
-          cluesDurationSeconds > 0
-            ? Math.max(Math.floor(elapsedSeconds / cluesDurationSeconds), 0)
-            : 0
+        const timedCluesCount = getTimedCluesCountForTask(game, tasks[activeTaskIndex], elapsedSeconds)
         const visibleCluesCount = Math.max(timedCluesCount, forcedCluesCount)
         const activeTask = tasks[activeTaskIndex] ?? null
 
@@ -1428,6 +1414,7 @@ const computeTaskHtmlUnlocked = async ({
           taskDuration: taskDurationSeconds,
           photos: effectiveGameTeam.photos,
           timeAddings: effectiveGameTeam.timeAddings,
+          virtualCodesCount: getVirtualMainCodesCount(effectiveGameTeam, activeTask, activeTaskIndex),
           visibleCluesCount,
           includeActionPrompt: false,
           format: 'web',
@@ -1537,6 +1524,9 @@ const getTeamGameTaskState = async ({
   testRunId,
   stageId,
   variantId,
+  itemId,
+  requestId,
+  penaltyKey,
 }) => {
   if (!location || !gameId || !teamId) {
     return buildError(GAME_TASK_ERRORS.INVALID_PARAMS)
@@ -1677,7 +1667,7 @@ const getTeamGameTaskState = async ({
     const variantGame = hasClassicVariants(game) ? game : null
     if (variantGame) {
       const processed = await processClassicVariants({
-        game, gameTeam, gamesTeamsModel, action, message, stageId, variantId,
+        game, gameTeam, gamesTeamsModel, action, message, stageId, variantId, itemId, requestId, penaltyKey,
         isCaptain, actorId: userId ? String(userId) : null,
         dynamicTimeCode: new Intl.DateTimeFormat('ru-RU', { timeZone: getLocationTimeZone(location), hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace(':', ''),
       })
@@ -1813,18 +1803,27 @@ const getTeamGameTaskState = async ({
       const index = Number(gameTeam.activeNum || 0)
       const stage = variantGame.tasks[index]
       const progress = stage ? getClassicStageProgress(gameTeam, stage, index) : null
+      const effectiveTask = game.tasks?.[index]
+      const freeze = getActiveTaskFreeze({ timeAddings: gameTeam.timeAddings, task: effectiveTask, taskIndex: index })
       const choosing = taskState === 'active' && stage?.variantConfig?.enabled && !progress?.selectedVariantId
       variantData = {
         stageId: stage ? classicStageId(stage, index) : null,
         selectedVariantId: progress?.selectedVariantId || null,
         variantChoices: choosing ? classicPublicChoices(variantGame, gameTeam, index) : [],
-        inventory: classicPublicInventory(variantGame, gameTeam),
+        inventory: classicPublicInventory(variantGame, gameTeam).map((entry) => {
+          const item = variantGame.classicItems.find((item) => item.id === entry.itemId)
+          const reason = getClassicItemUseBlockReason({ item, game: variantGame, gameTeam, task: stage, taskIndex: index, stageId: stage ? classicStageId(stage, index) : null, isCaptain })
+          return { ...entry, canUse: !reason, useBlockReason: reason, ...(entry.effect?.type === 'penalty_erase' ? { penalties: getClassicPenaltyCandidates(variantGame, gameTeam, effectiveTask, index) } : {}) }
+        }),
+        itemHelp: progress?.revealedHelp || [],
+        activeShields: progress?.shields?.length || 0,
+        freezeRemainingSeconds: freeze ? Math.max(0, Math.ceil((new Date(freeze.createdAt).getTime() + Math.abs(freeze.time) * 1000 - Date.now()) / 1000)) : 0,
         canSelectVariant: choosing && isCaptain,
       }
       if (choosing) {
         taskState = 'choosing_variant'
         taskDisplayHtml = ''; taskDisplayText = ''; taskDisplayTaskHtml = ''; taskDisplayTaskText = ''; taskDisplayClues = []
-        const duration = Number(game.taskDuration ?? 3600)
+        const duration = getTaskDurationSeconds(game, stage)
         const target = new Date(gameTeam.startTime[index]).getTime() + duration * 1000
         taskHtml = `<b>Выберите путь для задания ${index + 1}.</b>${duration > 0 ? `<br /><span data-task-countdown="task" data-refresh-on-complete="true" data-target="${target}"></span>` : ''}`
       }

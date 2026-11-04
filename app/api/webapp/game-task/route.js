@@ -49,7 +49,7 @@ export async function POST(request) {
   }
 
   const body = (await request.json().catch(() => ({}))) || {}
-  const { location, gameId, teamId, message, action, testRunId, stageId, variantId } = body
+  const { location, gameId, teamId, message, action, testRunId, stageId, variantId, itemId, requestId, penaltyKey } = body
 
   const normalizedLocation = normalizeString(location)
   const normalizedGameId = normalizeString(gameId)
@@ -88,6 +88,9 @@ export async function POST(request) {
       testRunId: normalizedTestRunId,
       stageId: normalizeString(stageId),
       variantId: normalizeString(variantId),
+      itemId: normalizeString(itemId),
+      requestId: normalizeString(requestId),
+      penaltyKey: normalizeString(penaltyKey),
     })
 
     if (!stateResult.success) {

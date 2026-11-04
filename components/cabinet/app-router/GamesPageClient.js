@@ -2,6 +2,7 @@
 
 import { showClassicItemsAndVariants } from '@helpers/classicEditorSettings'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
+import { getTaskDurationSeconds } from '@helpers/taskTiming'
 import GameTeamLimit from '@components/cabinet/GameTeamLimit'
 import GamePrequelCardAction from '@components/cabinet/GamePrequelCardAction'
 import GamePrequelPanel from '@components/modals/GamePrequelPanel'
@@ -518,6 +519,7 @@ const createTask = () => ({
   taskRich: '',
   taskMedia: [],
   taskBonusForComplite: 0,
+  allowIncompleteClues: false,
   clues: [],
   subTasks: [],
   images: [],
@@ -849,6 +851,9 @@ const buildUpdatePayload = (game) => {
       canceled: Boolean(task.canceled),
       stageKey: task.stageKey || task.mongoId || task.id,
       variantConfig: task.variantConfig || null,
+      taskDuration: task.taskDuration ?? null,
+      clueIntervals: task.clueIntervals ?? null,
+      allowIncompleteClues: task.allowIncompleteClues === true,
       variants: task.variants || [],
       itemRewards: task.itemRewards || null,
       outcomeRewards: task.outcomeRewards || null,
@@ -1056,6 +1061,7 @@ const buildUpdatePayload = (game) => {
     showFinishingPlace: Boolean(game.showFinishingPlace),
     taskDuration: Number(game.taskDuration) || 0,
     cluesDuration: Number(game.cluesDuration) || 0,
+    clueIntervals: game.clueIntervals ?? null,
     clueEarlyAccessMode: game.clueEarlyAccessMode,
     clueEarlyPenalty: Number(game.clueEarlyPenalty) || 0,
     allowCaptainForceClue: Boolean(game.allowCaptainForceClue),
@@ -1203,12 +1209,12 @@ const validateTaskEditorRequirements = (game) => {
       })
     }
 
-    if (clues.length === 0) {
+    if (isPhotoGame && clues.length === 0 && task.allowIncompleteClues !== true) {
       issues.push({
         taskId,
         message: `${taskLabel}: добавьте хотя бы одну подсказку.`,
       })
-    } else if (!hasFilledClue) {
+    } else if (clues.length > 0 && !hasFilledClue) {
       issues.push({
         taskId,
         message: `${taskLabel}: заполните текст хотя бы в одной подсказке.`,
@@ -3081,6 +3087,7 @@ const GamesPage = ({
           baseDraft.type = normalizedSource.type || 'classic'
           baseDraft.taskDuration = Number(normalizedSource.taskDuration) || 0
           baseDraft.cluesDuration = Number(normalizedSource.cluesDuration) || 0
+          baseDraft.clueIntervals = normalizedSource.clueIntervals ?? null
           baseDraft.clueEarlyAccessMode =
             normalizedSource.clueEarlyAccessMode || 'time'
           baseDraft.clueEarlyPenalty =
@@ -4422,6 +4429,7 @@ const GamesPage = ({
               : '',
           taskDuration: Number(gameForPreview?.taskDuration) || 3600,
           cluesDuration: Number(gameForPreview?.cluesDuration) || 1200,
+          clueIntervals: gameForPreview?.clueIntervals ?? null,
           breakDuration: Number(gameForPreview?.breakDuration) || 0,
           taskTheme: normalizeTaskTheme(gameForPreview?.taskTheme),
           useCustomTaskPublicTitles:
@@ -8003,6 +8011,8 @@ const GamesPage = ({
     }
 
     const minutes = toMinutes(modalGame.taskDuration)
+    const durations = (modalGame.tasks || []).map((task) => getTaskDurationSeconds(modalGame, task) / 60)
+    if (durations.some((duration) => duration !== minutes)) return new Set(durations).size > 1 ? `${Math.min(...durations)}–${Math.max(...durations)} мин` : `${durations[0]} мин`
     return minutes > 0 ? `${minutes} мин` : 'Не задано'
   }, [modalGame])
 
@@ -8012,6 +8022,7 @@ const GamesPage = ({
     }
 
     const minutes = toMinutes(modalGame.cluesDuration)
+    if (Array.isArray(modalGame.clueIntervals) || modalGame.tasks?.some((task) => Array.isArray(task.clueIntervals))) return 'По расписанию заданий'
     return minutes > 0 ? `${minutes} мин` : 'Подсказки отключены'
   }, [modalGame])
 
@@ -9110,6 +9121,7 @@ GamesPage.propTypes = {
       showFinishingPlace: PropTypes.bool,
       taskDuration: PropTypes.number,
       cluesDuration: PropTypes.number,
+      clueIntervals: PropTypes.arrayOf(PropTypes.number),
       clueEarlyAccessMode: PropTypes.string,
       clueEarlyPenalty: PropTypes.number,
       allowCaptainForceClue: PropTypes.bool,
@@ -9158,6 +9170,9 @@ GamesPage.propTypes = {
           taskRich: PropTypes.string,
           taskMedia: PropTypes.arrayOf(taskMediaShape),
           taskBonusForComplite: PropTypes.number,
+          taskDuration: PropTypes.number,
+          clueIntervals: PropTypes.arrayOf(PropTypes.number),
+          allowIncompleteClues: PropTypes.bool,
           clues: PropTypes.arrayOf(clueShape),
           subTasks: PropTypes.arrayOf(subTaskShape),
           images: PropTypes.arrayOf(PropTypes.string),

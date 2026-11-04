@@ -10,6 +10,7 @@ const CLOSED_GAME_IMMUTABLE_FIELD_LABELS = {
   type: 'тип игры',
   taskDuration: 'длительность задания',
   cluesDuration: 'длительность подсказок',
+  clueIntervals: 'расписание подсказок',
   breakDuration: 'длительность перерыва',
   taskFailurePenalty: 'штраф за слив задания',
   manyCodesPenalty: 'штраф за лишние коды',
@@ -134,6 +135,9 @@ const buildClosedGameTaskFingerprint = (task) => {
   return JSON.stringify({
     id: normalizeStringId(source._id ?? source.id),
     publicTitle: normalizeClosedGameString(source.publicTitle),
+      taskDuration: normalizeClosedGameNullableNumber(source.taskDuration),
+      clueIntervals: source.clueIntervals ?? null,
+    allowIncompleteClues: source.allowIncompleteClues === true,
     title: normalizeClosedGameString(source.title),
     task: normalizeClosedGameString(source.task),
     howToSolve: normalizeClosedGameString(source.howToSolve),
@@ -233,7 +237,7 @@ const resolveClosedGameUpdateViolation = ({ updateData, existingGame }) => {
     }
 
     const isStructuredField =
-      field === 'manyCodesPenalty' || field === 'taskDistributionTemplate'
+      field === 'manyCodesPenalty' || field === 'taskDistributionTemplate' || field === 'clueIntervals'
     const prevValue = isStructuredField
       ? canonicalizeClosedGameValue(
           field === 'manyCodesPenalty'

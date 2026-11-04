@@ -81,6 +81,16 @@ test('отменённые и отсутствующие в маршруте з�
   assert.equal(result[1].counts.pending, 0)
 })
 
+test('обзор учитывает закрытый отмычкой код вместе с введёнными кодами', () => {
+  const task = overview([makeTeam({ currentTaskSeconds: 250,
+    teamProgressStats: { tasks: [{ taskIndex: 2, startedAt: '2026-10-18T10:00:00Z',
+      requiredCodesCount: 3, mainCodes: [{ code: 'x' }], virtualCodesCount: 1 }] },
+  })])[2].teams[0]
+  assert.equal(task.foundCodesCount, 2)
+  assert.equal(task.requiredCodesCount, 3)
+  assert.equal(task.state, 'active')
+})
+
 test('пустая игра и игра без команд возвращают пустые счётчики', () => {
   assert.deepEqual(overview([], []), [])
   assert.equal(overview([])[0].counts.active, 0)

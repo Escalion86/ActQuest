@@ -1010,6 +1010,7 @@ function GameTeamPage({
   const gameMessageTextareaRef = useRef(null)
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
+  const captainActionStageRef = useRef({})
   const [stickyMessages, setStickyMessages] = useState([])
   const previousTaskStateRef = useRef(taskState || 'idle')
   const previousPostCompletionMessageRef = useRef('')
@@ -1499,6 +1500,7 @@ function GameTeamPage({
           teamId,
           testRunId: testRunId || undefined,
           action: 'finishBreak',
+          stageId: captainActionStageRef.current.finishBreak,
         }),
       })
 
@@ -1527,8 +1529,9 @@ function GameTeamPage({
 
   const handleFinishBreakRequest = useCallback(() => {
     if (isFinishingBreak || isTaskRefreshing) return
+    captainActionStageRef.current.finishBreak = taskData.displayMeta?.classic?.stageId
     setIsFinishBreakConfirmOpen(true)
-  }, [isFinishingBreak, isTaskRefreshing])
+  }, [isFinishingBreak, isTaskRefreshing, taskData.displayMeta?.classic?.stageId])
 
   const handleFinishBreakConfirm = useCallback(() => {
     setIsFinishBreakConfirmOpen(false)
@@ -1559,6 +1562,7 @@ function GameTeamPage({
           teamId,
           testRunId: testRunId || undefined,
           action: 'forceClue',
+          stageId: captainActionStageRef.current.forceClue,
         }),
       })
 
@@ -1587,8 +1591,9 @@ function GameTeamPage({
 
   const handleForceClueRequest = useCallback(() => {
     if (isForcingClue || isTaskRefreshing) return
+    captainActionStageRef.current.forceClue = taskData.displayMeta?.classic?.stageId
     setIsForceClueConfirmOpen(true)
-  }, [isForcingClue, isTaskRefreshing])
+  }, [isForcingClue, isTaskRefreshing, taskData.displayMeta?.classic?.stageId])
 
   const handleForceClueConfirm = useCallback(() => {
     setIsForceClueConfirmOpen(false)
@@ -1619,6 +1624,7 @@ function GameTeamPage({
           teamId,
           testRunId: testRunId || undefined,
           action: 'failTask',
+          stageId: captainActionStageRef.current.failTask,
         }),
       })
 
@@ -1645,8 +1651,9 @@ function GameTeamPage({
 
   const handleFailTaskRequest = useCallback(() => {
     if (isFailingTask || isTaskRefreshing) return
+    captainActionStageRef.current.failTask = taskData.displayMeta?.classic?.stageId
     setIsFailTaskConfirmOpen(true)
-  }, [isFailingTask, isTaskRefreshing])
+  }, [isFailingTask, isTaskRefreshing, taskData.displayMeta?.classic?.stageId])
 
   const handleFailTaskConfirm = useCallback(() => {
     setIsFailTaskConfirmOpen(false)
@@ -1911,8 +1918,9 @@ function GameTeamPage({
       ? value.trim()
       : `Задание ${currentTaskNumber}`
   }, [currentTaskDisplayMeta?.publicTitle, currentTaskNumber])
+  const virtualMainCodesCount = Math.max(0, Number(currentTaskDisplayMeta?.virtualCodesCount) || 0)
   const remainingMainCodesCount = useMemo(() => {
-    if (acceptedTaskCodes.length < 1) {
+    if (acceptedTaskCodes.length + virtualMainCodesCount < 1) {
       return null
     }
 
@@ -1938,12 +1946,13 @@ function GameTeamPage({
         : requiredCodesCount
 
     const remaining = Math.max(
-      cappedRequiredCodes - acceptedTaskCodes.length,
+      cappedRequiredCodes - acceptedTaskCodes.length - virtualMainCodesCount,
       0,
     )
     return remaining > 0 ? remaining : null
   }, [
     acceptedTaskCodes.length,
+    virtualMainCodesCount,
     currentTaskDisplayMeta?.mainCodesCount,
     currentTaskDisplayMeta?.requiredCodesCount,
   ])
@@ -2208,6 +2217,7 @@ function GameTeamPage({
         element,
         target: Number.isFinite(target) ? target : null,
         initialSeconds: Number.isFinite(seconds) ? seconds : null,
+        pauseSeconds: Math.max(0, Number(element.getAttribute('data-pause-seconds')) || 0),
         refreshOnComplete: refreshAttr === 'true' || refreshAttr === '1',
         startTimestamp: Date.now(),
       }
@@ -2225,7 +2235,7 @@ function GameTeamPage({
         // Это устойчиво к рассинхрону часов между устройством и сервером.
         if (Number.isFinite(initialSeconds)) {
           const base = Number.isFinite(startTimestamp) ? startTimestamp : now
-          remainingMs = initialSeconds * 1000 - (now - base)
+          remainingMs = initialSeconds * 1000 - Math.max(0, now - base - item.pauseSeconds * 1000)
         } else if (Number.isFinite(target)) {
           remainingMs = target - now
         }
@@ -2248,6 +2258,8 @@ function GameTeamPage({
               ? 'До следующей подсказки'
               : countdownType === 'break'
                 ? 'До окончания перерыва'
+                : countdownType === 'freeze'
+                  ? 'Заморозка времени закончится через'
                 : 'До завершения задания'
 
           panelStates.push({
@@ -2871,10 +2883,10 @@ function GameTeamPage({
                     </span>
                   </div>
                 ) : null}
-                {!isBreakState && acceptedTaskCodes.length > 0 ? (
+                {!isBreakState && (acceptedTaskCodes.length > 0 || virtualMainCodesCount > 0) ? (
                   <div className="mt-4">
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
-                      Принятые основные коды:
+                      Основные коды:
                     </p>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {acceptedTaskCodes.map((code, index) => (
@@ -2885,6 +2897,7 @@ function GameTeamPage({
                           {code}
                         </span>
                       ))}
+                      {virtualMainCodesCount > 0 && <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800 dark:border-cyan-700 dark:bg-cyan-950 dark:text-cyan-100">Закрыто отмычкой: {virtualMainCodesCount}</span>}
                     </div>
                     {remainingMainCodesCount !== null ? (
                       <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-100">
@@ -3319,6 +3332,7 @@ GameTeamPage.propTypes = {
     publicTitle: PropTypes.string,
     isBonusTask: PropTypes.bool,
     mainCodesCount: PropTypes.number,
+    virtualCodesCount: PropTypes.number,
     requiredCodesCount: PropTypes.number,
     bonusCodesCount: PropTypes.number,
     penaltyCodesCount: PropTypes.number,

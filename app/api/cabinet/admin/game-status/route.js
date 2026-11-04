@@ -4,6 +4,10 @@ import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import { normalizeTaskTheme } from '@helpers/taskThemes'
 import buildGameTaskOverview from '@helpers/buildGameTaskOverview'
 import { resolveRequiredMainCodesCount } from '@helpers/classicGameRules'
+import { getTaskTimeAdjustmentSeconds, isTimeAddingForTask as matchesTaskTimeAdding } from '@helpers/taskTimeAdjustments'
+import { getTimeAddingSeconds, getActiveTaskFreeze } from '@helpers/taskTimeAdjustments'
+import { getVirtualMainCodesCount, getClassicFoundMainCodesCount, getClassicItemStage } from '@helpers/classicItemProgress'
+import { getTaskDurationSeconds, getClueTimesSeconds, getTimedCluesCountForTask } from '@helpers/taskTiming'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
@@ -265,10 +269,7 @@ const shouldShowTimeAddingInAdjustments = (adding) => {
 }
 
 const isTimeAddingForTask = (adding, taskIndex, task) => {
-  const taskId = getTaskIdValue(task)
-  if (taskId && adding?.taskId) return String(adding.taskId) === taskId
-  return Number.isInteger(Number(adding?.taskIndex)) &&
-    Number(adding.taskIndex) === taskIndex
+  return matchesTaskTimeAdding(adding, taskIndex, task)
 }
 
 const getTaskElapsedAdjustmentSeconds = ({ timeAddings, taskIndex, task }) => {
@@ -276,22 +277,13 @@ const getTaskElapsedAdjustmentSeconds = ({ timeAddings, taskIndex, task }) => {
   return addings.reduce((sum, adding) => {
     if (normalizeTimeAddingScope(adding) !== 'task_elapsed') return sum
     if (!isTimeAddingForTask(adding, taskIndex, task)) return sum
-    const seconds = Number(adding?.time)
+    const seconds = getTimeAddingSeconds(adding)
     return Number.isFinite(seconds) ? sum + Math.round(seconds) : sum
   }, 0)
 }
 
 const getClueAdvanceSecondsForTask = ({ timeAddings, taskIndex, task }) => {
-  const addings = Array.isArray(timeAddings) ? timeAddings : []
-
-  return addings.reduce((sum, adding) => {
-    if (!isCaptainForceClueAdding(adding)) return sum
-
-    if (!isTimeAddingForTask(adding, taskIndex, task)) return sum
-
-    const seconds = Number(adding?.time)
-    return Number.isFinite(seconds) && seconds > 0 ? sum + seconds : sum
-  }, 0)
+  return getTaskTimeAdjustmentSeconds({ timeAddings, taskIndex, task })
 }
 
 const getForcedClueAddingsCountForTask = ({ timeAddings, taskIndex, task }) => {
@@ -380,7 +372,6 @@ const syncGameTeamProgressForStatusUnlocked = async ({
   const tasksCount = tasks.length
   if (!gameTeam || tasksCount === 0) return gameTeam
 
-  const taskDuration = Math.max(0, Number(game?.taskDuration) || 3600)
   const breakDuration = Math.max(0, Number(game?.breakDuration) || 0)
   const nowDate = toDateValue(now) || new Date()
   const nowMs = nowDate.getTime()
@@ -405,6 +396,7 @@ const syncGameTeamProgressForStatusUnlocked = async ({
   }
 
   const getTimeoutFailedAt = (teamState, taskIndex, startAt) => {
+    const taskDuration = getTaskDurationSeconds(game, tasks[taskIndex])
     const startDate = toDateValue(startAt)
     if (!startDate) return null
 
@@ -494,6 +486,7 @@ const syncGameTeamProgressForStatusUnlocked = async ({
       ? teamState.activeNum
       : 0
     const taskIndex = getTaskIndexForStep(game, teamState, activeStep)
+    const taskDuration = getTaskDurationSeconds(game, tasks[taskIndex])
     if (activeStep >= tasksCount || taskIndex === null) return teamState
 
     const nextStep = activeStep + 1
@@ -915,6 +908,7 @@ export async function GET(request) {
         taskTheme: 1,
         taskDuration: 1,
         cluesDuration: 1,
+        clueIntervals: 1,
         breakDuration: 1,
         taskFailurePenalty: 1,
         manyCodesPenalty: 1,
@@ -1108,6 +1102,7 @@ export async function GET(request) {
       const activeTaskIndex =
         activeTaskIndexRaw !== null ? activeTaskIndexRaw : tasksCount
       const nextTaskIndex = getTaskIndexForStep(game, gt, activeTaskStep + 1)
+      const taskDuration = getTaskDurationSeconds(game, game.tasks?.[activeTaskIndex])
       const completedRouteTaskIndexes = new Set(
         taskSequence.slice(0, Math.max(activeTaskStep, 0)),
       )
@@ -1189,11 +1184,11 @@ export async function GET(request) {
         activeTaskIndex >= tasksCount ||
         Boolean(endTime[activeTaskIndex]) ||
         Boolean(activeTaskFailure) ||
-        (startTime[activeTaskIndex]
+        (taskDuration > 0 && startTime[activeTaskIndex]
           ? getEffectiveTaskSeconds(
               activeTaskIndex,
               getSecondsBetween(startTime[activeTaskIndex], now),
-            ) > taskDuration
+            ) >= taskDuration
           : false)
 
       const isAllTasksStarted =
@@ -1222,9 +1217,9 @@ export async function GET(request) {
         }
         if (i === activeTaskIndex) {
           if (isActiveTaskFinished && endTime[i]) {
-            sumTimeSeconds += getSecondsBetween(startTime[i], endTime[i])
+            sumTimeSeconds += getEffectiveTaskSeconds(i, getSecondsBetween(startTime[i], endTime[i]))
           } else if (isActiveTaskFinished) {
-            sumTimeSeconds += taskDuration
+            sumTimeSeconds += getTaskDurationSeconds(game, game.tasks[i])
           } else {
             sumTimeSeconds += getEffectiveTaskSeconds(
               i,
@@ -1232,9 +1227,9 @@ export async function GET(request) {
             )
           }
         } else if (endTime[i]) {
-          sumTimeSeconds += getSecondsBetween(startTime[i], endTime[i])
+          sumTimeSeconds += getEffectiveTaskSeconds(i, getSecondsBetween(startTime[i], endTime[i]))
         } else {
-          sumTimeSeconds += taskDuration
+          sumTimeSeconds += getTaskDurationSeconds(game, game.tasks[i])
         }
       }
 
@@ -1275,10 +1270,10 @@ export async function GET(request) {
       let completedTaskSeconds = 0
       if (startTime[activeTaskIndex] && isActiveTaskFinished) {
         if (endTime[activeTaskIndex]) {
-          completedTaskSeconds = getSecondsBetween(
+          completedTaskSeconds = getEffectiveTaskSeconds(activeTaskIndex, getSecondsBetween(
             startTime[activeTaskIndex],
             endTime[activeTaskIndex],
-          )
+          ))
         } else {
           completedTaskSeconds = taskDuration
         }
@@ -1287,12 +1282,15 @@ export async function GET(request) {
       // Подсказки на текущем задании
       let cluesReceived = 0
       if (
-        cluesDuration > 0 &&
+        getClueTimesSeconds(game, game.tasks?.[activeTaskIndex]).length > 0 &&
         currentTaskSeconds > 0 &&
         !isActiveTaskFinished
       ) {
-        cluesReceived = Math.floor(currentTaskSeconds / cluesDuration)
+        cluesReceived = getTimedCluesCountForTask(game, game.tasks?.[activeTaskIndex], currentTaskSeconds)
       }
+      cluesReceived = Math.min(game.tasks?.[activeTaskIndex]?.clues?.length || 0, Math.max(cluesReceived, Number(gt.forcedClues?.[activeTaskIndex]) || 0))
+      const nextClueAt = getClueTimesSeconds(game, game.tasks?.[activeTaskIndex])[cluesReceived]
+      const freeze = getActiveTaskFreeze({ timeAddings, task: currentTaskSource, taskIndex: activeTaskIndex })
 
       // Название текущего задания
       const currentTaskTitle =
@@ -1327,6 +1325,7 @@ export async function GET(request) {
         )
         const wrongCodesFound = normalizeCodesArray(wrongCodes[taskIndex])
         const taskSource = Array.isArray(game.tasks) ? game.tasks[taskIndex] : null
+        const taskDuration = getTaskDurationSeconds(game, taskSource)
         const isCanceledTask = Boolean(taskSource?.canceled)
         const isBonusTask = Boolean(taskSource?.isBonusTask)
         const shouldCountInTotals = !isCanceledTask && !isBonusTask
@@ -1507,6 +1506,7 @@ export async function GET(request) {
         return {
           taskIndex,
           taskTitle: normalizeText(game.tasks?.[taskIndex]?.title) || 'Без названия',
+          taskDurationSeconds: getTaskDurationSeconds(game, taskSource),
           variantTitle: taskSource?.variantTitle || '',
           requiredCodesCount: resolveRequiredMainCodesCount(taskSource),
           startedAt: startAt,
@@ -1521,6 +1521,10 @@ export async function GET(request) {
           penaltyByCodesSeconds,
           penaltyByManyWrongSeconds,
           bonusByCodesSeconds,
+          timeBonuses: timeAddings.filter((adding) => ['item_time_rewind', 'item_time_freeze'].includes(adding.source) && isTimeAddingForTask(adding, taskIndex, taskSource)).map((adding) => ({ name: adding.name, seconds: Math.abs(getTimeAddingSeconds(adding, endAt || game.dateEndFact || now)), createdAt: adding.createdAt })),
+          virtualCodesCount: getVirtualMainCodesCount(gt, taskSource, taskIndex),
+          completionSource: getClassicItemStage(gt, taskSource, taskIndex)?.completionSource || null,
+          itemEffects: (gt.classicProgress?.history || []).filter((event) => ['item_used', 'penalty_blocked'].includes(event.type) && event.stageId === String(taskSource?.stageKey || taskSource?._id || taskSource?.id || taskIndex)).map((event) => ({ key: event.key, title: event.itemTitle, description: event.description || event.itemTitle, at: event.at })),
           hasConfiguredBonusCodes,
           hasConfiguredPenaltyCodes,
           mainCodes: enrichCodes(mainCodesFound, 'main'),
@@ -1590,10 +1594,8 @@ export async function GET(request) {
         totalCodesBonusSeconds +
         totalAddingsBonusSeconds +
         totalPrequelBonusSeconds
-      const totalFinalSeconds = Math.max(
-        0,
-        totalTasksTimeSeconds + totalPenaltySeconds - totalBonusSeconds,
-      )
+      const finalSeconds = totalTasksTimeSeconds + totalPenaltySeconds - totalBonusSeconds
+      const totalFinalSeconds = game.type === 'classic' ? finalSeconds : Math.max(0, finalSeconds)
       const totalAcceptedCodesCount = taskStats.reduce(
         (acc, task) =>
           acc +
@@ -1631,7 +1633,7 @@ export async function GET(request) {
         startedTasks,
         currentTaskTitle,
         nextTaskTitle,
-        findedCodesCount: currentFindedCodes.length,
+        findedCodesCount: getClassicFoundMainCodesCount(gt, currentTaskSource, activeTaskIndex),
         findedCodes: currentFindedCodes,
         wrongCodesCount: currentWrongCodes.length,
         wrongCodes: currentWrongCodes,
@@ -1649,6 +1651,9 @@ export async function GET(request) {
         sumTimeSeconds,
         currentTaskActualSeconds,
         currentTaskSeconds,
+        freezeRemainingSeconds: freeze ? Math.max(0, Math.ceil((new Date(freeze.createdAt).getTime() + Math.abs(freeze.time) * 1000 - Date.now()) / 1000)) : 0,
+        taskDurationSeconds: taskDuration,
+        nextClueInSeconds: Number.isFinite(nextClueAt) ? Math.max(0, nextClueAt - currentTaskSeconds) : null,
         breakTimeLeftSeconds,
         completedTaskSeconds,
         isBreakFinishedWaitingForNextTask,
@@ -1656,6 +1661,7 @@ export async function GET(request) {
         forcedCluesReceived: currentForcedCluesCount,
         currentPhotosCount,
         teamProgressStats: {
+          totalTimeBonusSeconds: taskStats.reduce((sum, task) => sum + task.timeBonuses.reduce((value, item) => value + item.seconds, 0), 0),
           completedTasksCount,
           totalTasksCount: tasksCount,
           totalTasksTimeSeconds,
@@ -1709,6 +1715,8 @@ export async function GET(request) {
           useCustomTaskPublicTitles: game.useCustomTaskPublicTitles === true,
           dateStartFact: game.dateStartFact ?? null,
           taskDuration,
+          hasIndividualTaskDurations: game.tasks?.some((task) => task.taskDuration != null) || false,
+          hasCustomClueSchedule: Array.isArray(game.clueIntervals) || game.tasks?.some((task) => Array.isArray(task.clueIntervals)) || false,
           cluesDuration,
           breakDuration,
           tasksCount,

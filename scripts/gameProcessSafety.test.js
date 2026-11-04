@@ -6,6 +6,9 @@ import * as locks from '../server/gameProcessLock.js'
 import withGameTeamsLocked from '../server/withGameTeamsLocked.js'
 import * as distribution from '../helpers/taskDistribution.js'
 import * as rules from '../helpers/classicGameRules.js'
+import { getTaskTimeAdjustmentSeconds } from '../helpers/taskTimeAdjustments.js'
+import * as timing from '../helpers/taskTiming.js'
+import { getVirtualMainCodesCount } from '../helpers/classicItemProgress.js'
 import buildGameStartProgressUpdate from '../server/buildGameStartProgressUpdate.js'
 import buildGameResultComputed from '../server/buildGameResultComputed.js'
 import updateParticipantsRatings from '../server/updateParticipantsRatings.js'
@@ -32,7 +35,7 @@ const fixture = (status = 'started') => memoryGameDb({
   TeamsUsers: [{ userId: 'user', teamId: 'team', role: 'captain' }],
 })
 const { computeTaskHtml } = loadServerUnit('server/getTeamGameTaskState.js', {
-  ...locks, ...distribution, ...rules,
+  ...locks, ...distribution, ...rules, ...timing, getTaskTimeAdjustmentSeconds, getVirtualMainCodesCount,
   normalizeTaskTheme: () => 'default', getGameProcessFinishingPlace: () => '',
   sanitize: String, taskText: () => 'Задание', buildTaskDisplayContent: () => ({}),
 }, ['computeTaskHtml'])

@@ -1,3 +1,5 @@
+import { getTaskDurationSeconds } from './taskTiming.js'
+
 // Индексы здесь относятся к заданиям редактора, а не к шагам маршрута команды.
 export default function buildGameTaskOverview({ tasks = [], teams = [], taskDuration = 0 }) {
   const overview = tasks.map((task, taskIndex) => ({
@@ -14,6 +16,7 @@ export default function buildGameTaskOverview({ tasks = [], teams = [], taskDura
     )
     const route = new Set(team.taskSequence || tasks.map((_, index) => index))
     for (const item of overview) {
+      const duration = getTaskDurationSeconds({ taskDuration }, tasks[item.taskIndex])
       if (item.canceled) continue
       const stats = statsByIndex.get(item.taskIndex)
       const isCurrent = team.activeTaskIndex === item.taskIndex
@@ -23,14 +26,14 @@ export default function buildGameTaskOverview({ tasks = [], teams = [], taskDura
       else if (!route.has(item.taskIndex)) state = 'excluded'
       else if (isCurrent && !team.isTeamFinished && (stats?.startedAt || team.isChoosingVariant)) state = 'active'
 
-      const remainingSeconds = state === 'active' && taskDuration > 0 && stats?.startedAt
-        ? Math.max(0, taskDuration - (Number(team.currentTaskSeconds) || 0))
+      const remainingSeconds = state === 'active' && duration > 0 && stats?.startedAt
+        ? Math.max(0, duration - (Number(team.currentTaskSeconds) || 0))
         : null
       const failureReason = state !== 'failed' ? null
         : stats.failedByCaptain ? 'Слив капитаном'
           : stats.failureSource === 'admin' ? 'Пропущено администратором'
           : stats.failureSource === 'system' ? 'Пропущено системой'
-          : stats.failedByTimeout || (taskDuration > 0 && stats.completedSeconds >= taskDuration)
+          : stats.failedByTimeout || (duration > 0 && stats.completedSeconds >= duration)
             ? 'Время вышло' : 'Задание не завершено'
 
       item.counts[state] += 1
@@ -40,7 +43,7 @@ export default function buildGameTaskOverview({ tasks = [], teams = [], taskDura
         state,
         failureReason,
         remainingSeconds,
-        foundCodesCount: stats?.mainCodes?.length || 0,
+        foundCodesCount: (stats?.mainCodes?.length || 0) + (Number(stats?.virtualCodesCount) || 0),
         requiredCodesCount: stats?.requiredCodesCount ?? null,
         variantTitle: stats?.variantTitle || '',
         isChoosingVariant: state === 'active' && Boolean(team.isChoosingVariant),

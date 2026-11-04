@@ -31,6 +31,9 @@ import {
   AccordionChevronIcon,
 } from '@components/modals/game-edit/sharedIcons'
 import { getRequiredMainCodesValidationError } from '@helpers/classicGameRules'
+import TaskTimingFields from '../TaskTimingFields'
+import TaskClueCoverage from '../TaskClueCoverage'
+import { getTaskClueCountError } from '@helpers/taskTiming'
 
 const TaskRichEditor = dynamic(
   () => import('@components/cabinet/TaskRichEditor'),
@@ -150,6 +153,7 @@ const TaskItem = ({
     hasMeaningfulRichMarkup(task?.taskRich) ||
     hasTaskMedia
   const taskClues = Array.isArray(task?.clues) ? task.clues : []
+  const clueCoverageTask = isAlternative ? { ...task, taskDuration: selectedGame.tasks?.[index]?.taskDuration, clueIntervals: selectedGame.tasks?.[index]?.clueIntervals } : task
   const hasFilledClue = taskClues.some(
     (clue) =>
       getClueText(clue).trim() !== '' ||
@@ -189,8 +193,9 @@ const TaskItem = ({
   const hasTaskValidationErrors =
     !taskTitle ||
     !hasTaskDescription ||
-    taskClues.length === 0 ||
-    !hasFilledClue ||
+    (isPhotoGame && taskClues.length === 0 && task.allowIncompleteClues !== true) ||
+    Boolean(getTaskClueCountError(selectedGame, clueCoverageTask)) ||
+    (taskClues.length > 0 && !hasFilledClue) ||
     (!isPhotoGame && normalizedCodes.length === 0) ||
     hasRequiredCodesError
   const customTaskPublicTitle =
@@ -451,6 +456,7 @@ const TaskItem = ({
            используется, чтобы не блокировать медиа-элементы
            (аудио, видео, просмотр изображений). */
         <div className={contentOnly ? 'space-y-5' : 'px-3 py-4 space-y-5 sm:px-4 sm:py-5'}>
+          {!isPhotoGame && !isAlternative && <TaskTimingFields game={selectedGame} task={task} disabled={!canEditSelectedGame || isSaving || ['started', 'finished', 'closed'].includes(selectedGame?.status)} onChange={(patch) => Object.entries(patch).forEach(([field, value]) => handleTaskFieldChange(task.id, field, value))} />}
           <div className="space-y-4">
             {!isAlternative && <div className="flex justify-end">
               <CabinetButton
@@ -614,7 +620,7 @@ const TaskItem = ({
           {/* Clues Section */}
           <div>
             <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
-              {withRequiredMark('Подсказки')}
+              {task.allowIncompleteClues ? 'Подсказки' : withRequiredMark('Подсказки')}
             </h4>
             {task.clues?.length > 0 ? (
               <div className="mt-3 space-y-3">
@@ -911,6 +917,7 @@ const TaskItem = ({
                 Добавить подсказку
               </CabinetButton>
             </div>
+            <TaskClueCoverage game={selectedGame} task={clueCoverageTask} disabled={!canEditSelectedGame || isSaving} onChange={(checked) => handleTaskFieldChange(task.id, 'allowIncompleteClues', checked)} />
           </div>
 
           {/* Bonus for completion (photo only) */}
@@ -1796,6 +1803,9 @@ TaskItem.propTypes = {
   expandedContent: PropTypes.node,
   renderCodeReward: PropTypes.func,
   task: PropTypes.shape({
+    taskDuration: PropTypes.number,
+    clueIntervals: PropTypes.arrayOf(PropTypes.number),
+    allowIncompleteClues: PropTypes.bool,
     id: PropTypes.string.isRequired,
     variantConfig: PropTypes.object,
     variants: PropTypes.array,

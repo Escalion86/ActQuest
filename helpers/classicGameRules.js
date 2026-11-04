@@ -1,3 +1,6 @@
+import { getTaskTimeAdjustmentSeconds } from './taskTimeAdjustments.js'
+import { getTaskDurationSeconds } from './taskTiming.js'
+
 const toDateValue = (value) => {
   if (!value) return null
 
@@ -78,38 +81,16 @@ export const resolveForceClueCost = ({
   }
 }
 
-const getTaskIdValue = (task) =>
-  task?._id !== null && task?._id !== undefined ? String(task._id) : ''
-
-export const getCaptainClueTimeSecondsForTask = ({
+export const getClassicTaskTimeAdjustmentSeconds = ({
   gameTeam,
   task,
   taskIndex,
+  now = new Date(),
 }) => {
-  const taskId = getTaskIdValue(task)
-  const addings = Array.isArray(gameTeam?.timeAddings)
-    ? gameTeam.timeAddings
-    : []
-
-  return addings.reduce((sum, adding) => {
-    const source = typeof adding?.source === 'string' ? adding.source : ''
-    const name = typeof adding?.name === 'string' ? adding.name : ''
-    const isCaptainForceClue =
-      source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
-    if (!isCaptainForceClue) return sum
-
-    if (taskId && adding?.taskId) {
-      if (String(adding.taskId) !== taskId) return sum
-    } else if (Number.isInteger(Number(adding?.taskIndex))) {
-      if (Number(adding.taskIndex) !== taskIndex) return sum
-    } else {
-      return sum
-    }
-
-    const seconds = Number(adding?.time)
-    return Number.isFinite(seconds) && seconds > 0 ? sum + seconds : sum
-  }, 0)
+  return getTaskTimeAdjustmentSeconds({ timeAddings: gameTeam?.timeAddings, task, taskIndex, now })
 }
+
+export const getCaptainClueTimeSecondsForTask = getClassicTaskTimeAdjustmentSeconds
 
 export const getClassicTaskEffectiveElapsedSeconds = ({
   gameTeam,
@@ -129,7 +110,7 @@ export const getClassicTaskEffectiveElapsedSeconds = ({
 
   return (
     realElapsed +
-    getCaptainClueTimeSecondsForTask({ gameTeam, task, taskIndex })
+    getClassicTaskTimeAdjustmentSeconds({ gameTeam, task, taskIndex, now })
   )
 }
 
@@ -164,7 +145,7 @@ export const getClassicTaskMutationBlockReason = ({
     return 'not_started'
   }
 
-  const taskDurationSeconds = toNonNegativeSeconds(game?.taskDuration, 3600)
+  const taskDurationSeconds = getTaskDurationSeconds(game, task)
 
   if (
     taskDurationSeconds > 0 &&

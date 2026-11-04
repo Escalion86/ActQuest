@@ -22,6 +22,8 @@ import {
   releaseGameProcessLock,
 } from '@server/gameProcessLock'
 import taskText from 'telegram/func/taskText'
+import { getTimedCluesCountForTask } from '@helpers/taskTiming'
+import { getTaskTimeAdjustmentSeconds } from '@helpers/taskTimeAdjustments'
 
 const PROMPT_TEXT = {
   classic: 'ВВЕДИТЕ КОД',
@@ -176,49 +178,10 @@ const createBaseResponse = ({
   }
 }
 
-const collectVisibleCluesCount = ({
-  task,
-  cluesDuration,
-  startTime,
-  forcedClues,
-  timeAddings,
-  taskIndex,
-}) => {
-  const totalClues = Array.isArray(task?.clues) ? task.clues.length : 0
-  if (totalClues === 0) return 0
-
+const collectVisibleCluesCount = ({ game, task, cluesDuration, startTime, forcedClues, timeAddings, taskIndex }) => {
   const startDate = ensureDate(startTime)
-  const elapsedSeconds = startDate ? Math.max(getSecondsBetween(startDate), 0) : 0
-  const taskId = task?._id !== null && task?._id !== undefined ? String(task._id) : ''
-  const clueAdvanceSeconds = Array.isArray(timeAddings)
-    ? timeAddings.reduce((sum, adding) => {
-        const source = typeof adding?.source === 'string' ? adding.source : ''
-        const name = typeof adding?.name === 'string' ? adding.name : ''
-        const isCaptainForceClue =
-          source === 'captain_force_clue' ||
-          name.startsWith('Досрочная подсказка')
-        if (!isCaptainForceClue) return sum
-
-        if (taskId && adding?.taskId) {
-          if (String(adding.taskId) !== taskId) return sum
-        } else if (typeof adding?.taskIndex === 'number') {
-          if (adding.taskIndex !== taskIndex) return sum
-        } else {
-          return sum
-        }
-
-        const seconds = Number(adding?.time)
-        return Number.isFinite(seconds) && seconds > 0 ? sum + seconds : sum
-      }, 0)
-    : 0
-
-  const timedClues =
-    cluesDuration > 0
-      ? Math.floor((elapsedSeconds + clueAdvanceSeconds) / cluesDuration)
-      : 0
-  const forcedCluesCount = Math.max(forcedClues || 0, 0)
-
-  return Math.min(totalClues, Math.max(timedClues, forcedCluesCount))
+  const elapsed = (startDate ? Math.max(getSecondsBetween(startDate), 0) : 0) + getTaskTimeAdjustmentSeconds({ timeAddings, taskIndex, task })
+  return Math.min(task?.clues?.length || 0, Math.max(getTimedCluesCountForTask(game || { cluesDuration }, task, elapsed), forcedClues || 0))
 }
 
 const preparePhotosProgress = (photos, taskIndex, tasksCount) => {
@@ -380,6 +343,7 @@ const webGameProcessUnlocked = async ({
       photos: photosProgress,
       timeAddings,
       visibleCluesCount: collectVisibleCluesCount({
+        game: resolvedGame,
         task: currentTask,
         cluesDuration,
         startTime: startTime[activeTaskIndex],
@@ -506,6 +470,7 @@ const webGameProcessUnlocked = async ({
       taskDuration,
       timeAddings,
       visibleCluesCount: collectVisibleCluesCount({
+        game: resolvedGame,
         task: currentTask,
         cluesDuration,
         startTime: startTime[activeTaskIndex],
@@ -562,6 +527,7 @@ const webGameProcessUnlocked = async ({
       taskDuration,
       timeAddings,
       visibleCluesCount: collectVisibleCluesCount({
+        game: resolvedGame,
         task: currentTask,
         cluesDuration,
         startTime: startTime[activeTaskIndex],
@@ -623,6 +589,7 @@ const webGameProcessUnlocked = async ({
       taskDuration,
       timeAddings,
       visibleCluesCount: collectVisibleCluesCount({
+        game: resolvedGame,
         task: currentTask,
         cluesDuration,
         startTime: startTime[activeTaskIndex],
@@ -779,6 +746,7 @@ const webGameProcessUnlocked = async ({
       taskDuration,
       timeAddings,
       visibleCluesCount: collectVisibleCluesCount({
+        game: resolvedGame,
         task: tasks[nextTaskIndex],
         cluesDuration,
         startTime: startTimeTemp[nextTaskIndex],
@@ -827,6 +795,7 @@ const webGameProcessUnlocked = async ({
     taskDuration,
     timeAddings,
     visibleCluesCount: collectVisibleCluesCount({
+      game: resolvedGame,
       task: currentTask,
       cluesDuration,
       startTime: startTime[activeTaskIndex],

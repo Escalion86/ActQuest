@@ -1581,8 +1581,8 @@ export default function GameControlPageClient({ session: _session }) {
                     ? 'задания'
                     : 'заданий'}
                 {' · '}
-                {taskDurationMinutes} мин на задание
-                {cluesDurationMinutes > 0 ? (
+                {taskDurationMinutes} мин на задание по умолчанию{data?.hasIndividualTaskDurations ? ' · есть индивидуальные лимиты' : ''}
+                {data?.hasCustomClueSchedule ? <span> · подсказки по расписанию заданий</span> : cluesDurationMinutes > 0 ? (
                   <>
                     {' · '}
                     подсказки каждые {cluesDurationMinutes} мин
@@ -1847,7 +1847,8 @@ export default function GameControlPageClient({ session: _session }) {
                         </h3>
                         {team.isChoosingVariant ? <span className="text-sm text-amber-600">Выбирает путь</span> : team.selectedVariantTitle ? <span className="text-sm text-cyan-700 dark:text-cyan-300">{team.selectedVariantTitle}</span> : null}
                         {team.classicInventory?.length > 0 ? <span className="text-xs text-slate-500">{team.classicInventory.map((item) => `${item.title} ×${item.quantity}`).join(', ')}</span> : null}
-                        {team.classicHistory?.length > 0 ? <details className="text-xs"><summary className="cursor-pointer">История пути</summary><ul className="max-h-48 overflow-auto">{team.classicHistory.map((event) => <li key={event.key} className="py-1">{event.type === 'variant_selected' ? `${event.title || 'Путь'}: ${event.reason || ''}` : event.type === 'stage_finished' ? `Исход: ${{ completed: 'выполнено', timeout: 'таймаут', captain_failed: 'провал' }[event.outcome] || event.outcome}` : 'Выданы предметы'}{event.items?.length ? ` (${event.items.map((item) => `${item.title || item.itemId} ×${item.quantity}`).join(', ')})` : ''}</li>)}</ul></details> : null}
+                        {team.freezeRemainingSeconds > 0 && <span className="text-xs text-cyan-700 dark:text-cyan-300">Время заморожено ещё на {team.freezeRemainingSeconds} сек.</span>}
+                        {team.classicHistory?.length > 0 ? <details className="text-xs"><summary className="cursor-pointer">История пути и предметов</summary><ul className="max-h-48 overflow-auto">{team.classicHistory.map((event) => <li key={event.key} className="py-1">{event.type === 'variant_selected' ? `${event.title || 'Путь'}: ${event.reason || ''}` : event.type === 'item_used' ? `Применён предмет «${event.itemTitle || ''}»: ${event.description || 'Бонус времени'}` : event.type === 'penalty_blocked' ? event.description : event.type === 'stage_finished' ? `Исход: ${{ completed: 'выполнено', timeout: 'таймаут', captain_failed: 'провал' }[event.outcome] || event.outcome}` : 'Выданы предметы'}{event.type !== 'item_used' && event.items?.length ? ` (${event.items.map((item) => `${item.title || item.itemId} ×${item.quantity}`).join(', ')})` : ''}</li>)}</ul></details> : null}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-600/50 dark:bg-slate-700/50 dark:text-slate-300">
@@ -2117,22 +2118,10 @@ export default function GameControlPageClient({ session: _session }) {
                           )
                           const failRemaining = Math.max(
                             0,
-                            Math.floor(taskDuration || 0) - elapsed,
+                            Math.floor(team.taskDurationSeconds ?? taskDuration ?? 0) - elapsed,
                           )
-                          const clueInterval = Math.max(
-                            1,
-                            Math.floor(cluesDuration || 0),
-                          )
-                          const mod = elapsed % clueInterval
-                          const clueRemaining =
-                            clueInterval > 0
-                              ? mod === 0
-                                ? clueInterval
-                                : clueInterval - mod
-                              : Number.POSITIVE_INFINITY
-                          const canShowClueTimer =
-                            Number(cluesDuration) > 0 &&
-                            clueRemaining < failRemaining
+                          const clueRemaining = Number.isFinite(team.nextClueInSeconds) ? team.nextClueInSeconds : Number.POSITIVE_INFINITY
+                          const canShowClueTimer = clueRemaining < failRemaining
 
                           if (canShowClueTimer) {
                             return (

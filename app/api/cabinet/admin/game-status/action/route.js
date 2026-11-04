@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
+import { getTaskDurationSeconds } from '@helpers/taskTiming'
 import webGameProcess from '@server/webGameProcess'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
@@ -132,10 +133,7 @@ const forceFailActiveTask = async ({ GamesTeams, game, gameTeam }) => {
     Number.isFinite(game?.breakDuration) && game.breakDuration > 0
       ? Number(game.breakDuration)
       : 0
-  const taskDuration =
-    Number.isFinite(game?.taskDuration) && game.taskDuration > 0
-      ? Math.floor(Number(game.taskDuration))
-      : 0
+  const taskDuration = getTaskDurationSeconds(game, game.tasks[activeTaskIndex])
 
   if (endTime[activeTaskIndex]) {
     return { success: false, message: 'Текущее задание уже завершено.' }

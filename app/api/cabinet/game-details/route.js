@@ -158,6 +158,7 @@ export async function GET(request) {
         showFinishingPlace: 1,
         taskDuration: 1,
         cluesDuration: 1,
+        clueIntervals: 1,
         clueEarlyAccessMode: 1,
         clueEarlyPenalty: 1,
         allowCaptainForceClue: 1,

@@ -6,6 +6,7 @@ import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import ModalSection from '@components/modals/ModalSection'
+import { ClueScheduleFields } from '@components/modals/game-tasks/TaskTimingFields'
 import {
   getTimedCluesCount,
   normalizeClueEarlyAccessFrom,
@@ -27,16 +28,17 @@ const GameSettingsSection = ({
   getCheckboxChecked,
 }) => {
   const isPhotoGame = selectedGame?.type === 'photo'
-  const timedCluesCount = getTimedCluesCount(
+  const timedCluesCount = isPhotoGame ? getTimedCluesCount(
     selectedGame.taskDuration,
     selectedGame.cluesDuration,
-  )
+  ) : Math.max(1, ...(selectedGame.tasks || []).flatMap((task) => [task, ...(task.variants || []).map((variant) => variant.content)]).map((task) => task?.clues?.length || 0))
   const clueEarlyAccessOptions = Array.from(
     { length: timedCluesCount },
     (_, index) => index + 1,
   )
   const updateDurationAndClueAccess = (durationPatch) =>
     updateSelectedGame((currentGame) => {
+      if (!isPhotoGame) return durationPatch
       const nextGame = { ...currentGame, ...durationPatch }
       const nextTimedCluesCount = getTimedCluesCount(
         nextGame.taskDuration,
@@ -64,14 +66,14 @@ const GameSettingsSection = ({
       <div className="grid gap-4 md:grid-cols-2">
         <CabinetDurationField
           id="game-task-duration"
-          label="Продолжительность задания"
+          label={isPhotoGame ? 'Продолжительность задания' : 'Продолжительность задания по умолчанию'}
           valueSeconds={selectedGame.taskDuration}
           onChangeSeconds={(nextSeconds) =>
             updateDurationAndClueAccess({ taskDuration: nextSeconds })
           }
           labelClassName={fieldLabelClassName}
         />
-        <div>
+        {(isPhotoGame || selectedGame.clueIntervals == null) && <div>
           <CabinetDurationField
             id="game-clues-duration"
             label="Время до подсказки"
@@ -84,8 +86,10 @@ const GameSettingsSection = ({
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
             Укажите 0, чтобы отключить автоматическую выдачу подсказок.
           </p>
-        </div>
+        </div>}
       </div>
+
+      {!isPhotoGame && <ClueScheduleFields value={selectedGame.clueIntervals ?? null} defaultInterval={selectedGame.cluesDuration ?? 1200} disabled={!canEditSelectedGame || isSaving} cluesCount={timedCluesCount} onChange={(clueIntervals) => updateSelectedGame({ clueIntervals })} />}
 
       <div className="grid gap-4 md:grid-cols-2">
         <CabinetSelectField
@@ -304,6 +308,8 @@ GameSettingsSection.propTypes = {
     type: PropTypes.string,
     taskDuration: PropTypes.number,
     cluesDuration: PropTypes.number,
+    clueIntervals: PropTypes.arrayOf(PropTypes.number),
+    tasks: PropTypes.array,
     clueEarlyAccessMode: PropTypes.string,
     clueEarlyPenalty: PropTypes.number,
     breakDuration: PropTypes.number,

@@ -8,6 +8,7 @@ import {
   normalizeClueEarlyAccessFrom,
 } from './clueEarlyAccess.js'
 import { getRequiredMainCodesValidationError } from './classicGameRules.js'
+import { getTaskClueCountError } from './taskTiming.js'
 
 const stripHtmlToPlainText = (value) =>
   String(value || '')
@@ -859,7 +860,7 @@ export const getGameValidationErrors = (game, gameTeams = []) => {
     ? safeGame.tasks.filter((task) => !task?.canceled)
     : []
 
-  if (taskDuration - cluesDuration < 0) {
+  if (safeGame.type === 'photo' && taskDuration - cluesDuration < 0) {
     errors.push('Время до подсказки больше, чем длительность задания.')
   }
 
@@ -871,9 +872,8 @@ export const getGameValidationErrors = (game, gameTeams = []) => {
         : normalizeClueEarlyAccessFrom(safeGame.clueEarlyAccessFrom, 0)
 
     if (
-      cluesNeeded < 1 ||
       clueEarlyAccessFrom < 1 ||
-      clueEarlyAccessFrom > cluesNeeded
+      (safeGame.type === 'photo' && (cluesNeeded < 1 || clueEarlyAccessFrom > cluesNeeded))
     ) {
       errors.push(
         cluesNeeded > 0
@@ -888,8 +888,15 @@ export const getGameValidationErrors = (game, gameTeams = []) => {
     return errors
   }
 
-  activeTasks.flatMap((task) => [task, ...(task.variantConfig?.enabled ? (task.variants || []).map((variant) => variant.content || {}) : [])]).forEach((task, index) => {
-    const taskLabel = `Задание ${index + 1}`
+  const taskEntries = (Array.isArray(safeGame.tasks) ? safeGame.tasks : []).flatMap((stage, index) => {
+    if (stage?.canceled) return []
+    const label = `Задание ${index + 1}`
+    return [{ task: stage, taskLabel: label }, ...(stage.variantConfig?.enabled ? (stage.variants || []).map((variant) => ({
+      task: { ...variant.content, taskDuration: stage.taskDuration, clueIntervals: stage.clueIntervals },
+      taskLabel: `${label}, вариант «${variant.title || variant.id}»`,
+    })) : [])]
+  })
+  taskEntries.forEach(({ task, taskLabel }) => {
 
     if (!task?.title) {
       errors.push(`${taskLabel}: не указано название.`)
@@ -930,14 +937,8 @@ export const getGameValidationErrors = (game, gameTeams = []) => {
       )
     })
 
-    if (cluesDuration > 0) {
-      const cluesCount = Array.isArray(task?.clues) ? task.clues.length : 0
-      if (cluesCount < cluesNeeded) {
-        errors.push(
-          `${taskLabel}: недостаточно подсказок (${cluesCount}/${cluesNeeded}).`
-        )
-      }
-    }
+    const clueCountError = getTaskClueCountError(safeGame, task)
+    if (clueCountError) errors.push(`${taskLabel}: ${clueCountError}`)
   })
 
   return errors

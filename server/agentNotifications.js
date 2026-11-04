@@ -243,6 +243,7 @@ const notifyAllTeamsPassedEvents = async ({ db, game }) => {
         return hasTeamFinishedAgentWorkForTask({
           gameTeam,
           taskIndex,
+          tasks,
           tasksCount: tasks.length,
           breakDurationSeconds,
           taskDurationSeconds,

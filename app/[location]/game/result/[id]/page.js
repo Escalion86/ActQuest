@@ -7,6 +7,7 @@ import { use, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import { getTaskDurationSeconds, getTimedCluesCountForTask } from '@helpers/taskTiming'
 // import Image from 'next/image'
 import cn from 'classnames'
 import { PASTEL_COLORS } from '@helpers/constants'
@@ -246,6 +247,7 @@ const Time = ({ start, seconds, duration, forceFinish = false }) => {
 
 const TimeResult = ({
   variantTitle = '',
+  itemEffects = [],
   start,
   delay,
   timeResult,
@@ -277,7 +279,7 @@ const TimeResult = ({
   const hasAdjustmentsData =
     Array.isArray(adjustments) && adjustments.length > 0
   const hasAnyAdjustment =
-    hasAdjustmentsData || penaltySeconds > 0 || bonusSeconds > 0
+    hasAdjustmentsData || penaltySeconds > 0 || bonusSeconds > 0 || itemEffects.length > 0
 
   useEffect(() => {
     if (!isTooltipOpen) {
@@ -367,8 +369,9 @@ const TimeResult = ({
                   }
                   setActiveAdjustmentKey(adjustmentKey || null)
                 }}
-                title="Показать бонусы и штрафы"
+                title="Показать бонусы, штрафы и предметы"
               >
+                {itemEffects.length > 0 && <span>Предметы</span>}
                 {penaltySeconds > 0 && (
                   <span className="text-red-600 dark:text-rose-300">
                     {toHHMMSS(penaltySeconds, true)}
@@ -390,7 +393,7 @@ const TimeResult = ({
                   )}
                 >
                   <p className="mb-1 font-semibold text-slate-800 dark:text-slate-100">
-                    Учтённые бонусы и штрафы
+                    Бонусы, штрафы и предметы
                   </p>
                   {hasAdjustmentsData ? (
                     <ul className="space-y-1">
@@ -447,6 +450,7 @@ const TimeResult = ({
                       )}
                     </div>
                   )}
+                  {itemEffects.length > 0 && <ul className="mt-2 space-y-1 border-t border-slate-200 pt-2 dark:border-slate-700">{itemEffects.map((effect) => <li key={effect.key}><span className="font-semibold">{effect.title}</span>: {effect.description}</li>)}</ul>}
                 </div>
               )}
             </>
@@ -825,8 +829,6 @@ const GameBlock = ({ game, isDarkTheme }) => {
   const rowHeight = 60
   // const breakDuration = game.breakDuration ?? 0
   const tasksCount = tasks?.length ?? 0
-  const taskDuration = game.taskDuration ?? 3600
-  const cluesDuration = game.cluesDuration ?? 1200
   const breakDuration = Number(game.breakDuration) || 0
   const taskFailurePenalty = game.taskFailurePenalty ?? 0
   const isTeamFinishedForAnimation = ({ computedTeam, endTime, activeNum }) => {
@@ -852,6 +854,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
     for (let i = 0; i < tasksCount; i++) {
       const prevSum = i === 0 ? 0 : tempResult[i - 1]
       const task = tasks[i]
+      const taskDuration = getTaskDurationSeconds(game, task)
       if (task.canceled || task.isBonusTask) {
         tempResult.push(prevSum)
       } else if (computedTeam && Array.isArray(computedTeam.taskResults)) {
@@ -919,7 +922,9 @@ const GameBlock = ({ game, isDarkTheme }) => {
       }
 
       let best = Number.POSITIVE_INFINITY
-      teamsAnimateSteps.forEach((timeResults) => {
+      teamsAnimateSteps.forEach((timeResults, teamIndex) => {
+        const team = gameTeamsWithTeams[teamIndex]
+        if (team?.computedTeam?.taskResults?.[taskIndex]?.isFailedTask || team?.taskFailures?.some((failure) => Number(failure.taskIndex) === taskIndex)) return
         const current = Number(timeResults?.[taskIndex])
         const previous =
           taskIndex > 0 ? Number(timeResults?.[taskIndex - 1]) : 0
@@ -953,6 +958,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
       }
 
       const timeSpent = current - previous
+      const taskDuration = getTaskDurationSeconds(game, tasks[taskIndex])
       if (!Number.isFinite(timeSpent) || timeSpent < 0 || taskDuration <= 0) {
         return 'normal'
       }
@@ -1049,7 +1055,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
       if (computedTeam && Array.isArray(computedTeam.taskResults)) {
         return (tasks ?? []).map((_, taskIndex) => {
           const value = Number(
-            computedTeam.taskResults?.[taskIndex]?.bonusSeconds,
+            (Number(computedTeam.taskResults?.[taskIndex]?.bonusSeconds) || 0) + (Number(computedTeam.taskResults?.[taskIndex]?.timeBonusSeconds) || 0) + (Number(computedTeam.taskResults?.[taskIndex]?.itemBonusSeconds) || 0),
           )
           return Number.isFinite(value) ? value : 0
         })
@@ -1107,6 +1113,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
     if (computedTeam) {
       return (
         (Number(computedTeam.codeBonusSeconds) || 0) +
+        (Number(computedTeam.taskTimeBonusSeconds) || 0) +
         (Number(computedTeam.prequelBonusSeconds) || 0)
       )
     }
@@ -1185,7 +1192,8 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     display: item?.display || toHHMMSS(absSeconds, true),
                     description:
                       taskPrefix +
-                      (item?.description || item?.name || 'Корректировка'),
+                      (item?.description || item?.name || 'Корректировка') +
+                      (item?.includedInTaskTime ? ' (уже учтён во времени задания)' : ''),
                   }
                 })
                 .filter(Boolean)
@@ -1195,6 +1203,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
       const fromComputedAddings =
         computedTeam && Array.isArray(computedTeam.addings)
           ? computedTeam.addings
+              .filter((item) => !['item_time_rewind', 'item_time_freeze', 'item_penalty_shield', 'item_penalty_erase'].includes(item.source))
               .map((item) => {
                 const rawSeconds = Number(item?.seconds)
                 const absSeconds = Number.isFinite(rawSeconds)
@@ -1678,21 +1687,21 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       time / maxTeamTime > 1
                         ? animationDuration
                         : (time / maxTeamTime) * animationDuration
-                    const clues =
-                      cluesDuration > 0
-                        ? Math.floor(timeResult / cluesDuration)
-                        : null
+                    const clues = getTimedCluesCountForTask(game, tasks[index], timeResult)
+                    const taskDuration = getTaskDurationSeconds(game, tasks[index])
+                    const isFailedTask = Boolean(gameTeamsWithTeams[i]?.computedTeam?.taskResults?.[index]?.isFailedTask || gameTeamsWithTeams[i]?.taskFailures?.some((failure) => Number(failure.taskIndex) === index))
 
                     return (
                       <TimeResult
                         key={'team' + i + 'task' + index}
                         variantTitle={gameTeamsWithTeams[i]?.computedTeam?.taskResults?.[index]?.variantTitle || ''}
+                        itemEffects={gameTeamsWithTeams[i]?.computedTeam?.taskResults?.[index]?.itemEffects || []}
                         start={start}
                         delay={delay}
                         timeResult={timeResult}
                         isBonusTask={isBonusTask}
                         color={
-                          timeResult >= taskDuration
+                          isFailedTask || (taskDuration > 0 && timeResult >= taskDuration)
                             ? 'red'
                             : clues === 0
                               ? 'green'
@@ -1708,6 +1717,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                         setActiveAdjustmentKey={setActiveAdjustmentKey}
                         showBestCup={
                           !isBonusTask &&
+                          !isFailedTask &&
                           Number.isFinite(bestTaskTimeByIndex[index]) &&
                           timeResult === bestTaskTimeByIndex[index]
                         }
@@ -2409,4 +2419,4 @@ export default ResultPage
 //     fallback: true,
 //   }
 // }
-TimeResult.propTypes = { variantTitle: PropTypes.string }
+TimeResult.propTypes = { variantTitle: PropTypes.string, itemEffects: PropTypes.arrayOf(PropTypes.shape({ key: PropTypes.string, title: PropTypes.string, description: PropTypes.string })) }

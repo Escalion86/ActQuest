@@ -226,6 +226,7 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
       ? { isTeamOnBreak: false, breakTimeLeftSeconds: 0 }
       : resolveTeamBreakState({
           gameTeam,
+          tasks,
           tasksCount: tasks.length,
           breakDurationSeconds,
           taskDurationSeconds,
@@ -235,6 +236,7 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
       : resolveTeamAgentStatus({
           gameTeam,
           assignedTaskIndexes,
+          tasks,
           tasksCount: tasks.length,
           breakDurationSeconds,
           taskDurationSeconds,

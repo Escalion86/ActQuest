@@ -12,6 +12,9 @@ import { normalizeTaskTheme } from '../helpers/taskThemes.js'
 import buildTaskDisplayContent from '../helpers/buildTaskDisplayContent.js'
 import getGameProcessFinishingPlace from '../helpers/getGameProcessFinishingPlace.js'
 import { resolveRequiredMainCodesCount } from '../helpers/classicGameRules.js'
+import { getTaskTimeAdjustmentSeconds } from '../helpers/taskTimeAdjustments.js'
+import * as timing from '../helpers/taskTiming.js'
+import { getVirtualMainCodesCount } from '../helpers/classicItemProgress.js'
 
 registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@helpers/')) {
@@ -28,8 +31,8 @@ const { default: sanitize } = await import('../helpers/sanitize.js')
 
 // Проверяем настоящий расчёт состояния; база не используется при отключённом втором движке.
 const source = readFileSync(new URL('../server/getTeamGameTaskState.js', import.meta.url), 'utf8')
-const context = vm.createContext({ Date, console, process, taskText, sanitize, normalizeTaskTheme,
-  getTaskIndexForStep, buildTaskDisplayContent, getGameProcessFinishingPlace, resolveRequiredMainCodesCount })
+const context = vm.createContext({ Date, console, process, taskText, sanitize, normalizeTaskTheme, ...timing, getVirtualMainCodesCount,
+  getTaskIndexForStep, buildTaskDisplayContent, getGameProcessFinishingPlace, resolveRequiredMainCodesCount, getTaskTimeAdjustmentSeconds })
 vm.runInContext(source.replace(/^import[\s\S]*?from ['"][^'"]+['"]\s*\n/gm, '')
   .replace(/^export default .*$/gm, '').replace(/^export /gm, '')
   + '\nglobalThis.computeTaskHtml = computeTaskHtml', context)

@@ -492,7 +492,7 @@ const PrequelConfigSchema = new Schema(
 const gamesSchema = {
   classicItemsAndVariantsEnabled: { type: Boolean, default: undefined },
   classicItems: {
-    type: [{ id: String, title: String, description: String, image: String, kind: { type: String, enum: ['unique', 'stackable'] } }],
+    type: [{ id: String, title: String, description: String, image: String, kind: { type: String, enum: ['unique', 'stackable'] }, effect: { type: Schema.Types.Mixed, default: null } }],
     default: [],
   },
   name: {
@@ -619,6 +619,9 @@ const gamesSchema = {
     type: [
       {
         variantConfig: { type: Schema.Types.Mixed, default: null },
+        taskDuration: { type: Number, default: null },
+        clueIntervals: { type: [Number], default: null },
+        allowIncompleteClues: { type: Boolean, default: false },
         stageKey: { type: String, default: '' },
         variants: { type: [Schema.Types.Mixed], default: [] },
         itemRewards: { type: Schema.Types.Mixed, default: null },
@@ -886,6 +889,7 @@ const gamesSchema = {
     type: Number,
     default: 1200,
   },
+  clueIntervals: { type: [Number], default: null },
   clueEarlyPenalty: {
     type: Number,
     default: 0,

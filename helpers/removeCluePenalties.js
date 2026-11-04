@@ -1,6 +1,6 @@
 const isCluePenalty = ({ source }) => {
   const normalizedSource = typeof source === 'string' ? source.trim() : ''
-  return normalizedSource === 'captain_force_clue'
+  return normalizedSource === 'captain_force_clue' || normalizedSource.startsWith('item_')
 }
 
 const removeCluePenalties = (timeAddings) => {
