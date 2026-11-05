@@ -6,6 +6,7 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
   useEditor,
+  useEditorState,
 } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
@@ -23,6 +24,7 @@ import pauseOtherAudioElements from '@helpers/audioPlayback'
 import { sendImage } from '@helpers/cloudinary'
 import normalizeEditorLinkHref from '@helpers/normalizeEditorLinkHref'
 import { LOCATIONS } from '@server/serverConstants'
+import { TaskTab, TaskTabs } from './task-rich-editor/taskTabsExtension'
 
 const FONT_OPTIONS = [
   { value: '', label: 'Шрифт' },
@@ -57,6 +59,7 @@ const SLASH_COMMANDS = [
   },
   { id: 'blockquote', label: 'Цитата', aliases: ['quote', 'blockquote'] },
   { id: 'codeBlock', label: 'Код-блок', aliases: ['code', 'snippet'] },
+  { id: 'taskTabs', label: 'Вкладки', aliases: ['tabs', 'вкладки'] },
 ]
 
 const ESCALIONCLOUD_PUBLIC_ORIGIN =
@@ -844,20 +847,6 @@ const toHexColor = (value) => {
   return ''
 }
 
-const buildAudioHtml = (url, title = 'Аудио') => {
-  const safeUrl = escapeHtmlAttribute(url)
-  const safeTitle = escapeHtmlAttribute(title)
-
-  return `<audio-message src="${safeUrl}" title="${safeTitle}"></audio-message><p></p>`
-}
-
-const buildVideoHtml = (url, title = 'Видео') => {
-  const safeUrl = escapeHtmlAttribute(url)
-  const safeTitle = escapeHtmlAttribute(title)
-
-  return `<video-message src="${safeUrl}" title="${safeTitle}"></video-message><p></p>`
-}
-
 const formatAudioClock = (seconds) => {
   const value = Number(seconds)
   if (!Number.isFinite(value) || value < 0) return '0:00'
@@ -909,7 +898,10 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     decodeHtmlEntities(node.attrs.title).trim()
       ? decodeHtmlEntities(node.attrs.title).trim()
       : 'Аудио'
-  const canEditAudioTitle = Boolean(editor?.isEditable)
+  const canEditAudioTitle = useEditorState({
+    editor,
+    selector: ({ editor: current }) => Boolean(current?.isEditable),
+  })
 
   useEffect(() => {
     const audio = audioRef.current
@@ -1009,7 +1001,7 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
   }
 
   const handleRename = () => {
-    if (!canEditAudioTitle) return
+    if (!editor?.isEditable) return
     const nextTitle = window.prompt('Введите название аудио', title)
     if (nextTitle === null) return
     updateAttributes({ title: nextTitle.trim() || 'Аудио' })
@@ -1374,7 +1366,10 @@ const FrameBox = Node.create({
 const ResizableImageNodeView = ({ node, editor }) => {
   const src = typeof node?.attrs?.src === 'string' ? node.attrs.src : ''
   const alt = typeof node?.attrs?.alt === 'string' ? node.attrs.alt : ''
-  const isEditable = Boolean(editor?.isEditable)
+  const isEditable = useEditorState({
+    editor,
+    selector: ({ editor: current }) => Boolean(current?.isEditable),
+  })
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   return (
@@ -1569,6 +1564,7 @@ const TaskRichEditor = ({
     underline: false,
     blockquote: false,
     frameBox: false,
+    taskTabs: false,
     bulletList: false,
     orderedList: false,
     link: false,
@@ -1627,17 +1623,17 @@ const TaskRichEditor = ({
       'max-w-none',
       'px-5',
       'py-4',
-      'text-slate-800',
       'focus:outline-none',
-      'dark:text-slate-100',
     ]
+
+    if (!taskTheme) classNames.push('text-slate-800', 'dark:text-slate-100')
 
     if (!(disabled && compactReadOnly)) {
       classNames.push('min-h-[220px]')
     }
 
     return classNames.join(' ')
-  }, [compactReadOnly, disabled])
+  }, [compactReadOnly, disabled, taskTheme])
 
   const extensions = useMemo(
     () => [
@@ -1658,6 +1654,8 @@ const TaskRichEditor = ({
       AudioMessage,
       VideoMessage,
       FrameBox,
+      TaskTabs,
+      TaskTab,
     ],
     [],
   )
@@ -1687,7 +1685,7 @@ const TaskRichEditor = ({
         propagateEditorState(nextEditor)
       },
     },
-    [extensions, disabled, editorClassName],
+    [extensions],
   )
 
   const cancelLinkButtonMenuClose = useCallback(() => {
@@ -2002,7 +2000,18 @@ const TaskRichEditor = ({
     if (!editor) return
     // Смена режима не меняет содержимое и не должна помечать задание изменённым.
     editor.setEditable(!disabled, false)
+    editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false))
   }, [editor, disabled])
+
+  useEffect(() => {
+    if (!editor) return
+    editor.setOptions({
+      editorProps: {
+        ...editor.options.editorProps,
+        attributes: { class: editorClassName },
+      },
+    })
+  }, [editor, editorClassName])
 
   useEffect(() => {
     if (!editor) return undefined
@@ -2025,6 +2034,7 @@ const TaskRichEditor = ({
         underline: editor.isActive('underline'),
         blockquote: editor.isActive('blockquote'),
         frameBox: editor.isActive('frameBox'),
+        taskTabs: editor.isActive('taskTabs'),
         bulletList: editor.isActive('bulletList'),
         orderedList: editor.isActive('orderedList'),
         link: isLinkActive && !isLinkButton,
@@ -2108,6 +2118,7 @@ const TaskRichEditor = ({
           prev.underline === nextState.underline &&
           prev.blockquote === nextState.blockquote &&
           prev.frameBox === nextState.frameBox &&
+          prev.taskTabs === nextState.taskTabs &&
           prev.bulletList === nextState.bulletList &&
           prev.orderedList === nextState.orderedList &&
           prev.link === nextState.link &&
@@ -2182,6 +2193,7 @@ const TaskRichEditor = ({
       else if (commandId === 'orderedList') chain.toggleOrderedList().run()
       else if (commandId === 'blockquote') chain.toggleBlockquote().run()
       else if (commandId === 'codeBlock') chain.toggleCodeBlock().run()
+      else if (commandId === 'taskTabs') chain.insertTaskTabs().run()
 
       setSlashMenu((prev) => ({
         ...prev,
@@ -2400,22 +2412,6 @@ const TaskRichEditor = ({
     }
   }, [disabled, editor, propagateEditorState])
 
-  const forceAppendHtmlToEditor = useCallback(
-    (htmlFragment) => {
-      if (!editor || !htmlFragment) return false
-
-      const currentHtml = editor.getHTML()
-      const hasOnlyEmptyParagraph = currentHtml === '<p></p>'
-      const nextHtml = hasOnlyEmptyParagraph
-        ? htmlFragment
-        : `${currentHtml}${htmlFragment}`
-
-      editor.commands.setContent(nextHtml, true)
-      return true
-    },
-    [editor],
-  )
-
   const triggerFileInput = useCallback(
     (mode) => {
       if (disabled || isUploading) return
@@ -2452,19 +2448,46 @@ const TaskRichEditor = ({
 
       setUploadError('')
       setIsUploading(true)
-
-      const uploadResult = await sendImage(
-        file,
-        null,
-        directory,
-        null,
-        process.env.NEXT_PUBLIC_ESCALIONCLOUD_PROJECT || 'actquest',
-        (message) => setUploadError(message || 'Не удалось загрузить файл'),
-        resolvedMode === 'video' ? 300000 : 45000,
-      )
-
-      setIsUploading(false)
-      if (!uploadResult) return
+      let uploadSelection = editor.state.selection.getBookmark()
+      let tabPosition = null
+      let tabRemoved = false
+      const { $from } = editor.state.selection
+      for (let depth = $from.depth; depth > 0; depth -= 1) {
+        if ($from.node(depth).type.name === 'taskTab') {
+          tabPosition = $from.before(depth)
+          break
+        }
+      }
+      const mapUploadSelection = ({ transaction, appendedTransactions = [] }) => {
+        for (const nextTransaction of [transaction, ...appendedTransactions]) {
+          uploadSelection = uploadSelection.map(nextTransaction.mapping)
+          if (tabPosition === null || tabRemoved) continue
+          const mapped = nextTransaction.mapping.mapResult(tabPosition, 1)
+          tabPosition = mapped.pos
+          tabRemoved = mapped.deleted || nextTransaction.doc.nodeAt(tabPosition)?.type.name !== 'taskTab'
+        }
+      }
+      editor.on('transaction', mapUploadSelection)
+      let uploadResult
+      try {
+        uploadResult = await sendImage(
+          file,
+          null,
+          directory,
+          null,
+          process.env.NEXT_PUBLIC_ESCALIONCLOUD_PROJECT || 'actquest',
+          (message) => setUploadError(message || 'Не удалось загрузить файл'),
+          resolvedMode === 'video' ? 300000 : 45000,
+        )
+      } finally {
+        editor.off('transaction', mapUploadSelection)
+        setIsUploading(false)
+      }
+      if (!uploadResult || editor.isDestroyed) return
+      if (!editor.isEditable || tabRemoved) {
+        setUploadError('Место вставки изменилось во время загрузки. Вернитесь к нужной вкладке и добавьте файл ещё раз.')
+        return
+      }
 
       const uploadedUrls = Array.from(
         new Set(
@@ -2490,67 +2513,21 @@ const TaskRichEditor = ({
       }
 
       const url = uploadedUrls[0]
-      if (resolvedMode === 'audio') {
-        const audioHtml = buildAudioHtml(url, file.name || 'Аудио')
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: 'audioMessage',
-            attrs: {
-              src: url,
-              title: file.name || 'Аудио',
-              mime: file.type || '',
-            },
-          })
-          .insertContent({ type: 'paragraph' })
-          .run()
-
-        const nextHtml = editor.getHTML()
-        if (!nextHtml.includes(url)) {
-          forceAppendHtmlToEditor(audioHtml)
-        }
-      } else if (resolvedMode === 'video') {
-        const videoHtml = buildVideoHtml(url, file.name || 'Видео')
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: 'videoMessage',
-            attrs: {
-              src: url,
-              title: file.name || 'Видео',
-              mime: file.type || '',
-            },
-          })
-          .insertContent({ type: 'paragraph' })
-          .run()
-
-        const nextHtml = editor.getHTML()
-        if (!nextHtml.includes(url)) {
-          forceAppendHtmlToEditor(videoHtml)
-        }
-      } else {
-        editor
-          .chain()
-          .focus()
-          .setImage({
-            src: url,
-            alt: file.name || 'Изображение задания',
-          })
-          .insertContent({ type: 'paragraph' })
-          .run()
-
-        const nextHtml = editor.getHTML()
-        if (!nextHtml.includes(url)) {
-          const safeUrl = escapeHtmlAttribute(url)
-          const safeAlt = escapeHtmlAttribute(
-            file.name || 'Изображение задания',
-          )
-          forceAppendHtmlToEditor(
-            `<p><img src="${safeUrl}" alt="${safeAlt}" loading="lazy"></p><p></p>`,
-          )
-        }
+      const mediaNode = resolvedMode === 'image'
+        ? { type: 'image', attrs: { src: url, alt: file.name || 'Изображение задания' } }
+        : { type: resolvedMode === 'audio' ? 'audioMessage' : 'videoMessage', attrs: { src: url, title: file.name || (resolvedMode === 'audio' ? 'Аудио' : 'Видео'), mime: file.type || '' } }
+      // Медиа и абзац вставляются одной операцией в исходное место загрузки.
+      const targetSelection = uploadSelection.resolve(editor.state.doc)
+      const targetRange = targetSelection instanceof NodeSelection
+        ? { from: targetSelection.to, to: targetSelection.to }
+        : { from: targetSelection.from, to: targetSelection.to }
+      const inserted = editor.chain()
+        .focus()
+        .insertContentAt(targetRange, [mediaNode, { type: 'paragraph' }])
+        .run()
+      if (!inserted) {
+        setUploadError('Не удалось вставить файл. Установите курсор в нужном месте и повторите загрузку.')
+        return
       }
 
       propagateEditorState(editor)
@@ -2559,7 +2536,6 @@ const TaskRichEditor = ({
       directory,
       disabled,
       editor,
-      forceAppendHtmlToEditor,
       isUploading,
       propagateEditorState,
       uploadMode,
@@ -3289,6 +3265,13 @@ const TaskRichEditor = ({
               disabled={disabled || isUploading}
             />
             <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+            <ToolbarButton
+              label="Вкладки"
+              title={toolbarState.taskTabs ? 'Для нового блока поставьте курсор вне текущих вкладок' : 'Добавить блок вкладок'}
+              isActive={toolbarState.taskTabs}
+              onClick={() => editor.chain().focus().insertTaskTabs().run()}
+              disabled={disabled || toolbarState.taskTabs}
+            />
             <ToolbarButton
               label="Очистить"
               onClick={clearFormatting}

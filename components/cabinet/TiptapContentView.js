@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types'
 import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
+import TaskTabsHtmlView from '@components/game/TaskTabsHtmlView'
 
 const escapeHtml = (value) =>
   String(value || '')
@@ -59,6 +60,15 @@ const TiptapContentView = ({
   const htmlWithNormalizedAudio = normalizeAudioMessageHtml(normalizedHtmlContent)
 
   if (htmlWithNormalizedAudio) {
+    if (/\bdata-aq-tabs\s*=\s*["']?true\b/i.test(htmlWithNormalizedAudio)) {
+      return (
+        <TaskTabsHtmlView
+          className={`aq-tiptap-view aq-rich-text-base aq-task-content max-w-none break-words [overflow-wrap:anywhere] [&_*]:max-w-full [&_*]:break-words ${className}`}
+          html={htmlWithNormalizedAudio}
+        />
+      )
+    }
+
     return (
       <div
         className={`aq-tiptap-view aq-rich-text-base aq-task-content max-w-none break-words [overflow-wrap:anywhere] [&_*]:max-w-full [&_*]:break-words ${className}`}

@@ -134,6 +134,7 @@ const TaskItem = ({
   expandedContent,
   renderCodeReward,
 }) => {
+  const [isDescriptionPreview, setIsDescriptionPreview] = useState(false)
   const canDragTask = canEditSelectedGame && !isSaving && !isTaskOrderLocked
   const isDragOver = dragOverTaskId === task.id
   const isDraggingCurrent = draggedTaskId === task.id
@@ -573,9 +574,22 @@ const TaskItem = ({
           </div>
 
           <div className="space-y-2">
-            <p className={fieldLabelClassName}>
-              {withRequiredMark('Описание задания')}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className={fieldLabelClassName}>
+                {withRequiredMark('Описание задания')}
+              </p>
+              {canEditSelectedGame ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 disabled:opacity-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+                  aria-pressed={isDescriptionPreview}
+                  disabled={isSaving}
+                  onClick={() => setIsDescriptionPreview((value) => !value)}
+                >
+                  {isDescriptionPreview ? 'Вернуться к редактированию' : 'Как видит игрок'}
+                </button>
+              ) : null}
+            </div>
             <TaskRichEditor
               taskTheme={normalizeTaskTheme(selectedGame?.taskTheme)}
               value={task.taskRich || task.task || ''}
@@ -589,7 +603,9 @@ const TaskItem = ({
                 type: selectedGame.type === 'photo' ? 'photo' : 'classic',
                 location: selectedGame.location || '',
               }}
-              disabled={!canEditSelectedGame || isSaving}
+              disabled={!canEditSelectedGame || isSaving || isDescriptionPreview}
+              hideToolbar={isDescriptionPreview}
+              compactReadOnly={isDescriptionPreview}
               placeholder="Введите описание задания. Можно использовать форматирование, картинки и аудио."
               onChange={({ html, plainText, media }) => {
                 const nextTaskText =

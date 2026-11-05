@@ -271,6 +271,201 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   word-break: break-word;
 }
 
+/* Вкладки — часть rich-text документа; выбранная панель хранится только в UI. */
+.aq-task-tabs {
+  --aq-tabs-surface: #f8fafc;
+  --aq-tabs-border: #cbd5e1;
+  --aq-tabs-active: #0369a1;
+  --aq-tabs-selected: #e0f2fe;
+  --aq-tabs-danger: #b91c1c;
+  margin: 1em 0;
+  min-width: 0;
+  border: 1px solid var(--aq-tabs-border);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.dark .aq-task-tabs {
+  --aq-tabs-surface: #162033;
+  --aq-tabs-border: #475569;
+  --aq-tabs-active: #7dd3fc;
+  --aq-tabs-selected: #14344d;
+  --aq-tabs-danger: #fca5a5;
+}
+
+.aq-task-theme .aq-task-tabs {
+  --aq-tabs-surface: var(--aq-task-surface);
+  --aq-tabs-border: var(--aq-task-border);
+  --aq-tabs-active: var(--aq-task-accent);
+  --aq-tabs-selected: var(--aq-task-surface);
+}
+
+.aq-task-tabs [hidden] {
+  display: none !important;
+}
+
+.aq-task-tabs__editor-tools,
+.aq-task-tabs__tab-row,
+.aq-task-tabs__tablist,
+.aq-task-tabs__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.aq-task-tabs__editor-tools {
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--aq-tabs-border);
+  border-radius: 9px 9px 0 0;
+  background: var(--aq-tabs-surface);
+  font-size: 13px;
+}
+
+.aq-task-tabs__tab-row {
+  align-items: stretch;
+  padding: 7px 9px 0;
+  border-bottom: 1px solid var(--aq-tabs-border);
+}
+
+.aq-task-tabs__tablist {
+  flex: 1;
+  gap: 3px;
+}
+
+.aq-task-tabs > .aq-task-tabs__tablist {
+  padding: 8px 9px 0;
+  border-bottom: 1px solid var(--aq-tabs-border);
+}
+
+.aq-task-tabs__tab {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.aq-task-tabs__tab[aria-selected='true'] {
+  border-bottom-color: var(--aq-tabs-active);
+  color: var(--aq-tabs-active);
+  background: var(--aq-tabs-selected);
+}
+
+.aq-task-tabs__tab:hover,
+.aq-task-tabs__button:hover:not(:disabled) {
+  background: var(--aq-tabs-selected);
+}
+
+.aq-task-tabs__button {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid var(--aq-tabs-border);
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+}
+
+.aq-task-tabs__tab-row > .aq-task-tabs__button {
+  align-self: center;
+  margin-bottom: 6px;
+  border-color: transparent;
+  color: var(--aq-tabs-active);
+}
+
+.aq-task-tabs__button:disabled {
+  opacity: .45;
+}
+
+.aq-task-tabs__button--danger {
+  color: var(--aq-tabs-danger);
+}
+
+.aq-task-tabs__tab:focus-visible,
+.aq-task-tabs__button:focus-visible,
+.aq-task-tabs__settings input:focus-visible {
+  outline: 2px solid var(--aq-tabs-active);
+  outline-offset: 2px;
+}
+
+.aq-task-tabs__settings {
+  padding: 12px;
+  border-bottom: 1px solid var(--aq-tabs-border);
+  background: var(--aq-tabs-surface);
+}
+
+.aq-task-tabs__settings label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.aq-task-tabs__settings input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--aq-tabs-border);
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.aq-task-tabs__actions {
+  margin-top: 10px;
+}
+
+.aq-task-tabs__panel {
+  min-width: 0;
+  padding: 16px;
+}
+
+.aq-task-tabs__panel > :first-child {
+  margin-top: 0;
+}
+
+.aq-task-tabs__panel > :last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror[contenteditable='true'] .aq-task-tabs__panel {
+  min-height: 110px;
+}
+
+.aq-task-tabs__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .aq-task-tabs__tab { padding-inline: 9px; }
+  .aq-task-tabs__panel { padding: 12px; }
+  .aq-task-tabs__settings input { font-size: 16px; }
+}
+
+@media (pointer: coarse) {
+  .aq-task-tabs__tab,
+  .aq-task-tabs__button { min-height: 44px; }
+}
+
 .aq-rich-text-base p {
   margin: 0;
   overflow-wrap: anywhere;
