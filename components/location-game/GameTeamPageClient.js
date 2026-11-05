@@ -2334,7 +2334,7 @@ function GameTeamPage({
 
   return (
     <>
-      <div className="min-h-screen bg-[#F5F6F8] pb-16 transition-colors dark:bg-slate-950 dark:text-slate-100">
+      <div className={`min-h-screen bg-[#F5F6F8] ${currentTaskDisplayMeta?.classic ? 'pb-[calc(7rem+env(safe-area-inset-bottom,0px))]' : 'pb-16'} transition-colors dark:bg-slate-950 dark:text-slate-100`}>
         <header className="transition-colors bg-white border-b border-gray-200 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between max-w-6xl px-4 py-5 mx-auto">
             <Link
