@@ -307,7 +307,9 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .aq-task-tabs__editor-tools,
 .aq-task-tabs__tab-row,
 .aq-task-tabs__tablist,
-.aq-task-tabs__actions {
+.aq-task-tabs__actions,
+.aq-task-tabs__tool-actions,
+.aq-task-tabs__confirmation {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -396,7 +398,10 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 
 .aq-task-tabs__tab:focus-visible,
 .aq-task-tabs__button:focus-visible,
-.aq-task-tabs__settings input:focus-visible {
+.aq-task-tabs__accordion-toggle:focus-visible,
+.aq-task-tabs__body:focus-visible,
+.aq-task-tabs__settings input:focus-visible,
+.aq-task-tabs__settings select:focus-visible {
   outline: 2px solid var(--aq-tabs-active);
   outline-offset: 2px;
 }
@@ -413,7 +418,8 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   font-size: 13px;
 }
 
-.aq-task-tabs__settings input {
+.aq-task-tabs__settings input,
+.aq-task-tabs__settings select {
   display: block;
   width: 100%;
   min-width: 0;
@@ -425,6 +431,23 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   font: inherit;
 }
 
+.aq-task-tabs__settings select {
+  margin-bottom: 14px;
+  min-height: 38px;
+  background: var(--aq-tabs-surface);
+}
+
+.aq-task-tabs__confirmation {
+  padding: 12px;
+  border-bottom: 1px solid var(--aq-tabs-border);
+  background: var(--aq-tabs-surface);
+  font-size: 13px;
+}
+
+.aq-task-tabs__confirmation > span {
+  flex-basis: 100%;
+}
+
 .aq-task-tabs__actions {
   margin-top: 10px;
 }
@@ -434,16 +457,215 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   padding: 16px;
 }
 
+.aq-task-tabs__body {
+  min-width: 0;
+}
+
+.aq-task-tabs__detail-title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.aq-task-tabs__body > :first-child,
 .aq-task-tabs__panel > :first-child {
   margin-top: 0;
 }
 
+.aq-task-tabs__body > :last-child,
 .aq-task-tabs__panel > :last-child {
   margin-bottom: 0;
 }
 
-.ProseMirror[contenteditable='true'] .aq-task-tabs__panel {
+.ProseMirror[contenteditable='true'] .aq-task-tabs__body {
   min-height: 110px;
+}
+
+/* Карточки открывают материал с возвратом к общему списку. */
+.aq-task-tabs[data-aq-tabs-style='cards'] .aq-task-tabs__tablist {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  flex-basis: 100%;
+}
+
+.aq-task-tabs[data-aq-tabs-style='cards'] .aq-task-tabs__tab-row {
+  padding: 12px;
+  border-bottom: 0;
+}
+
+.aq-task-tabs[data-aq-tabs-style='cards'] .aq-task-tabs__tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px;
+  border: 1px solid var(--aq-tabs-border);
+  border-radius: 12px;
+  background: var(--aq-tabs-surface);
+}
+
+.aq-task-tabs[data-aq-tabs-style='cards'] .aq-task-tabs__tab::before,
+.aq-task-tabs__accordion-toggle::before {
+  content: attr(data-number);
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  height: 30px;
+  border: 1px solid var(--aq-tabs-border);
+  border-radius: 8px;
+  color: var(--aq-tabs-active);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.aq-task-tabs[data-aq-tabs-style='cards'] .aq-task-tabs__tab::after,
+.aq-task-tabs__accordion-toggle::after {
+  content: '';
+  flex: 0 0 7px;
+  height: 7px;
+  margin-left: auto;
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+/* Заголовки аккордеона находятся рядом со своим содержимым. */
+.aq-task-tabs[data-aq-tabs-style='accordion'] .aq-task-tabs__tab-row {
+  border-bottom: 0;
+}
+
+.aq-task-tabs[data-aq-tabs-style='accordion'] .aq-task-tabs__tab-row:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+.aq-task-tabs[data-aq-tabs-style='accordion'] .aq-task-tabs__panel {
+  padding: 0;
+}
+
+.aq-task-tabs[data-aq-tabs-style='accordion'] .aq-task-tabs__panel + .aq-task-tabs__panel {
+  border-top: 1px solid var(--aq-tabs-border);
+}
+
+.aq-task-tabs__accordion-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.aq-task-tabs__accordion-toggle:hover,
+.aq-task-tabs__accordion-toggle[aria-expanded='true'] {
+  background: var(--aq-tabs-surface);
+}
+
+.aq-task-tabs__accordion-toggle::after {
+  transform: rotate(135deg);
+}
+
+.aq-task-tabs__accordion-toggle[aria-expanded='true']::after {
+  transform: rotate(-45deg);
+}
+
+.aq-task-tabs__accordion-toggle[aria-expanded='true']::before {
+  border-color: var(--aq-tabs-active);
+  background: var(--aq-tabs-selected);
+}
+
+.aq-task-tabs[data-aq-tabs-style='accordion'] .aq-task-tabs__body {
+  padding: 4px 16px 16px;
+}
+
+/* Схема строится по числу вкладок и работает с любым набором из 1–8 узлов. */
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tablist {
+  position: relative;
+  flex: none;
+  width: 100%;
+  height: var(--aq-map-height, 300px);
+  margin: 12px auto;
+  max-width: 580px;
+}
+
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tab-row {
+  flex-direction: column;
+  align-items: stretch;
+  border-bottom: 0;
+}
+
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tab-row > .aq-task-tabs__button {
+  align-self: flex-start;
+}
+
+.aq-task-tabs__connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke: var(--aq-tabs-border);
+  stroke-width: 1px;
+  pointer-events: none;
+}
+
+.aq-task-tabs__connections line {
+  vector-effect: non-scaling-stroke;
+}
+
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tab {
+  position: absolute;
+  left: var(--aq-node-x);
+  top: var(--aq-node-y);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 26%;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tab::before {
+  content: attr(data-number);
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--aq-tabs-border);
+  border-radius: 50%;
+  background: var(--aq-tabs-surface);
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tablist[data-dense='true'] .aq-task-tabs__tab {
+  width: 38%;
+  background: var(--aq-tabs-surface);
+}
+
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tab[aria-selected='true']::before {
+  border-color: var(--aq-tabs-active);
+  background: var(--aq-tabs-selected);
+  color: var(--aq-tabs-active);
+}
+
+.aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tab:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .aq-task-tabs__status {
@@ -458,7 +680,9 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 @media (max-width: 480px) {
   .aq-task-tabs__tab { padding-inline: 9px; }
   .aq-task-tabs__panel { padding: 12px; }
-  .aq-task-tabs__settings input { font-size: 16px; }
+  .aq-task-tabs__settings input,
+  .aq-task-tabs__settings select { font-size: 16px; }
+  .aq-task-tabs[data-aq-tabs-style='map'] .aq-task-tabs__tablist { height: var(--aq-map-height, 340px); }
 }
 
 @media (pointer: coarse) {

@@ -48,6 +48,7 @@ const sanitizeConf = {
       'style',
       'class',
       'data-aq-tabs',
+      'data-aq-tabs-style',
       'data-aq-tab',
       'data-aq-tab-title',
     ],
