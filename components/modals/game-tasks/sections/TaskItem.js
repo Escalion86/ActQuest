@@ -133,6 +133,7 @@ const TaskItem = ({
   hideStageFlags = false,
   expandedContent,
   renderCodeReward,
+  descriptionExtras,
 }) => {
   const [isDescriptionPreview, setIsDescriptionPreview] = useState(false)
   const canDragTask = canEditSelectedGame && !isSaving && !isTaskOrderLocked
@@ -632,6 +633,8 @@ const TaskItem = ({
               }}
             />
           </div>
+
+          {!isDescriptionPreview && descriptionExtras}
 
           {/* Clues Section */}
           <div>
@@ -1818,6 +1821,7 @@ TaskItem.propTypes = {
   hideStageFlags: PropTypes.bool,
   expandedContent: PropTypes.node,
   renderCodeReward: PropTypes.func,
+  descriptionExtras: PropTypes.node,
   task: PropTypes.shape({
     taskDuration: PropTypes.number,
     clueIntervals: PropTypes.arrayOf(PropTypes.number),

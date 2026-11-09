@@ -725,6 +725,7 @@ const buildUpdatePayload = (game) => {
           : stripHtmlToPlainText(task.taskRich),
       howToSolve: typeof task.howToSolve === 'string' ? task.howToSolve : '',
       taskRich: typeof task.taskRich === 'string' ? task.taskRich : '',
+      triggerBlocks: task.triggerBlocks || [],
       taskMedia: (Array.isArray(task.taskMedia) ? task.taskMedia : [])
         .map((media, index) => ({
           id:
@@ -1126,6 +1127,7 @@ const buildUpdatePayload = (game) => {
     tasks: tasksWithAllowedAgents,
     classicItemsAndVariantsEnabled: showClassicItemsAndVariants(game),
     classicItems: game.classicItems || [],
+    classicTriggers: game.classicTriggers || [],
     moderators: Array.from(moderatorsSet),
     agents: agentIds.map((userId) => ({ userId, active: true })),
     agentNotifications: {
@@ -3132,6 +3134,7 @@ const GamesPage = ({
           baseDraft.taskTheme = normalizeTaskTheme(normalizedSource.taskTheme)
           baseDraft.classicItemsAndVariantsEnabled = showClassicItemsAndVariants(normalizedSource)
           baseDraft.classicItems = JSON.parse(JSON.stringify(normalizedSource.classicItems || []))
+          baseDraft.classicTriggers = JSON.parse(JSON.stringify(normalizedSource.classicTriggers || []))
           baseDraft.tasks = Array.isArray(normalizedSource.tasks)
             ? JSON.parse(JSON.stringify(normalizedSource.tasks))
             : []

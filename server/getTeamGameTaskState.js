@@ -4,6 +4,7 @@ import fetchTeam from '@server/fetchTeam'
 import webGameProcess from '@server/webGameProcess'
 import processClassicVariants from '@server/processClassicVariants'
 import { getClassicItemUseBlockReason } from '@helpers/classicItemEffects'
+import { getVisibleClassicTriggerBlocks } from '@helpers/classicTriggers'
 import { getTaskTimeAdjustmentSeconds } from '@helpers/taskTimeAdjustments'
 import { getActiveTaskFreeze } from '@helpers/taskTimeAdjustments'
 import { getVirtualMainCodesCount, getClassicPenaltyCandidates } from '@helpers/classicItemProgress'
@@ -1422,6 +1423,11 @@ const computeTaskHtmlUnlocked = async ({
         const displayContent = buildTaskDisplayContent({
           task: activeTask,
           visibleCluesCount,
+          revealedBlocksHtml: game.type === 'classic'
+            ? getVisibleClassicTriggerBlocks(activeTask, effectiveGameTeam.classicProgress)
+                .map(({ contentRich }) => sanitizeFragment(contentRich))
+                .join('')
+            : '',
         })
         taskDisplayHtml = displayContent.html
         taskDisplayText = displayContent.text
@@ -1811,7 +1817,7 @@ const getTeamGameTaskState = async ({
         selectedVariantId: progress?.selectedVariantId || null,
         variantChoices: choosing ? classicPublicChoices(variantGame, gameTeam, index) : [],
         inventory: classicPublicInventory(variantGame, gameTeam).map((entry) => {
-          const item = variantGame.classicItems.find((item) => item.id === entry.itemId)
+          const item = variantGame.classicItems?.find((item) => item.id === entry.itemId)
           const reason = getClassicItemUseBlockReason({ item, game: variantGame, gameTeam, task: stage, taskIndex: index, stageId: stage ? classicStageId(stage, index) : null, isCaptain })
           return { ...entry, canUse: !reason, useBlockReason: reason, ...(entry.effect?.type === 'penalty_erase' ? { penalties: getClassicPenaltyCandidates(variantGame, gameTeam, effectiveTask, index) } : {}) }
         }),

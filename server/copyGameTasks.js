@@ -32,6 +32,9 @@ export const copyGuardFields = [
 ]
 
 export const taskCopyBlockReason = (task) => {
+  if (task?.triggerBlocks?.length) {
+    return 'Задание содержит скрытые блоки, связанные с триггерами игры. Скопируйте игру целиком.'
+  }
   if (task?.variantConfig?.enabled || task?.variants?.length || task?.itemRewards || task?.outcomeRewards) {
     return 'Задание содержит варианты, условия или награды предметами. Их связи с предметами и другими этапами нельзя безопасно перенести отдельно. Скопируйте игру целиком.'
   }

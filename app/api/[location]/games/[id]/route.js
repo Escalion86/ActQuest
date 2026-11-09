@@ -141,6 +141,13 @@ const stripHtmlToPlainText = (value) =>
 const sanitizeTasksRichContent = (tasks = []) =>
   (Array.isArray(tasks) ? tasks : []).map((task) => ({
     ...task,
+    ...(Array.isArray(task?.triggerBlocks) ? {
+      triggerBlocks: task.triggerBlocks.map((block) => ({
+          id: block?.id,
+          triggerId: block?.triggerId,
+          contentRich: typeof block?.contentRich === 'string' ? sanitize(block.contentRich) : '',
+        })),
+    } : {}),
     variants: (Array.isArray(task?.variants) ? task.variants : []).map((variant) => ({
       ...variant,
       content: sanitizeTasksRichContent([{ ...variant.content, variants: [] }])[0],
@@ -1078,13 +1085,13 @@ const execute = (request, params) =>
         const classicErrors = validateClassicVariants({ ...existingGame.toObject(), ...updateData })
         if (classicErrors.length) return res.status(400).json({ success: false, error: classicErrors.join(' ') })
         if (['started', 'finished', 'closed'].includes(existingGame.status) && (hasClassicVariants(existingGame) || hasClassicVariants({ ...existingGame.toObject(), ...updateData }) || hasCustomTaskTiming(existingGame) || hasCustomTaskTiming({ ...existingGame.toObject(), ...updateData })) && !shouldReset) {
-          const fields = ['tasks', 'classicItems', 'type', 'taskDuration', 'breakDuration', 'cluesDuration', 'clueIntervals', 'taskDistributionMode']
+          const fields = ['tasks', 'classicItems', 'classicTriggers', 'type', 'taskDuration', 'breakDuration', 'cluesDuration', 'clueIntervals', 'taskDistributionMode']
           const before = normalizeGameForCabinet(existingGame.toObject())
           const after = normalizeGameForCabinet(new Games({ ...existingGame.toObject(), ...updateData }).toObject())
           // Отмена этапа — оперативное действие, остальные правила неизменяемы.
           const withoutCancellation = (value) => JSON.stringify(value, (key, entry) => key === 'canceled' ? undefined : entry)
           const changed = fields.some((key) => Object.prototype.hasOwnProperty.call(updateData, key) && withoutCancellation(after[key]) !== withoutCancellation(before[key]))
-          if (changed) return res.status(409).json({ success: false, error: 'Правила игры с вариантами или индивидуальным временем нельзя менять после запуска. Создайте копию игры.' })
+          if (changed) return res.status(409).json({ success: false, error: 'Правила игры с вариантами, триггерами или индивидуальным временем нельзя менять после запуска. Создайте копию игры.' })
         }
         if (shouldReset) {
           const GamesTeams = db.model('GamesTeams')

@@ -495,6 +495,17 @@ const gamesSchema = {
     type: [{ id: String, title: String, description: String, image: String, kind: { type: String, enum: ['unique', 'stackable'] }, effect: { type: Schema.Types.Mixed, default: null } }],
     default: [],
   },
+  classicTriggers: {
+    type: [{
+      _id: false,
+      id: String,
+      title: String,
+      source: { type: String, enum: ['code', 'item_granted', 'item_used'] },
+      code: String,
+      itemId: String,
+    }],
+    default: [],
+  },
   name: {
     type: String,
     required: [true, 'Введите название игры'],
@@ -649,6 +660,10 @@ const gamesSchema = {
         taskRich: {
           type: String,
           default: '',
+        },
+        triggerBlocks: {
+          type: [{ _id: false, id: String, triggerId: String, contentRich: String }],
+          default: [],
         },
         taskMedia: {
           type: [

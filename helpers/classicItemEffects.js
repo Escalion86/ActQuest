@@ -4,6 +4,7 @@ import { getClassicEffectValidationError, isClassicHelpEffect } from './classicI
 import { getClassicItemStage, getClassicFoundMainCodesCount, getClassicPenaltyCandidates } from './classicItemProgress.js'
 import { getActiveTaskFreeze } from './taskTimeAdjustments.js'
 import { resolveClassicTask } from './classicVariants.js'
+import { getClassicItemTriggers, isClassicTriggerActive } from './classicTriggers.js'
 
 export const getClassicItemUseBlockReason = ({ item, game, gameTeam, task, taskIndex, stageId, isCaptain, now = new Date() }) => {
   if (!isCaptain) return 'Применить предмет может только капитан.'
@@ -15,6 +16,7 @@ export const getClassicItemUseBlockReason = ({ item, game, gameTeam, task, taskI
   if (effect.allowedStageIds?.length && !effect.allowedStageIds.includes(stageId)) return 'Этот предмет нельзя применить на текущем задании.'
   if (task.variantConfig?.enabled && !gameTeam.classicProgress?.stages?.some((entry) => entry.stageId === stageId && entry.selectedVariantId)) return 'Сначала выберите путь задания.'
   if (!(gameTeam.classicProgress?.inventory?.find((entry) => entry.itemId === item.id)?.quantity > 0)) return 'Предмета больше нет в инвентаре.'
+  if (effect.type === 'reveal_trigger' && !getClassicItemTriggers(game, 'item_used', item.id).some(({ id }) => !isClassicTriggerActive(gameTeam.classicProgress, id))) return 'У предмета нет новых скрытых блоков для открытия.'
   const content = resolveClassicTask(task, gameTeam, taskIndex)
   const stage = getClassicItemStage(gameTeam, task, taskIndex)
   const elapsed = getClassicTaskEffectiveElapsedSeconds({ gameTeam, task, taskIndex, startTime: gameTeam.startTime[taskIndex], now })

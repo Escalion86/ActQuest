@@ -109,8 +109,8 @@ const GameTaskSettingsModal = ({
             checked={showClassicItemsAndVariants(selectedGame)}
             onChange={(event) => updateSelectedGame({ classicItemsAndVariantsEnabled: event.target.checked })}
             disabled={!canEditSelectedGame || isGameClosed || isSaving}
-            label="Предметы и вариативность заданий"
-            description="Показывать предметы, варианты заданий и награды в редакторе. При отключении их настройки сохраняются."
+            label="Предметы, варианты заданий и триггеры"
+            description="Показывать дополнительные игровые механики в редакторе. При отключении их настройки сохраняются."
             labelClassName="text-sm text-slate-600 dark:text-slate-200"
           />
         )}

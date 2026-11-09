@@ -165,6 +165,7 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
       dateStartFact: 1,
       tasks: 1,
       classicItems: 1,
+      classicTriggers: 1,
       type: 1,
       storyNodes: 1,
       agents: 1,

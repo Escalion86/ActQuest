@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import fetchGame from '@server/fetchGame'
+import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 import {
   getGamePrequels,
   normalizePrequelConfig,
@@ -97,7 +98,7 @@ export default async function GameEntryPage({ params }) {
       notFound()
     }
 
-    const serializedGame = JSON.parse(JSON.stringify(game))
+    const serializedGame = JSON.parse(JSON.stringify(sanitizeGameForPublicRead(game)))
     serializedGame.prequel = normalizePrequelConfig(serializedGame.prequel, {
       includeCodes: false,
     })

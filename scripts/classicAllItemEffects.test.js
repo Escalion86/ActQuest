@@ -15,6 +15,7 @@ const at = (seconds) => new Date(Date.UTC(2026, 10, 3, 12, 0, seconds))
 const gameFixture = () => ({ type: 'classic', status: 'started', taskDuration: 1000, breakDuration: 30, cluesDuration: 300,
   taskFailurePenalty: 180, manyCodesPenalty: [2, 60],
   classicItems: CLASSIC_ITEM_EFFECTS.map(({ type, title, seconds }) => ({ id: type, title, kind: 'stackable', effect: { type, ...(seconds ? { seconds } : {}), ...(['secret_clue', 'compass'].includes(type) ? { text: 'СЕКРЕТ: ищите башню', image: 'https://example.org/map.png' } : {}) } })),
+  classicTriggers: [{ id: 'hidden', title: 'Скрытые блоки', source: 'item_used', itemId: 'reveal_trigger' }],
   tasks: [{ _id: 'task', stageKey: 'stage', codes: ['a', 'b', 'c'], numCodesToCompliteTask: 2,
     penaltyCodes: [{ code: 'trap', penalty: 120 }, { code: 'trap2', penalty: 90 }],
     clues: [{ clue: 'Первая' }, { clue: 'Вторая' }, { clue: 'Третья' }],
@@ -29,9 +30,9 @@ const quantity = (team, id) => team.classicProgress.inventory.find((entry) => en
 const stage = (team) => team.classicProgress.stages[0]
 const computed = async (game, team) => (await buildGameResultComputed({ game: { ...game, dateEndFact: at(1200), result: { teams: [{ _id: 'team' }], teamsUsers: [{ teamId: 'team' }], gameTeams: [{ ...team, teamId: 'team' }] } } })).computed.teams[0]
 
-test('каталог поддерживает все девять эффектов и проверяет скрытую помощь', () => {
+test('каталог поддерживает все десять эффектов и проверяет скрытую помощь', () => {
   const game = gameFixture()
-  assert.equal(game.classicItems.length, 9)
+  assert.equal(game.classicItems.length, 10)
   assert.deepEqual(validateClassicVariants(game), [])
   for (const effect of [{ type: 'compass' }, { type: 'secret_clue', text: 5 }, { type: 'compass', image: 'javascript:alert(1)' }, { type: 'time_freeze', seconds: -1 }]) {
     game.classicItems[0].effect = effect

@@ -10,6 +10,7 @@ import vm from 'node:vm'
 const at = (seconds) => new Date(Date.UTC(2026, 10, 4, 12, 0, seconds))
 const fixture = () => ({ type: 'classic', status: 'started', taskDuration: 1800, breakDuration: 30, clueIntervals: [300, 450, 900], manyCodesPenalty: [2, 60], taskFailurePenalty: 180,
   classicItems: [...CLASSIC_ITEM_EFFECTS.map(({ type, title, seconds }) => ({ id: type, title, kind: 'stackable', effect: { type, ...(seconds ? { seconds } : {}), ...(['secret_clue', 'compass'].includes(type) ? { text: 'Скрытая помощь' } : {}) } })), { id: 'reward', title: 'Награда', kind: 'stackable' }],
+  classicTriggers: [{ id: 'hidden', title: 'Скрытые блоки', source: 'item_used', itemId: 'reveal_trigger' }],
   tasks: [{ _id: 'first', stageKey: 'first', codes: ['a', 'b', 'c'], clues: [{ clue: 'Раз' }, { clue: 'Два' }, { clue: 'Три' }],
     penaltyCodes: [{ code: 'trap', penalty: 120 }, { code: 'trap2', penalty: 90 }], outcomeRewards: { completed: [{ itemId: 'reward', quantity: 2 }], timeout: [{ itemId: 'reward', quantity: 1 }], captain_failed: [{ itemId: 'reward', quantity: 1 }] } },
     { _id: 'second', stageKey: 'second', taskDuration: 2700, codes: ['next'], clues: [] },
@@ -39,10 +40,10 @@ const assertProgress = (game, team) => {
   }
 }
 
-test('40 320 порядков применения всех восьми незавершающих эффектов перед порталом', async () => {
+test('40 320 порядков применения восьми эффектов времени, подсказок и кодов перед порталом', async () => {
   const game = fixture()
   const initial = play(game, prepare(game), 580, { message: 'trap', stageId: 'first' }).gameTeam
-  const types = CLASSIC_ITEM_EFFECTS.map((entry) => entry.type).filter((type) => type !== 'portal')
+  const types = CLASSIC_ITEM_EFFECTS.map((entry) => entry.type).filter((type) => !['portal', 'reveal_trigger'].includes(type))
   let checked = 0
   for (const order of permutations(types)) {
     let team = initial

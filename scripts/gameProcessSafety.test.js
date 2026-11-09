@@ -9,6 +9,7 @@ import * as rules from '../helpers/classicGameRules.js'
 import { getTaskTimeAdjustmentSeconds } from '../helpers/taskTimeAdjustments.js'
 import * as timing from '../helpers/taskTiming.js'
 import { getVirtualMainCodesCount } from '../helpers/classicItemProgress.js'
+import { getVisibleClassicTriggerBlocks } from '../helpers/classicTriggers.js'
 import buildGameStartProgressUpdate from '../server/buildGameStartProgressUpdate.js'
 import buildGameResultComputed from '../server/buildGameResultComputed.js'
 import updateParticipantsRatings from '../server/updateParticipantsRatings.js'
@@ -36,6 +37,7 @@ const fixture = (status = 'started') => memoryGameDb({
 })
 const { computeTaskHtml } = loadServerUnit('server/getTeamGameTaskState.js', {
   ...locks, ...distribution, ...rules, ...timing, getTaskTimeAdjustmentSeconds, getVirtualMainCodesCount,
+  getVisibleClassicTriggerBlocks,
   normalizeTaskTheme: () => 'default', getGameProcessFinishingPlace: () => '',
   sanitize: String, taskText: () => 'Задание', buildTaskDisplayContent: () => ({}),
 }, ['computeTaskHtml'])

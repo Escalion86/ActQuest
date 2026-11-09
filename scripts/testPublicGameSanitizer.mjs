@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict'
 
 import sanitizeGameForPublicRead from '../helpers/sanitizeGameForPublicRead.js'
-import { canExposeCabinetGamePlace } from '../helpers/cabinetGameVisibility.js'
+import { canExposeCabinetGamePlace, sanitizeCabinetGameForViewer } from '../helpers/cabinetGameVisibility.js'
 
 const source = {
   _id: 'game-1',
   status: 'started',
+  classicTriggers: [{ id: 'trigger', source: 'code', code: 'TRIGGER_CODE_SECRET' }],
   tasks: [
     {
       task: 'Текст задания',
+      triggerBlocks: [{ id: 'block', triggerId: 'trigger', contentRich: 'TRIGGER_BLOCK_SECRET' }],
+      variants: [{ content: { triggerBlocks: [{ id: 'block', triggerId: 'trigger', contentRich: 'TRIGGER_VARIANT_SECRET' }] } }],
       codes: ['MAIN_SECRET'],
       codePhotos: ['PHOTO_SECRET'],
       bonusCodes: [{ code: 'BONUS_SECRET', bonus: 60, description: 'Бонус' }],
@@ -52,6 +55,9 @@ const sanitized = sanitizeGameForPublicRead(source)
 const serialized = JSON.stringify(sanitized)
 
 for (const secret of [
+  'TRIGGER_CODE_SECRET',
+  'TRIGGER_BLOCK_SECRET',
+  'TRIGGER_VARIANT_SECRET',
   'MAIN_SECRET',
   'PHOTO_SECRET',
   'BONUS_SECRET',
@@ -82,6 +88,13 @@ const finished = sanitizeGameForPublicRead({ ...source, status: 'finished' })
 assert.equal(finished.tasks[0].clues[0].clue, 'CLUE_SECRET')
 assert.equal(finished.tasks[0].codes.length, 0)
 assert.equal('code' in finished.tasks[0].bonusCodes[0], false)
+assert.doesNotMatch(JSON.stringify(finished), /TRIGGER_\w+_SECRET/)
+
+const published = { ...source, status: 'finished', showTasks: true }
+const cabinet = sanitizeCabinetGameForViewer(published, { canViewRestrictedGameInfo: false })
+assert.equal(cabinet.tasks.length, 1)
+assert.doesNotMatch(JSON.stringify(cabinet), /TRIGGER_\w+_SECRET/)
+assert.equal(sanitizeCabinetGameForViewer(published, { canViewRestrictedGameInfo: true }), published)
 
 assert.equal(canExposeCabinetGamePlace({ hideResult: false }), true)
 assert.equal(canExposeCabinetGamePlace({ hideResult: true }), false)

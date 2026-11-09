@@ -301,6 +301,7 @@ const fetchGamesForCabinet = async ({
       tasks: 1,
       classicItemsAndVariantsEnabled: 1,
       classicItems: 1,
+      classicTriggers: 1,
       updatedAt: 1,
       createdAt: 1,
       creatorUserId: 1,

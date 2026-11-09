@@ -278,6 +278,7 @@ export async function POST(request) {
         location: 1,
         tasks: 1,
         classicItems: 1,
+        classicTriggers: 1,
         type: 1,
         taskDuration: 1,
         breakDuration: 1,

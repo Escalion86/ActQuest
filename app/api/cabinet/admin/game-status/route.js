@@ -914,6 +914,7 @@ export async function GET(request) {
         manyCodesPenalty: 1,
         tasks: 1,
         classicItems: 1,
+        classicTriggers: 1,
         prequel: 1,
         prequels: 1,
         moderators: 1,

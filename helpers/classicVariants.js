@@ -1,10 +1,12 @@
 import { normalizeClassicCode, getRequiredMainCodesValidationError } from './classicGameRules.js'
 import { getTaskTimingErrors } from './taskTiming.js'
 import { getClassicEffectValidationError, getPublicClassicEffect } from './classicItemDefinitions.js'
+import { validateClassicTriggers } from './classicTriggers.js'
 
 export const classicStageId = (task, index) => String(task?.stageKey || task?._id || task?.id || index)
 export const hasClassicVariants = (game) => game?.type === 'classic' && (
   (game.classicItems || []).length > 0 ||
+  (game.classicTriggers || []).length > 0 ||
   (game.tasks || []).some((task) => task.variantConfig?.enabled || task.itemRewards || task.outcomeRewards)
 )
 export const getClassicStageProgress = (team, task, index) =>
@@ -72,10 +74,12 @@ const validateClassicVariantsUnchecked = (game) => {
   const errors = []
   const items = game.classicItems || []
   const tasks = game.tasks || []
-  const enabled = items.length || tasks.some((task) => task.variantConfig?.enabled || task.itemRewards || task.outcomeRewards)
-  if (!enabled) return errors
-  if (game.type !== 'classic') errors.push('Предметы и варианты доступны только для classic.')
-  if (game.taskDistributionMode === 'random') errors.push('Для вариантов и предметов нужен линейный порядок этапов.')
+  const triggerErrors = validateClassicTriggers(game)
+  const enabled = items.length || game.classicTriggers?.length || tasks.some((task) => task.variantConfig?.enabled || task.itemRewards || task.outcomeRewards)
+  if (!enabled) return triggerErrors
+  errors.push(...triggerErrors)
+  if (game.type !== 'classic') errors.push('Предметы, варианты и триггеры доступны только для classic.')
+  if (game.taskDistributionMode === 'random') errors.push('Для вариантов, предметов и триггеров нужен линейный порядок этапов.')
   const ids = new Set()
   const stageIds = tasks.map(classicStageId)
   if (new Set(stageIds).size !== stageIds.length) errors.push('Идентификаторы этапов должны быть уникальны.')

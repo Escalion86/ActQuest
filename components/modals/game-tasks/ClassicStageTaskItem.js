@@ -5,6 +5,7 @@ import { normalizeClassicCode } from '@helpers/classicGameRules'
 import { hasClassicVariants } from '@helpers/classicVariants'
 import TaskItem from './sections/TaskItem'
 import ClassicVariantsEditor from './ClassicVariantsEditor'
+import ClassicTriggerBlocksEditor from './ClassicTriggerBlocksEditor'
 import Quantities, { ClassicOutcomeRewards, classicButtonClass, classicInputClass } from './ClassicItemQuantities'
 
 export default function ClassicStageTaskItem({ updateSelectedGame, canManageClassic, ...props }) {
@@ -100,7 +101,16 @@ export default function ClassicStageTaskItem({ updateSelectedGame, canManageClas
       <ClassicVariantsEditor game={game} stageIndex={index} variantId={variantId} onSelectVariant={(id) => { setSelection(id); resetDrag() }} onChange={updateSelectedGame} disabled={disabled} />
     )}
     <h3 className="font-semibold">{variant ? `Задание варианта «${variant.title}»` : 'Основное задание'}</h3>
-    <TaskItem {...props} {...handlers} {...dragHandlers} key={variantId} task={content} contentOnly hideDeleteAction isAlternative={Boolean(variant)} isExpanded canEditSelectedGame={!disabled} renderCodeReward={renderCodeReward} />
+    <TaskItem {...props} {...handlers} {...dragHandlers} key={variantId} task={content} contentOnly hideDeleteAction isAlternative={Boolean(variant)} isExpanded canEditSelectedGame={!disabled} renderCodeReward={renderCodeReward}
+      descriptionExtras={<ClassicTriggerBlocksEditor
+        blocks={content.triggerBlocks}
+        triggers={game.classicTriggers || []}
+        directory={`games/${game.id || 'draft'}/tasks/${content.id}/triggers`}
+        taskTheme={game.taskTheme}
+        disabled={disabled}
+        onChange={(update) => updateContent((current) => ({ triggerBlocks: update(current.triggerBlocks || []) }))}
+      />}
+    />
     <section className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
       <h4 className="font-semibold">Какие предметы получит команда?</h4>
       <p className="text-sm text-slate-500">Награды за результат именно этого варианта. Выдача за отдельный код настраивается рядом с кодом.</p>

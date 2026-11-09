@@ -8,6 +8,7 @@ export const CLASSIC_ITEM_EFFECTS = [
   { type: 'lockpick', title: 'Отмычка', description: 'Закрывает один недостающий обязательный код. Награда за ввод настоящего кода не выдаётся.' },
   { type: 'compass', title: 'Компас', description: 'Показывает подготовленный организатором ориентир: текст и изображение для поиска.' },
   { type: 'portal', title: 'Портал', description: 'Завершает текущее задание без решения и штрафа за провал. Начинается обычный перерыв.' },
+  { type: 'reveal_trigger', title: 'Открытие скрытых блоков', description: 'Открывает скрытое содержимое связанных заданий для всей команды.' },
 ]
 
 export const getClassicEffectDefinition = (type) => CLASSIC_ITEM_EFFECTS.find((entry) => entry.type === type)

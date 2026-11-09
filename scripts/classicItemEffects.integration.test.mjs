@@ -96,6 +96,92 @@ test('Mongoose сохраняет настройки эффекта и не до
 
 const activation = (extra = {}) => ({ action: 'useItem', stageId: 'stage', itemId: 'clock', requestId: 'request-effect-1000', ...extra })
 
+test('API открывает блоки по коду, получению и применению предмета для одной команды', async () => withGameClock(async (clock, startedAt) => {
+  const f = fixture({ type: 'reveal_trigger' }, (game, registration) => {
+    registration.startTime = [startedAt]
+    registration.classicProgress = null
+    game.classicTriggers = [
+      { id: 'code', title: 'Радиосигнал', source: 'code', code: 'signal-secret' },
+      { id: 'grant', title: 'Получены очки', source: 'item_granted', itemId: 'clock' },
+      { id: 'use', title: 'Включены очки', source: 'item_used', itemId: 'clock' },
+    ]
+    game.tasks[0].codes = ['loot', 'finish']
+    game.tasks[0].itemRewards = { codes: [{ category: 'main', code: 'loot', items: [{ itemId: 'clock', quantity: 2 }] }] }
+    game.tasks[0].triggerBlocks = [
+      { id: 'radio', triggerId: 'code', contentRich: '<p>Сообщение радиста</p>' },
+      { id: 'loot', triggerId: 'grant', contentRich: '<p>Инструкция к очкам</p>' },
+      { id: 'image1', triggerId: 'use', contentRich: '<p><img src="https://example.org/hidden-first.png"></p>' },
+    ]
+    game.tasks.push({
+      _id: 'second', stageKey: 'second', codes: ['last'],
+      triggerBlocks: [{ id: 'default', triggerId: 'use', contentRich: '<p>Запасной путь</p>' }],
+      variantConfig: { enabled: true, mode: 'auto' },
+      variants: [{
+        id: 'night', title: 'Ночной путь',
+        content: {
+          task: 'Осмотрите стену', codes: ['last'],
+          triggerBlocks: [{ id: 'image2', triggerId: 'use', contentRich: '<p><img src="https://example.org/hidden-second.png"></p>' }],
+        },
+      }],
+    })
+  })
+  const { docs: teams } = f.db.model('Teams')
+  const { docs: memberships } = f.db.model('TeamsUsers')
+  const { docs: progress } = f.db.model('GamesTeams')
+  teams.push({ _id: 'other', name: 'Другая команда' })
+  memberships.push({ userId: 'user', teamId: 'other', role: 'captain' })
+  progress.push({ _id: 'other-registration', gameId: 'game', teamId: 'other', activeNum: 0, startTime: [startedAt] })
+
+  const send = async (input = {}) => {
+    const response = await f.request(input)
+    assert.equal(response.status, 200)
+    return (await response.json()).data
+  }
+  const hidden = /signal-secret|Сообщение радиста|Инструкция к очкам|hidden-first\.png|hidden-second\.png/
+  assert.doesNotMatch(JSON.stringify(await send()), hidden)
+  const code = await send({ message: ' SIGNAL-SECRET ' })
+  assert.match(code.taskDisplayTaskHtml, /Найдите код.*Сообщение радиста/)
+  assert.deepEqual(f.team().findedCodes[0], [])
+  assert.deepEqual(f.team().wrongCodes[0], [])
+  assert.equal(f.team().codeAttempts.length, 0)
+  await send({ message: 'signal-secret' })
+  assert.deepEqual(f.team().classicProgress.activeTriggerIds, ['code'])
+  const grant = await send({ message: 'loot' })
+  assert.match(grant.taskDisplayTaskHtml, /Инструкция к очкам/)
+  assert.doesNotMatch(JSON.stringify(grant), /hidden-first\.png/)
+  const used = await send(activation())
+  assert.match(used.taskDisplayTaskHtml, /hidden-first\.png/)
+  assert.doesNotMatch(JSON.stringify(used), /hidden-second\.png/)
+  await send(activation())
+  assert.equal((await f.request(activation({ requestId: 'different-use' }))).status, 409)
+  assert.deepEqual(f.team().classicProgress.activeTriggerIds, ['code', 'grant', 'use'])
+  assert.equal(f.team().classicProgress.inventory[0].quantity, 1)
+  assert.doesNotMatch(JSON.stringify(await send({ teamId: 'other' })), hidden)
+  clock(5)
+  await send({ message: 'finish' })
+  clock(15)
+  const next = await send()
+  assert.equal(next.stageId, 'second')
+  assert.match(next.taskDisplayTaskHtml, /hidden-second\.png/)
+  assert.doesNotMatch(JSON.stringify(next), /hidden-first\.png|Запасной путь/)
+}))
+
+test('схема сохраняет связи триггеров и проверка отклоняет неизвестный триггер', () => {
+  const f = fixture()
+  const mongoose = f.load('mongoose')
+  const schema = new mongoose.Schema(f.load('@schemas/gamesSchema').default)
+  const Model = mongoose.models.ClassicTriggerCasting || mongoose.model('ClassicTriggerCasting', schema)
+  const trigger = { id: 'secret', title: 'Радио', source: 'code', code: 'signal' }
+  const block = { id: 'block', triggerId: 'secret', contentRich: '<p>Скрытый текст</p>' }
+  const game = new Model({ type: 'classic', classicTriggers: [trigger], tasks: [{ triggerBlocks: [block] }] }).toObject()
+  assert.deepEqual(game.classicTriggers, [trigger])
+  assert.deepEqual(game.tasks[0].triggerBlocks, [block])
+  const { validateClassicVariants } = f.load('@helpers/classicVariants')
+  assert.equal(validateClassicVariants(game).length, 0)
+  game.tasks[0].triggerBlocks[0].triggerId = 'missing'
+  assert.match(validateClassicVariants(game).join(' '), /триггер из каталога/)
+})
+
 for (const type of ['secret_clue', 'compass']) test(`API ${type}: скрытая помощь выдаётся только после расхода предмета`, async () => {
   const f = fixture({ type, text: 'СЕКРЕТНЫЙ ОРИЕНТИР', image: 'https://example.org/secret-map.png' })
   const first = await (await f.request()).json()

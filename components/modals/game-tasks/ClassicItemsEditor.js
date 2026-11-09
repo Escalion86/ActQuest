@@ -22,7 +22,7 @@ function ItemCard({ item, children }) {
 }
 ItemCard.propTypes = { item: itemPropType.isRequired, children: PropTypes.node }
 
-export default function ClassicItemsEditor({ items, onChange, disabled, tasks = [] }) {
+export default function ClassicItemsEditor({ items, onChange, disabled, tasks = [], triggers = [] }) {
   const [draft, setDraft] = useState(null)
   const isExisting = draft && items.some((item) => item.id === draft.id)
   const effectError = getClassicEffectValidationError(draft?.effect)
@@ -41,7 +41,7 @@ export default function ClassicItemsEditor({ items, onChange, disabled, tasks = 
     </div>
     {items.length ? <div className="grid gap-3 sm:grid-cols-2">{items.map((item) => {
       const usage = classicItemUsage(tasks, item.id)
-      const used = usage.grants.length > 0 || usage.uses.length > 0
+      const used = usage.grants.length > 0 || usage.uses.length > 0 || triggers.some((trigger) => trigger.source !== 'code' && trigger.itemId === item.id)
       return <ItemCard key={item.id} item={item}>
       <div className="mt-3 space-y-2 text-xs text-slate-600 dark:text-slate-300">
         <p>Где выдаётся: {usage.grants.join('; ') || 'пока нигде'}</p>
@@ -49,9 +49,9 @@ export default function ClassicItemsEditor({ items, onChange, disabled, tasks = 
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" disabled={disabled} className={iconButtonClass} title="Редактировать" aria-label={`Редактировать предмет ${item.title}`} onClick={() => setDraft({ ...item, description: item.description || '' })}><FontAwesomeIcon icon={faPen} aria-hidden="true" /></button>
-        <button type="button" disabled={disabled || used} className={iconButtonClass} title={used ? 'Сначала уберите предмет из наград и условий' : 'Удалить'} aria-label={`Удалить предмет ${item.title}`} onClick={() => onChange(items.filter((entry) => entry.id !== item.id))}><FontAwesomeIcon icon={faTrash} aria-hidden="true" /></button>
+        <button type="button" disabled={disabled || used} className={iconButtonClass} title={used ? 'Сначала удалите связи предмета' : 'Удалить'} aria-label={`Удалить предмет ${item.title}`} onClick={() => onChange(items.filter((entry) => entry.id !== item.id))}><FontAwesomeIcon icon={faTrash} aria-hidden="true" /></button>
       </div>
-      {used && <p className="mt-2 text-xs text-slate-500">Для удаления сначала уберите предмет из перечисленных наград и условий.</p>}
+      {used && <p className="mt-2 text-xs text-slate-500">Для удаления сначала уберите предмет из связанных наград, условий и триггеров.</p>}
     </ItemCard>})}</div> : <p className="text-sm text-slate-500">Добавьте предмет — например, жетон, ключ или маховик времени. Его можно выдавать за коды, использовать при выборе пути или применять во время задания.</p>}
     <div onKeyDown={(event) => {
       // Escape закрывает только редактор предмета, сохраняя окно заданий.
@@ -89,4 +89,4 @@ export default function ClassicItemsEditor({ items, onChange, disabled, tasks = 
     </div>
   </section>
 }
-ClassicItemsEditor.propTypes = { items: PropTypes.arrayOf(itemPropType).isRequired, onChange: PropTypes.func.isRequired, disabled: PropTypes.bool, tasks: PropTypes.array }
+ClassicItemsEditor.propTypes = { items: PropTypes.arrayOf(itemPropType).isRequired, onChange: PropTypes.func.isRequired, disabled: PropTypes.bool, tasks: PropTypes.array, triggers: PropTypes.array }

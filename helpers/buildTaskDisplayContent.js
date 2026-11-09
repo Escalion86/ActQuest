@@ -5,10 +5,16 @@ const buildRichHeading = (label) => `<p><strong>${label}</strong></p>`
 
 const buildPlainHeading = (label) => `${label}:`
 
-const buildTaskDisplayContent = ({ task, visibleCluesCount = 0 }) => {
+const plainTextToHtml = (text) =>
+  text ? `<p>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br />')}</p>` : ''
+
+const buildTaskDisplayContent = ({ task, visibleCluesCount = 0, revealedBlocksHtml = '' }) => {
   const normalizedTask = task && typeof task === 'object' ? task : {}
-  const taskRich = normalizeString(normalizedTask.taskRich)
   const taskText = normalizeString(normalizedTask.task)
+  const baseRich = normalizeString(normalizedTask.taskRich)
+  const taskRich = revealedBlocksHtml
+    ? `${baseRich || plainTextToHtml(taskText)}${revealedBlocksHtml}`
+    : baseRich
   const clues = Array.isArray(normalizedTask.clues) ? normalizedTask.clues : []
   const safeVisibleCluesCount = Math.max(0, Number(visibleCluesCount) || 0)
   const visibleClues = clues.slice(0, safeVisibleCluesCount)

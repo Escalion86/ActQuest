@@ -115,6 +115,7 @@ const sanitizeCabinetGameForViewer = (
   return {
     ...game,
     classicItems: [],
+    classicTriggers: [],
     clueEarlyAccessMode: undefined,
     clueEarlyPenalty: undefined,
     clueEarlyAccessFrom: undefined,
@@ -129,7 +130,18 @@ const sanitizeCabinetGameForViewer = (
       ? game.result
       : null,
     finances: [],
-    tasks: canViewPublishedTasks && Array.isArray(game.tasks) ? game.tasks : [],
+    tasks: canViewPublishedTasks && Array.isArray(game.tasks)
+      ? game.tasks.map((task) => ({
+          ...task,
+          triggerBlocks: [],
+          ...(task.variants?.length ? {
+            variants: task.variants.map((variant) => ({
+              ...variant,
+              content: variant.content ? { ...variant.content, triggerBlocks: [] } : variant.content,
+            })),
+          } : {}),
+        }))
+      : [],
     prequel: {
       ...buildDefaultPrequel(),
       ...normalizePrequelConfig(game?.prequel, { includeCodes: false }),

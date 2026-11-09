@@ -6,6 +6,7 @@ import { getTaskDurationSeconds, getClueTimesSeconds, getTimedCluesCountForTask 
 import { applyClassicItemEffect, waiveClassicPenalty } from './classicItemEffectActions.js'
 import { getClassicPenaltyCandidates, getClassicFoundMainCodesCount } from '../helpers/classicItemProgress.js'
 import { getTimeAddingSeconds, isTimeAddingForTask, isTaskTimeAdjustment } from '../helpers/taskTimeAdjustments.js'
+import { activateClassicTriggers, getClassicItemTriggers, getClassicTriggerCodes } from '../helpers/classicTriggers.js'
 
 export const CLASSIC_PROGRESS_FIELDS = ['activeNum', 'taskSequence', 'startTime', 'endTime', 'findedCodes', 'findedBonusCodes', 'findedPenaltyCodes', 'wrongCodes', 'codeAttempts', 'forcedClues', 'taskFailures', 'timeAddings', 'classicProgress']
 const clone = (value) => JSON.parse(JSON.stringify(value))
@@ -60,6 +61,9 @@ export const runClassicVariants = ({ game, gameTeam, action, message, stageId, v
   const grant = (entries, key, index, at) => {
     if (!entries?.length || !event(key, 'items_granted', index, at, { items: entries })) return
     changeItems(entries, 1)
+    for (const { itemId } of entries) {
+      activateClassicTriggers(progress, getClassicItemTriggers(game, 'item_granted', itemId))
+    }
   }
   const select = (index, variant, method, at) => {
     const entry = record(index)
@@ -161,8 +165,11 @@ export const runClassicVariants = ({ game, gameTeam, action, message, stageId, v
       else {
         changeItems([{ itemId, quantity: 1 }], -1)
         const applied = applyClassicItemEffect({ game, team, task: effective, taskIndex: index, stage: entry, item, requestId, penalty, now })
+        const activated = activateClassicTriggers(progress, getClassicItemTriggers(game, 'item_used', itemId))
+        if (activated && item.effect.type === 'reveal_trigger') applied.description = 'Скрытые блоки открыты'
         event(`use-item:${requestId}`, 'item_used', index, now, { itemId, itemTitle: item.title, effect: clone(item.effect), penaltyKey: penaltyKey || null, ...applied, items: [{ itemId, quantity: 1 }] })
         reply.message = item.effect.type === 'time_rewind' ? `Предмет «${item.title}» применён. Время задания уменьшено на ${item.effect.seconds / 60} мин.` : `Предмет «${item.title}» применён. ${applied.description}.`
+        if (activated && item.effect.type !== 'reveal_trigger') reply.message += ' Скрытые блоки открыты.'
       }
     }
     else if (action === 'selectVariant') {
@@ -193,8 +200,11 @@ export const runClassicVariants = ({ game, gameTeam, action, message, stageId, v
       const penalty = effective.penaltyCodes?.find((entry) => normalizeClassicCode(entry.code) === code)
       const main = (effective.codes || []).some((value) => normalizeClassicCode(value) === code) || (effective.codes?.[0] === '[time]' && code === dynamicTimeCode)
       const category = bonus ? 'bonus' : penalty ? 'penalty' : main ? 'main' : 'wrong'
+      const codeTriggers = getClassicTriggerCodes(game, code)
       const key = { bonus: 'findedBonusCodes', penalty: 'findedPenaltyCodes', main: 'findedCodes', wrong: 'wrongCodes' }[category]
-      if (category !== 'wrong' && team[key][index].some((value) => normalizeClassicCode(value) === code)) fail('Такой код уже найден.', 400)
+      if (category === 'wrong' && codeTriggers.length) {
+        reply.message = activateClassicTriggers(progress, codeTriggers) ? 'Код принят. Скрытые блоки открыты.' : 'Этот код уже активировал триггер.'
+      } else if (category !== 'wrong' && team[key][index].some((value) => normalizeClassicCode(value) === code)) fail('Такой код уже найден.', 400)
       else {
         const penaltiesBefore = new Set(getClassicPenaltyCandidates(game, team, effective, index).map((entry) => entry.key))
         team[key][index].push(code)
@@ -202,6 +212,7 @@ export const runClassicVariants = ({ game, gameTeam, action, message, stageId, v
         reply.message = category === 'wrong' ? 'Код не верен.' : category === 'bonus' ? 'Бонусный код принят.' : category === 'penalty' ? 'Штрафной код принят.' : 'Код принят.'
         if (category === 'wrong' && isAdmin) reply.statusCode = 400
         if (category !== 'wrong') {
+          if (activateClassicTriggers(progress, codeTriggers)) reply.message += ' Скрытые блоки открыты.'
           const rewards = (effective.itemRewards?.codes || []).filter((reward) => reward.category === category && normalizeClassicCode(reward.code) === code).flatMap((reward) => reward.items || [])
           grant(rewards, `code:${entry.stageId}:${entry.selectedVariantId}:${category}:${code}`, index, now)
           if (category === 'main' && getClassicFoundMainCodesCount(team, effective, index) >= resolveRequiredMainCodesCount(effective)) team.endTime[index] = now
