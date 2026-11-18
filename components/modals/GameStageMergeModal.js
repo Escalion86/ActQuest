@@ -22,6 +22,12 @@ const formatTaskDifference = ({ kind, referenceTitle, title }) => {
   return `изменено «${title || referenceTitle || 'Без названия'}»`
 }
 
+const formatRuleValue = (value) => {
+  if (typeof value === 'boolean') return value ? 'Да' : 'Нет'
+  if (Array.isArray(value)) return value.map(formatRuleValue).join(', ') || '—'
+  return value == null || value === '' ? '—' : String(value)
+}
+
 const submitStage = async (gameIds, preview) => {
   const { json } = await requestApiJson('/api/cabinet/game-stages', {
     method: 'POST',
@@ -72,6 +78,7 @@ const GameStageMergeModal = ({ initialLocation, locations, onClose, onMerged }) 
 
   const preview = previewMutation.data
   const taskDifferences = preview?.taskDifferences ?? []
+  const ruleDifferences = preview?.ruleDifferences ?? []
   const isRated = selectedGames[0]?.isRated !== false
   const isBusy = previewMutation.isPending || mergeMutation.isPending
   const error = mergeMutation.error || previewMutation.error
@@ -163,37 +170,66 @@ const GameStageMergeModal = ({ initialLocation, locations, onClose, onMerged }) 
                 ? 'После публикации эти проведения войдут в рейтинг как один этап. Проверьте общие места и очки.'
                 : 'После публикации участники увидят общую таблицу. Проверьте места и итоговое время.'}
             </p>
-            {taskDifferences.length > 0 ? (
+            {taskDifferences.length > 0 || ruleDifferences.length > 0 ? (
               <NoticeBanner tone="warning">
-                <p className="font-semibold">Есть отличия в заданиях</p>
-                <p className="mt-1">
-                  Проверьте отличия перед публикацией общего результата.
-                </p>
-                <ul className="mt-3 space-y-3">
-                  {taskDifferences.map((difference) => (
-                    <li key={difference.gameId} className="break-words">
-                      <p className="font-semibold">
-                        {difference.gameName} ({getPreviewDateLabel(
-                          difference.gameId,
-                          difference.dateStart,
-                        )})
-                      </p>
-                      <p className="text-xs">
-                        Сравнение с «{difference.referenceGameName}» ({getPreviewDateLabel(
-                          difference.referenceGameId,
-                          difference.referenceDateStart,
-                        )})
-                      </p>
-                      <ul className="mt-1 list-disc space-y-1 pl-5">
-                        {difference.tasks.map((task) => (
-                          <li key={task.number}>
-                            Задание {task.number} — {formatTaskDifference(task)}
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                  ))}
-                </ul>
+                {taskDifferences.length > 0 ? (
+                  <>
+                    <p className="font-semibold">Есть отличия в заданиях</p>
+                    <p className="mt-1">
+                      Проверьте отличия перед публикацией общего результата.
+                    </p>
+                    <ul className="mt-3 space-y-3">
+                      {taskDifferences.map((difference) => (
+                        <li key={difference.gameId} className="break-words">
+                          <p className="font-semibold">
+                            {difference.gameName} ({getPreviewDateLabel(
+                              difference.gameId,
+                              difference.dateStart,
+                            )})
+                          </p>
+                          <p className="text-xs">
+                            Сравнение с «{difference.referenceGameName}» ({getPreviewDateLabel(
+                              difference.referenceGameId,
+                              difference.referenceDateStart,
+                            )})
+                          </p>
+                          <ul className="mt-1 list-disc space-y-1 pl-5">
+                            {difference.tasks.map((task) => (
+                              <li key={`${task.section || 'task'}-${task.number}`}>
+                                {task.section === 'prequel' ? 'Приквел' : 'Задание'}{' '}
+                                {task.number} — {formatTaskDifference(task)}
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                {ruleDifferences.length > 0 ? (
+                  <div className={taskDifferences.length > 0 ? 'mt-4' : undefined}>
+                    <p className="font-semibold">Различия в условиях игры</p>
+                    <ul className="mt-2 space-y-2">
+                      {ruleDifferences.map((difference) => (
+                        <li key={`${difference.gameId}-${difference.field}`} className="break-words">
+                          <p className="text-xs">
+                            {difference.gameName} ({getPreviewDateLabel(
+                              difference.gameId,
+                              difference.dateStart,
+                            )}) в сравнении с «{difference.referenceGameName}» ({getPreviewDateLabel(
+                              null,
+                              difference.referenceDateStart,
+                            )})
+                          </p>
+                          <p>
+                            {difference.label}: {formatRuleValue(difference.referenceValue)} →{' '}
+                            {formatRuleValue(difference.value)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </NoticeBanner>
             ) : null}
             <div className="overflow-x-auto">

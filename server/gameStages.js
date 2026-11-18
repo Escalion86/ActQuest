@@ -3,6 +3,7 @@ import { toStringId } from '../helpers/idAndDate.js'
 import buildGameStageResult, {
   GameStageError,
   assertGameStageCompatibility,
+  compareGameStageHintRules,
   compareGameStageTasks,
   stageRuleFields,
 } from './buildGameStageResult.js'
@@ -158,6 +159,7 @@ export const combineClosedGames = async ({ db, session, gameIds, preview }) => {
       teamsCount: Object.keys(result.teamsPlaces).length,
       gameIds: uniqueIds,
       taskDifferences: compareGameStageTasks(selectedGames),
+      ruleDifferences: compareGameStageHintRules(selectedGames),
     }
   }
 

@@ -1,6 +1,8 @@
 import { toStringId } from '../helpers/idAndDate.js'
 import { calculateRatingGameScore } from '../helpers/ratingV2.js'
+import { normalizeClueEarlyAccessFrom } from '../helpers/clueEarlyAccess.js'
 import { CLOSED_GAME_IMMUTABLE_FIELD_LABELS } from '../helpers/closedGameUpdateProtection.js'
+import { getGamePrequels, resolveRequiredPrequelMainCodesCount } from '../helpers/normalizePrequel.js'
 import buildGameResultComputed from './buildGameResultComputed.js'
 
 export class GameStageError extends Error {
@@ -20,7 +22,9 @@ export const stageRuleFields = [
   'prequels', 'maxTeamPlayers',
 ]
 
-const sharedStageRuleFields = stageRuleFields.filter((field) => field !== 'tasks')
+const sharedStageRuleFields = stageRuleFields.filter((field) =>
+  !['tasks', 'prequel', 'prequels', 'clueEarlyAccessFrom'].includes(field),
+)
 const stageRuleLabels = {
   ...CLOSED_GAME_IMMUTABLE_FIELD_LABELS,
   location: 'город',
@@ -30,21 +34,22 @@ const stageRuleLabels = {
   classicItemsAndVariantsEnabled: 'режим предметов и вариантов',
   classicItems: 'предметы',
   classicTriggers: 'триггеры',
-  prequel: 'приквел',
-  prequels: 'приквелы',
+  prequels: 'правила приквела',
   maxTeamPlayers: 'максимальный размер команды',
 }
 
 // У копий могут отличаться служебные ID вложенных документов и даты открытия приквела.
-const normalizeRuleValue = (value) => {
-  if (Array.isArray(value)) return value.map(normalizeRuleValue)
+const normalizeRuleValue = (value, section, parentKey) => {
+  if (Array.isArray(value)) return value.map((item) => normalizeRuleValue(item, section, parentKey))
   if (value == null || typeof value !== 'object') return value ?? null
   if (value instanceof Date) return value.toISOString()
   if (value._bsontype === 'ObjectId') return toStringId(value)
   return Object.fromEntries(
     Object.keys(value).sort()
       .filter((key) => key !== '_id' && key !== 'openAt' && key !== 'agentUserIds')
-      .map((key) => [key, normalizeRuleValue(value[key])]),
+      .filter((key) => !(section === 'task' && !parentKey && key === 'stageKey'))
+      .filter((key) => !(key === 'id' && (section === 'prequel' || (section === 'task' && parentKey?.endsWith('Media')))))
+      .map((key) => [key, normalizeRuleValue(value[key], section, key)]),
   )
 }
 
@@ -56,6 +61,19 @@ export const equalGameStageRule = (field, first, second) => {
   return JSON.stringify(normalizeRuleValue(first)) === JSON.stringify(normalizeRuleValue(second))
 }
 
+const enabledPrequels = (game) => getGamePrequels(game).filter((prequel) => prequel.enabled)
+
+const prequelScoringRules = (game) => enabledPrequels(game).map((prequel) => ({
+  mode: prequel.mode,
+  mainCodesCount: prequel.mainCodesCount,
+  requiredMainCodesCount: resolveRequiredPrequelMainCodesCount(prequel),
+  completionBonus: prequel.completionBonus.value,
+  bonusValues: prequel.bonusCodes.map(({ value }) => value),
+  penaltyValues: prequel.penaltyCodes.map(({ value }) => value),
+  wrongAttemptsLimit: prequel.wrongAttemptsLimit,
+  wrongAttemptsPenalty: prequel.wrongAttemptsPenalty,
+}))
+
 export const assertGameStageCompatibility = (games) => {
   const [first, ...others] = games
   if (!first || (first.type || 'classic') !== 'classic') {
@@ -63,6 +81,9 @@ export const assertGameStageCompatibility = (games) => {
   }
   for (const game of others) {
     const differentRules = sharedStageRuleFields.filter((field) => !equalGameStageRule(field, first[field], game[field]))
+    if (!equalGameStageRule('prequels', prequelScoringRules(first), prequelScoringRules(game))) {
+      differentRules.push('prequels')
+    }
     if (differentRules.length > 0) {
       const labels = differentRules.map((field) => `«${stageRuleLabels[field]}»`).join(', ')
       throw new GameStageError(`У проведения «${game.name}» отличаются настройки — ${labels}.`)
@@ -72,25 +93,34 @@ export const assertGameStageCompatibility = (games) => {
 
 const taskTitle = (task) => task?.title?.trim() || task?.publicTitle?.trim() || ''
 
+const compareTasksByPosition = (referenceTasks, currentTasks, section) => {
+  const tasks = []
+  for (let index = 0; index < Math.max(referenceTasks.length, currentTasks.length); index += 1) {
+    const original = referenceTasks[index]
+    const current = currentTasks[index]
+    if (JSON.stringify(normalizeRuleValue(original, section)) === JSON.stringify(normalizeRuleValue(current, section))) continue
+    tasks.push({
+      ...(section === 'prequel' ? { section } : {}),
+      number: index + 1,
+      referenceTitle: taskTitle(original),
+      title: taskTitle(current),
+      kind: !original ? 'added' : !current ? 'removed' : 'changed',
+    })
+  }
+  return tasks
+}
+
 export const compareGameStageTasks = (games) => {
   const [reference, ...others] = games
   if (!reference) return []
   const referenceTasks = reference.tasks ?? []
+  const referencePrequels = enabledPrequels(reference)
 
   return others.flatMap((game) => {
-    const currentTasks = game.tasks ?? []
-    const tasks = []
-    for (let index = 0; index < Math.max(referenceTasks.length, currentTasks.length); index += 1) {
-      const original = referenceTasks[index]
-      const current = currentTasks[index]
-      if (equalGameStageRule('tasks', original, current)) continue
-      tasks.push({
-        number: index + 1,
-        referenceTitle: taskTitle(original),
-        title: taskTitle(current),
-        kind: !original ? 'added' : !current ? 'removed' : 'changed',
-      })
-    }
+    const tasks = [
+      ...compareTasksByPosition(referenceTasks, game.tasks ?? [], 'task'),
+      ...compareTasksByPosition(referencePrequels, enabledPrequels(game), 'prequel'),
+    ]
 
     if (!tasks.length) return []
     return [{
@@ -101,6 +131,28 @@ export const compareGameStageTasks = (games) => {
       referenceGameName: reference.name,
       referenceDateStart: reference.dateStart,
       tasks,
+    }]
+  })
+}
+
+export const compareGameStageHintRules = (games) => {
+  const [reference, ...others] = games
+  if (!reference || reference.allowCaptainForceClue === false) return []
+  const referenceNumber = normalizeClueEarlyAccessFrom(reference.clueEarlyAccessFrom)
+
+  return others.flatMap((game) => {
+    const number = normalizeClueEarlyAccessFrom(game.clueEarlyAccessFrom)
+    if (number === referenceNumber) return []
+    return [{
+      gameId: toStringId(game._id),
+      gameName: game.name,
+      dateStart: game.dateStart,
+      referenceGameName: reference.name,
+      referenceDateStart: reference.dateStart,
+      field: 'clueEarlyAccessFrom',
+      label: 'Досрочное открытие подсказок',
+      referenceValue: `с подсказки №${referenceNumber}`,
+      value: `с подсказки №${number}`,
     }]
   })
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import buildGameStageResult, { compareGameStageTasks } from '../server/buildGameStageResult.js'
+import buildGameStageResult, { compareGameStageHintRules, compareGameStageTasks } from '../server/buildGameStageResult.js'
 
 const row = (teamId, finalSeconds, outOfCompetition = false) => ({
   teamId, finalSeconds, outOfCompetition, teamName: `Команда ${teamId}`,
@@ -24,6 +24,19 @@ const game = (id, teams, options = {}) => ({
     teamsUsers: teams.map((team) => ({ teamId: team.teamId, userId: `user-${team.teamId}` })),
   },
   ...options,
+})
+
+test('номер первой досрочной подсказки виден в предупреждении и сохраняет общий зачёт', async () => {
+  const first = game('a', [row('a1', 142)], { allowCaptainForceClue: true, clueEarlyAccessFrom: 1 })
+  const second = game('b', [row('b1', 139)], { allowCaptainForceClue: true, clueEarlyAccessFrom: 2 })
+
+  assert.deepEqual((await buildGameStageResult([first, second])).teamsPlaces, { b1: 1, a1: 2 })
+  const [difference] = compareGameStageHintRules([first, second])
+  assert.equal(difference.gameId, 'b')
+  assert.equal(difference.referenceValue, 'с подсказки №1')
+  assert.equal(difference.value, 'с подсказки №2')
+  assert.deepEqual(compareGameStageHintRules([{ ...first, allowCaptainForceClue: false }, second]), [])
+  await assert.rejects(buildGameStageResult([first, { ...second, clueEarlyAccessMode: 'penalty' }]), /режим раннего доступа/)
 })
 
 test('пересчитывает места и очки трёх проведений по общему времени', async () => {
@@ -59,9 +72,10 @@ test('отклоняет повторное участие команды или
   await assert.rejects(buildGameStageResult([first, second]), /игроков участвовал/i)
 })
 
-test('сравнивает содержимое заданий по порядку, игнорируя различия служебных ID', () => {
+test('сравнивает содержимое заданий по порядку, игнорируя служебные ID и ключи', () => {
   const tasks = (gameId) => ['Старый мост', 'Фонтан', 'Станция'].map((title, index) => ({
     _id: `${gameId}-task-${index}`,
+    stageKey: `${gameId}-stage-${index}`,
     title,
     codes: [`код ${index}`],
     clues: [{ _id: `${gameId}-clue-${index}`, clue: `подсказка ${index}` }],
@@ -108,6 +122,52 @@ test('сравнивает содержимое заданий по порядк
   assert.equal(shortenedWarning.gameId, 'd')
   assert.deepEqual(shortenedWarning.tasks.map(({ number, kind }) => [number, kind]), [[3, 'removed']])
   assert.equal(shortenedWarning.tasks[0].referenceTitle, 'Станция')
+})
+
+test('сравнивает описание приквела, сохраняя проверку бонусов и штрафов', async () => {
+  const prequel = (id, {
+    description = 'Подпись бонуса',
+    bonus = 30,
+    penalty = 15,
+  } = {}) => ({
+    id: `${id}-prequel`,
+    title: 'Разминка',
+    enabled: true,
+    mode: 'multi_hit',
+    bonusCodes: [{
+      id: `${id}-bonus`,
+      code: 'разминка',
+      description,
+      value: bonus,
+    }],
+    penaltyCodes: [{
+      id: `${id}-penalty`,
+      code: 'неверный ответ',
+      value: penalty,
+    }],
+  })
+  const first = game('a', [row('a1', 142)], { prequels: [prequel('a')] })
+  const identical = game('b', [row('b1', 139)], { prequels: [prequel('b')] })
+  assert.deepEqual(compareGameStageTasks([first, identical]), [])
+  assert.deepEqual((await buildGameStageResult([first, identical])).teamsPlaces, { b1: 1, a1: 2 })
+
+  const changedText = game('b', [row('b1', 139)], {
+    prequels: [prequel('b', { description: 'Исправленная подпись бонуса' })],
+  })
+  const [warning] = compareGameStageTasks([first, changedText])
+  assert.equal(warning.gameId, 'b')
+  assert.equal(warning.tasks.length, 1)
+  assert.equal(warning.tasks[0].section, 'prequel')
+  assert.equal(warning.tasks[0].number, 1)
+  assert.equal(warning.tasks[0].kind, 'changed')
+  assert.equal(warning.tasks[0].referenceTitle, 'Разминка')
+  assert.equal(warning.tasks[0].title, 'Разминка')
+  assert.deepEqual((await buildGameStageResult([first, changedText])).teamsPlaces, { b1: 1, a1: 2 })
+
+  for (const changed of [{ bonus: 60 }, { penalty: 45 }]) {
+    const second = game('b', [row('b1', 139)], { prequels: [prequel('b', changed)] })
+    await assert.rejects(buildGameStageResult([first, second]), /правила приквела/i)
+  }
 })
 
 test('объединяет полные результаты при отличиях заданий', async () => {
