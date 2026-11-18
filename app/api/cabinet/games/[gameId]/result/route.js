@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultComputed from '@server/buildGameResultComputed'
+import { getGameStageSummary } from '@server/getGameStageSummaries'
 // import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
@@ -308,6 +309,7 @@ const handleRequest = async ({ request, params, method }) => {
         status: 1,
         hideResult: 1,
         showResultAudience: 1,
+        stageId: 1,
         dateStartFact: 1,
         dateEndFact: 1,
         taskDuration: 1,
@@ -363,15 +365,19 @@ const handleRequest = async ({ request, params, method }) => {
 
     const identity = normalizeSessionIdentity(session)
     const canManageThisGame = hasGameManageAccess({ identity, game })
+    const stage = method === 'GET' && !canManageThisGame ? await getGameStageSummary(db, game) : null
 
     if (method === 'GET' && !canViewPublishedGameResults(game, {
       canViewRestrictedGameInfo: canManageThisGame,
       hasUserParticipation: resolveUserParticipationTeamIds({ result: game.result, session }).length > 0,
+      releaseStageContent: stage?.isReleased === true,
     })) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Просмотр результатов отключён в настройках игры',
+          error: game.stageId && !stage?.isReleased
+            ? 'Результаты будут доступны после публикации общего зачёта этапа'
+            : 'Просмотр результатов отключён в настройках игры',
         },
         { status: 403 },
       )

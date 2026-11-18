@@ -11,14 +11,20 @@ const normalizeShowTasksAudience = (value) =>
 const normalizeShowResultAudience = (value) =>
   value === 'participants' ? 'participants' : 'all'
 
+const canReleaseGameStageContent = (
+  game,
+  { releaseStageContent = game?.stageResultPublished } = {},
+) => !game?.stageId || releaseStageContent === true
+
 const canViewPublishedGameResults = (
   game,
-  { hasUserParticipation = false, canViewRestrictedGameInfo = false } = {},
+  options = {},
 ) => Boolean(
-  canViewRestrictedGameInfo ||
-    (!game?.hideResult &&
+  options.canViewRestrictedGameInfo ||
+    (canReleaseGameStageContent(game, options) &&
+      !game?.hideResult &&
       (normalizeShowResultAudience(game?.showResultAudience) === 'all' ||
-        hasUserParticipation)),
+        options.hasUserParticipation)),
 )
 
 const isCompletedGameStatus = (status) => {
@@ -29,14 +35,14 @@ const isCompletedGameStatus = (status) => {
 
 const canExposePublishedGameTasks = (
   game,
-  { hasUserParticipation = false } = {},
+  options = {},
 ) => {
-  if (!game || !Boolean(game.showTasks) || !isCompletedGameStatus(game.status)) {
+  if (!game?.showTasks || !isCompletedGameStatus(game.status) || !canReleaseGameStageContent(game, options)) {
     return false
   }
 
   if (normalizeShowTasksAudience(game.showTasksAudience) === 'participants') {
-    return Boolean(hasUserParticipation)
+    return Boolean(options.hasUserParticipation)
   }
 
   return true
@@ -44,9 +50,9 @@ const canExposePublishedGameTasks = (
 
 const canViewPublishedGameTasks = (
   game,
-  { hasUserParticipation = false } = {},
+  options = {},
 ) =>
-  canExposePublishedGameTasks(game, { hasUserParticipation }) &&
+  canExposePublishedGameTasks(game, options) &&
   Array.isArray(game?.tasks) &&
   game.tasks.length > 0
 
@@ -102,15 +108,13 @@ const canExposeCabinetGamePlace = (
 
 const sanitizeCabinetGameForViewer = (
   game,
-  { canViewRestrictedGameInfo, hasUserParticipation = false },
+  options,
 ) => {
-  if (!game || typeof game !== 'object' || canViewRestrictedGameInfo) {
+  if (!game || typeof game !== 'object' || options.canViewRestrictedGameInfo) {
     return game
   }
 
-  const canViewPublishedTasks = canExposePublishedGameTasks(game, {
-    hasUserParticipation,
-  })
+  const canViewPublishedTasks = canExposePublishedGameTasks(game, options)
 
   return {
     ...game,
@@ -126,7 +130,7 @@ const sanitizeCabinetGameForViewer = (
     showTasksAudience: normalizeShowTasksAudience(game.showTasksAudience),
     hideResult: Boolean(game?.hideResult),
     showResultAudience: normalizeShowResultAudience(game.showResultAudience),
-    result: canViewPublishedGameResults(game, { hasUserParticipation })
+    result: canViewPublishedGameResults(game, options)
       ? game.result
       : null,
     finances: [],
@@ -169,6 +173,7 @@ export {
   canExposeCabinetGamePlace,
   canManageCabinetGameFinances,
   canOpenRestrictedTeamGamePreview,
+  canReleaseGameStageContent,
   canViewPublishedGameTasks,
   canViewPublishedGameResults,
   canViewCabinetGameRestrictedInfo,

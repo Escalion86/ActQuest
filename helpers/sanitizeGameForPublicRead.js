@@ -1,4 +1,4 @@
-import { canViewPublishedGameResults } from './cabinetGameVisibility.js'
+import { canReleaseGameStageContent, canViewPublishedGameResults } from './cabinetGameVisibility.js'
 
 const omitCodeValue = (value) => {
   if (!value || typeof value !== 'object') {
@@ -42,6 +42,7 @@ const sanitizeGameForPublicRead = (game, viewer = {}) => {
 
   const normalizedStatus = String(source.status || '').trim().toLowerCase()
   const isFinished = normalizedStatus === 'finished' || normalizedStatus === 'closed'
+  const canViewTasks = viewer.canViewRestrictedGameInfo || canReleaseGameStageContent(source, viewer)
   const tasks = (Array.isArray(source.tasks) ? source.tasks : []).map((task) => ({
     ...task,
     variants: [],
@@ -99,11 +100,13 @@ const sanitizeGameForPublicRead = (game, viewer = {}) => {
 
   return {
     ...publicSource,
+    ...(source.stageId ? { stageResultPublished: canReleaseGameStageContent(source, viewer) } : {}),
     result: canViewPublishedGameResults(source, viewer) ? source.result : null,
+    showTasks: canViewTasks && source.showTasks,
     classicItems: [],
     classicTriggers: [],
-    tasks,
-    storyNodes,
+    tasks: canViewTasks ? tasks : [],
+    storyNodes: canViewTasks ? storyNodes : [],
     storyCharacters: [],
     storyTopics: [],
     storyInteractions: [],

@@ -699,7 +699,11 @@ const GameTasksEditModal = ({
         <ModalSection>
           {variantsLocked ? <p className="mb-3 text-sm text-amber-700 dark:text-amber-300">Правила игры с вариантами зафиксированы при запуске. Для новой редакции создайте копию игры.</p> : null}
           {showClassicFeatures && <ClassicItemsSection game={selectedGame} onChange={updateSelectedGame} disabled={!canEditSelectedGame || isSaving || ['started', 'finished', 'closed'].includes(selectedGame?.status)} />}
-          {isGameClosed ? (
+          {selectedGame.stageId ? (
+            <p className="mb-4 rounded-xl border border-amber-300/70 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200">
+              Задания общие для всех проведений этапа и доступны для просмотра.
+            </p>
+          ) : isGameClosed ? (
             <p className="mb-4 rounded-xl border border-amber-300/70 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200">
               Игра закрыта: задания можно только просматривать. Сохранение
               изменений недоступно, чтобы не менять задания завершённой игры
@@ -898,6 +902,7 @@ GameTasksEditModal.propTypes = {
   onOpenCopiedTasks: PropTypes.func.isRequired,
   currentUserRole: PropTypes.string,
   selectedGame: PropTypes.shape({
+    stageId: PropTypes.string,
     taskTheme: PropTypes.string,
     id: PropTypes.string,
     type: PropTypes.string,

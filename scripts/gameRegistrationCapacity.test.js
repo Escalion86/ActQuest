@@ -39,26 +39,40 @@ const load = async (path) => {
   return module.exports
 }
 
-const fixture = (overrides = {}) => {
+const fixture = (overrides = {}, otherGames = []) => {
   const game = { _id: 'game', status: 'active', registrationOpen: true, maxTeams: 1, ...overrides }
+  const gameDocs = [game, ...otherGames.map((entry) => ({ ...game, ...entry }))]
+  const stage = game.stageId ? { _id: game.stageId } : null
   const registrations = []
+  const memberships = []
   let failCreate = false
   const query = (value) => ({ select: () => query(value), lean: async () => value })
-  const games = {
+  const lockModel = (documents) => ({
     findOneAndUpdate: (filter, update) => {
-      if (game.registrationLock != null) return query(null)
-      Object.assign(game, update.$set)
-      return query({ ...game })
+      const doc = documents.find((row) => row._id === filter._id)
+      if (!doc || doc.registrationLock != null) return query(null)
+      if ('stageId' in filter && (doc.stageId ?? null) !== filter.stageId) return query(null)
+      Object.assign(doc, update.$set)
+      return query({ ...doc })
     },
     updateOne: async (filter) => {
-      assert.equal(filter['registrationLock.token'], game.registrationLock.token)
-      delete game.registrationLock
+      const doc = documents.find((row) => row._id === filter._id)
+      assert.equal(filter['registrationLock.token'], doc.registrationLock.token)
+      delete doc.registrationLock
     },
+  })
+  const games = {
+    ...lockModel(gameDocs),
+    findById: (id) => query(gameDocs.find((row) => row._id === id)),
+    find: ({ stageId, status }) => query(gameDocs.filter((row) => row.stageId === stageId && row.status !== status.$ne)),
   }
   const teams = {
-    find: () => query(registrations),
-    findOne: ({ gameId, teamId }) => query(registrations.find((row) => row.gameId === gameId && row.teamId === teamId)),
-    countDocuments: async () => registrations.length,
+    find: ({ gameId }) => query(registrations.filter((row) => row.gameId === gameId)),
+    findOne: ({ gameId, teamId }) => query(registrations.find((row) => (
+      row.teamId === teamId && (gameId.$in?.includes(row.gameId) ?? row.gameId === gameId)
+    ))),
+    distinct: async (key, { gameId }) => [...new Set(registrations.filter((row) => gameId.$in.includes(row.gameId)).map((row) => row[key]))],
+    countDocuments: async ({ gameId }) => registrations.filter((row) => row.gameId === gameId).length,
     create: async (data) => {
       await new Promise((resolve) => setImmediate(resolve))
       if (failCreate) throw new Error('Ошибка записи')
@@ -67,7 +81,16 @@ const fixture = (overrides = {}) => {
       return row
     },
   }
-  return { game, registrations, db: { model: (name) => name === 'Games' ? games : teams }, fail: () => { failCreate = true } }
+  const models = {
+    Games: games,
+    GamesTeams: teams,
+    GameStages: lockModel(stage ? [stage] : []),
+    TeamsUsers: {
+      distinct: async (key, { teamId }) => [...new Set(memberships.filter((row) => row.teamId === teamId).map((row) => row[key]))],
+      exists: async ({ teamId, userId }) => memberships.some((row) => teamId.$in.includes(row.teamId) && userId.$in.includes(row.userId)),
+    },
+  }
+  return { game, stage, registrations, memberships, db: { model: (name) => models[name] }, fail: () => { failCreate = true } }
 }
 const register = (state, teamId, role = 'client') => registerGameTeam({ db: state.db, gameId: 'game', teamId, role })
 
@@ -124,6 +147,49 @@ test('статусы и дубли перепроверяются в защищ�
   await assert.rejects(register(state, 'one'), /уже зарегистрирована/)
   await register(state, 'two')
   assert.equal(state.registrations.length, 2)
+})
+
+test('регистрации на разные даты этапа используют общую блокировку и раздельные лимиты', async () => {
+  const state = fixture({ stageId: 'stage' }, [{ _id: 'day-two' }])
+  state.registrations.push({ gameId: 'game', teamId: 'existing' })
+  const onDate = (gameId, teamId) => registerGameTeam({ db: state.db, gameId, teamId, role: 'client' })
+
+  await assert.rejects(onDate('day-two', 'existing'), /другую дату этого этапа/)
+  state.game.maxTeams = null
+  const concurrent = await Promise.allSettled([
+    onDate('game', 'same-team'),
+    onDate('day-two', 'same-team'),
+  ])
+  const successful = concurrent.find((attempt) => attempt.status === 'fulfilled')?.value
+  assert.equal(concurrent.filter((attempt) => attempt.status === 'fulfilled').length, 1)
+  assert.ok(successful)
+  const otherDate = successful.gameId === 'game' ? 'day-two' : 'game'
+  await assert.rejects(onDate(otherDate, 'same-team'), /другую дату этого этапа/)
+  await onDate(otherDate, 'other-team')
+  assert.equal(state.stage.registrationLock, undefined)
+})
+
+test('регистрация на этап сверяет исторические и текущие составы и пропускает отменённые даты', async () => {
+  const state = fixture({ stageId: 'stage', maxTeams: null }, [
+    { _id: 'past', status: 'closed', result: {
+      gameTeams: [{ teamId: 'past-team' }],
+      teamsUsers: [{ userId: 'past-player' }],
+    } },
+    { _id: 'later', status: 'active' },
+    { _id: 'cancelled', status: 'canceled' },
+  ])
+  state.registrations.push({ gameId: 'later', teamId: 'later-team' }, { gameId: 'cancelled', teamId: 'cancelled-team' })
+  state.memberships.push(
+    { teamId: 'with-past-member', userId: 'past-player' },
+    { teamId: 'later-team', userId: 'later-player' },
+    { teamId: 'with-later-member', userId: 'later-player' },
+    { teamId: 'cancelled-team', userId: 'player-from-cancelled-date' },
+  )
+
+  await assert.rejects(register(state, 'past-team'), /зарегистрирована на другую дату/)
+  await assert.rejects(register(state, 'with-past-member'), /есть участник другой даты/)
+  await assert.rejects(register(state, 'with-later-member'), /есть участник другой даты/)
+  assert.equal((await register(state, 'cancelled-team')).gameId, 'game')
 })
 
 test('ошибка записи освобождает блокировку, зависшая блокировка не истекает самовольно', async () => {

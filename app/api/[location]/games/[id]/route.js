@@ -36,6 +36,8 @@ import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 import protectStoryScenarioUpdate from '@helpers/protectStoryScenarioUpdate'
 import { resolveParticipationMetricsTransition } from '@helpers/gameParticipation'
 import { isIndividualGameStart } from '@helpers/gameRegistration'
+import { equalGameStageRule, stageRuleFields } from '@server/buildGameStageResult'
+import { getGameStageSummary } from '@server/getGameStageSummaries'
 
 const buildResetPayload = ({
   clearTimeAddings = true,
@@ -558,8 +560,10 @@ const execute = (request, params) =>
 
           const session = await getServerSession(authOptions)
           const identity = resolveSessionIdentity(session)
+          const stage = await getGameStageSummary(db, existingGame)
           const viewer = {
             canViewRestrictedGameInfo: canManageGame({ session, game: existingGame }),
+            releaseStageContent: stage?.isReleased === true,
             hasUserParticipation: collectSnapshotTeamIdsForUser({
               game: existingGame, userId: identity.userId,
             }).length > 0,
@@ -623,6 +627,9 @@ const execute = (request, params) =>
           }
 
           const normalizedStatus = String(existingGame.status || '').toLowerCase()
+          if (existingGame.stageId) {
+            return res.status(409).json({ success: false, error: 'Проведение входит в общий этап. Используйте отмену проведения.' })
+          }
           if (normalizedStatus === 'started' || normalizedStatus === 'closed') {
             return res.status(400).json({
               success: false,
@@ -677,7 +684,7 @@ const execute = (request, params) =>
           .json({ success: false, error: 'Отсутствуют данные для обновления игры' })
       }
 
-      if (Object.keys(updatePayload).some((key) => key.startsWith('$') || key.includes('.') || key === 'registrationLock')) {
+      if (Object.keys(updatePayload).some((key) => key.startsWith('$') || key.includes('.') || ['registrationLock', 'stageId'].includes(key))) {
         return res.status(400).json({ success: false, error: 'Некорректные поля игры' })
       }
       if (Object.prototype.hasOwnProperty.call(updatePayload, 'maxTeams')) {
@@ -1147,13 +1154,27 @@ const execute = (request, params) =>
           }
         }
 
-        let updatedGame = await Games.findByIdAndUpdate(id, updateData, {
+        if (existingGame.stageId) {
+          const previous = existingGame.toObject({ flattenMaps: true })
+          const candidate = Games.hydrate(previous)
+          candidate.set(updateData)
+          const next = candidate.toObject({ flattenMaps: true })
+          if (stageRuleFields.some((field) => !equalGameStageRule(field, previous[field], next[field]))) {
+            return res.status(409).json({ success: false, error: 'У проведений одного этапа должны совпадать задания, правила, город и сезон.' })
+          }
+        }
+
+        let updatedGame = await Games.findOneAndUpdate({
+          _id: id,
+          stageId: existingGame.stageId ?? null,
+          registrationLock: null,
+        }, updateData, {
           returnDocument: 'after',
           runValidators: true,
         })
 
         if (!updatedGame) {
-          return res.status(400).json({ success: false, error: 'Не удалось обновить игру' })
+          return res.status(409).json({ success: false, error: 'Данные игры обновляются. Повторите попытку.' })
         }
 
         if (shouldReset) {

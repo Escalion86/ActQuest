@@ -11,6 +11,7 @@ import Modal from '@components/Modal'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
+import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   useInfiniteQuery,
@@ -41,6 +42,7 @@ import GameReviewModal from '@components/location-game/GameReviewModal'
 import GameModals from '@components/modals/GameModals'
 import GameStatusModal from '@components/modals/GameStatusModal'
 import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
+import GameStageMergeModal from '@components/modals/GameStageMergeModal'
 import extractErrorMessage from '@helpers/extractErrorMessage'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
@@ -78,7 +80,7 @@ import {
   areGameDraftsEqual,
 } from '@helpers/gameDraftDirtyState'
 import useMergedSession from '@helpers/useMergedSession'
-import { getNounPlayers, getNounTeams } from '@helpers/getNoun'
+import getNoun, { getNounPlayers, getNounTeams } from '@helpers/getNoun'
 import {
   buildDefaultPrequel,
   normalizePrequelConfig,
@@ -219,6 +221,37 @@ const DEFAULT_CREATE_GAME_CLONE_OPTIONS = {
 
 const normalizeGamesViewValue = (value) =>
   value === 'upcoming' || value === 'past' ? value : 'all'
+
+const groupGameListEntries = (games, stagesById) => {
+  const entries = []
+
+  for (const game of games) {
+    if (!game.stageId) {
+      entries.push({ game })
+      continue
+    }
+
+    const existingStage = stagesById.get(game.stageId)
+    if (existingStage) {
+      if (!existingStage.occurrences.has(game.id)) {
+        existingStage.occurrences.set(game.id, game)
+      }
+      continue
+    }
+
+    const stage = {
+      stageId: game.stageId,
+      name: game.stageName || game.name,
+      location: game.location,
+      resultPublished: Boolean(game.stageResultPublished),
+      occurrences: new Map([[game.id, game]]),
+    }
+    stagesById.set(game.stageId, stage)
+    entries.push(stage)
+  }
+
+  return entries
+}
 
 const buildCabinetGamesQueryKey = ({ gamesView, userRole, locationValue }) => [
   'cabinet-games',
@@ -1098,7 +1131,7 @@ const buildUpdatePayload = (game) => {
       game.seasonName.trim()
         ? game.seasonName.trim()
         : null,
-    hidden: normalizedIsRated ? false : Boolean(game.hidden),
+    hidden: game.stageId || !normalizedIsRated ? Boolean(game.hidden) : false,
     showCreator: Boolean(game.showCreator),
     showEnterButton: Boolean(game.showEnterButton),
     showTasks: Boolean(game.showTasks),
@@ -1461,6 +1494,7 @@ const GamesPage = ({
     useState(false)
   const [pushBroadcastGameId, setPushBroadcastGameId] = useState('')
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
+  const [isStageMergeModalOpen, setIsStageMergeModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
   const [newGameIsRated, setNewGameIsRated] = useState(true)
   const [createGameType, setCreateGameType] = useState('classic')
@@ -1472,6 +1506,7 @@ const GamesPage = ({
   const [creatingSeasonByLocation, setCreatingSeasonByLocation] = useState({})
   const [createGameMode, setCreateGameMode] = useState(CREATE_GAME_MODE_EMPTY)
   const [cloneSourceGameId, setCloneSourceGameId] = useState('')
+  const [addCloneToStage, setAddCloneToStage] = useState(false)
   const [cloneSourceGames, setCloneSourceGames] = useState([])
   const [isCloneSourceGamesLoading, setIsCloneSourceGamesLoading] =
     useState(false)
@@ -2032,19 +2067,35 @@ const GamesPage = ({
   )
 
   const saveGameMutation = useMutation({
-    mutationFn: async ({ game, fallbackMessage }) => {
+    mutationFn: async ({ game, baseline, fallbackMessage }) => {
+      const payload = buildUpdatePayload(game)
+      let data = payload
+      if (game.stageId) {
+        if (!baseline || baseline.id !== game.id) {
+          throw new Error('Обновите данные проведения перед сохранением')
+        }
+        const previous = buildUpdatePayload(baseline)
+        data = Object.fromEntries(
+          Object.entries(payload).filter(
+            ([key, value]) => !areGameDraftsEqual(value, previous[key]),
+          ),
+        )
+      }
       const { json } = await requestApiJson(
         `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: buildUpdatePayload(game) }),
+          body: JSON.stringify({ data }),
           fallbackMessage: fallbackMessage || 'Не удалось сохранить игру',
         },
       )
 
       return normalizeGameForCabinet({
         ...json.data,
+        stageName: json.data.stageName ?? game.stageName,
+        stageResultPublished:
+          json.data.stageResultPublished ?? game.stageResultPublished,
         teamsCount: game.teamsCount,
       })
     },
@@ -2763,6 +2814,7 @@ const GamesPage = ({
     setCreateGameSeasonId('')
     setCreateGameMode(CREATE_GAME_MODE_EMPTY)
     setCloneSourceGameId('')
+    setAddCloneToStage(false)
     setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
     setIsCreateGameModalOpen(true)
   }, [location])
@@ -2849,6 +2901,11 @@ const GamesPage = ({
       byId.set(game.id, {
         id: game.id,
         name: game.name || 'Без названия',
+        type: game.type || 'classic',
+        status: game.status,
+        stageId: game.stageId,
+        stageName: game.stageName,
+        stageResultPublished: game.stageResultPublished,
         sortDate:
           gameDate && !Number.isNaN(gameDate.getTime())
             ? gameDate.getTime()
@@ -2871,6 +2928,28 @@ const GamesPage = ({
         return rest
       })
   }, [cloneSourceGames])
+
+  const cloneSourceGame = createGameCloneSourceOptions.find(
+    (game) => game.id === cloneSourceGameId,
+  )
+  const canAddCloneToStage =
+    cloneSourceGame?.type === 'classic' &&
+    cloneSourceGame.status !== 'canceled' &&
+    !cloneSourceGame.stageResultPublished
+  const isCreatingStageOccurrence =
+    createGameMode === CREATE_GAME_MODE_CLONE &&
+    canAddCloneToStage &&
+    addCloneToStage
+
+  const handleChangeCreateGameMode = useCallback((mode) => {
+    setCreateGameMode(mode)
+    setAddCloneToStage(false)
+  }, [])
+
+  const handleChangeCloneSourceGame = useCallback((gameId) => {
+    setCloneSourceGameId(gameId)
+    setAddCloneToStage(false)
+  }, [])
 
   useEffect(() => {
     if (!isCreateGameModalOpen || !canEditAllGames) {
@@ -2969,6 +3048,8 @@ const GamesPage = ({
       normalizedCreateLocation,
       selectedOrganizerId,
       selectedGameType,
+      sourceGameId,
+      addToStage,
     }) => {
       const baseDraft = {
         name: trimmedName,
@@ -3049,9 +3130,9 @@ const GamesPage = ({
         },
       }
 
-      if (isCloneMode) {
+      if (isCloneMode && !addToStage) {
         const gameDetailsParams = new URLSearchParams({
-          gameId: cloneSourceGameId,
+          gameId: sourceGameId,
           location: 'all',
         })
 
@@ -3265,19 +3346,30 @@ const GamesPage = ({
         ? selectedSeason?.name || ''
         : ''
 
-      const payload = {
-        ...buildUpdatePayload({
-          ...baseDraft,
-          name: trimmedName,
-        }),
-        location: normalizedCreateLocation,
-        ...(selectedOrganizerId ? { creatorUserId: selectedOrganizerId } : {}),
-      }
+      const payload = addToStage
+        ? {
+            data: {
+              name: trimmedName,
+              location: normalizedCreateLocation,
+              type: selectedGameType,
+            },
+            sourceGameId,
+            addToStage: true,
+          }
+        : {
+            data: {
+              ...buildUpdatePayload({ ...baseDraft, name: trimmedName }),
+              location: normalizedCreateLocation,
+              ...(selectedOrganizerId
+                ? { creatorUserId: selectedOrganizerId }
+                : {}),
+            },
+          }
 
       const { json } = await requestApiJson(CABINET_GAMES_API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: payload }),
+        body: JSON.stringify(payload),
         fallbackMessage: 'Не удалось создать игру',
       })
 
@@ -3295,7 +3387,7 @@ const GamesPage = ({
     onMutate: () => {
       setCreateGameFeedback(null)
     },
-    onSuccess: (createdGame) => {
+    onSuccess: (createdGame, { addToStage }) => {
       setGames((prev) =>
         sortGamesForCurrentView([
           createdGame,
@@ -3313,12 +3405,15 @@ const GamesPage = ({
 
       setFeedback({
         type: 'success',
-        message: `Игра «${createdGame.name || 'Без названия'}» создана`,
+        message: addToStage
+          ? 'Проведение создано. Укажите его дату в редакторе.'
+          : `Игра «${createdGame.name || 'Без названия'}» создана`,
       })
 
       setIsCreateGameModalOpen(false)
       setCreateGameMode(CREATE_GAME_MODE_EMPTY)
       setCloneSourceGameId('')
+      setAddCloneToStage(false)
       setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
       const createdDraft = cloneGameDraft(createdGame)
       setEditingGame(createdDraft)
@@ -3346,6 +3441,10 @@ const GamesPage = ({
         return true
       }
 
+      if (isCreatingStageOccurrence) {
+        return false
+      }
+
       const hasAnyCloneOption = Object.values(createGameCloneOptions).some(
         Boolean,
       )
@@ -3362,6 +3461,7 @@ const GamesPage = ({
     createGameCloneOptions,
     createGameMode,
     isCreatingGame,
+    isCreatingStageOccurrence,
     newGameName,
   ])
 
@@ -3379,6 +3479,7 @@ const GamesPage = ({
     setCreateGameSeasonId('')
     setCreateGameMode(CREATE_GAME_MODE_EMPTY)
     setCloneSourceGameId('')
+    setAddCloneToStage(false)
     setCloneSourceGames([])
     setIsCloneSourceGamesLoading(false)
     setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
@@ -3386,7 +3487,9 @@ const GamesPage = ({
   }, [isCreatingGame, location])
 
   const handleCreateGame = useCallback(async () => {
-    const trimmedName = newGameName.trim()
+    const trimmedName = isCreatingStageOccurrence
+      ? cloneSourceGame.stageName || cloneSourceGame.name
+      : newGameName.trim()
     const isCloneMode = createGameMode === CREATE_GAME_MODE_CLONE
 
     if (!trimmedName) {
@@ -3413,7 +3516,11 @@ const GamesPage = ({
       return
     }
 
-    if (isCloneMode && !Object.values(createGameCloneOptions).some(Boolean)) {
+    if (
+      isCloneMode &&
+      !isCreatingStageOccurrence &&
+      !Object.values(createGameCloneOptions).some(Boolean)
+    ) {
       setCreateGameFeedback({
         type: 'error',
         message: 'Выберите хотя бы один блок для клонирования',
@@ -3421,9 +3528,12 @@ const GamesPage = ({
       return
     }
 
+    const gameLocation = isCreatingStageOccurrence
+      ? cloneSourceGame.location
+      : createGameLocation
     const normalizedCreateLocation =
-      typeof createGameLocation === 'string'
-        ? createGameLocation.trim().toLowerCase()
+      typeof gameLocation === 'string'
+        ? gameLocation.trim().toLowerCase()
         : ''
     if (!normalizedCreateLocation) {
       setCreateGameFeedback({
@@ -3436,6 +3546,8 @@ const GamesPage = ({
     createGameMutation.mutate({
       trimmedName,
       isCloneMode,
+      sourceGameId: cloneSourceGameId,
+      addToStage: isCreatingStageOccurrence,
       normalizedCreateLocation,
       selectedOrganizerId: createGameOrganizerId.trim(),
       selectedGameType:
@@ -3443,6 +3555,7 @@ const GamesPage = ({
     })
   }, [
     canEditAllGames,
+    cloneSourceGame,
     cloneSourceGameId,
     createGameCloneOptions,
     createGameOrganizerId,
@@ -3450,6 +3563,7 @@ const GamesPage = ({
     createGameMode,
     createGameMutation,
     createGameType,
+    isCreatingStageOccurrence,
     newGameName,
   ])
 
@@ -3690,6 +3804,34 @@ const GamesPage = ({
     [applyGamesFilters, pastGamesBase],
   )
 
+  const gameListEntries = useMemo(() => {
+    const stagesById = new Map()
+    return {
+      upcoming: isPastView
+        ? []
+        : groupGameListEntries(filteredUpcomingGames, stagesById),
+      past: isUpcomingView ? [] : groupGameListEntries(pastGames, stagesById),
+    }
+  }, [filteredUpcomingGames, isPastView, isUpcomingView, pastGames])
+
+  const handleStagePublished = useCallback(() => {
+    setIsStageMergeModalOpen(false)
+    queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
+    queryClient.invalidateQueries({ queryKey: ['cabinet-game-stage-merge'] })
+    setFeedback({ type: 'success', message: 'Общий результат опубликован' })
+  }, [queryClient, setFeedback])
+
+  const publishStageMutation = useMutation({
+    mutationFn: async (stageId) =>
+      requestApiJson(`/api/cabinet/game-stages/${encodeURIComponent(stageId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'publish' }),
+        fallbackMessage: 'Не удалось опубликовать общий результат',
+      }),
+    onSuccess: handleStagePublished,
+  })
+
   const pastGamesSeasonOptions = useMemo(() => {
     const seasonsMap = new Map()
 
@@ -3864,7 +4006,8 @@ const GamesPage = ({
   // Закрытая игра доступна только для просмотра: задания редактировать и
   // сохранять нельзя, чтобы не искажать результаты завершённой игры.
   const isSelectedGameClosed = isClosedStatus(selectedGame?.status)
-  const canEditSelectedGameTasks = canEditSelectedGame && !isSelectedGameClosed
+  const canEditSelectedGameTasks =
+    canEditSelectedGame && !isSelectedGameClosed && !selectedGame?.stageId
 
   const canManageGameStatus = useCallback(
     (game) => {
@@ -4191,7 +4334,9 @@ const GamesPage = ({
     }
 
     let validationWarningMessage = ''
-    const validationIssues = validateTaskEditorRequirements(gameToSave)
+    const validationIssues = gameToSave.stageId
+      ? []
+      : validateTaskEditorRequirements(gameToSave)
     if (validationIssues.length > 0) {
       const firstIssue = validationIssues[0]?.message || 'Проверьте задания.'
       const totalIssues = validationIssues.length
@@ -4233,6 +4378,7 @@ const GamesPage = ({
     }
 
     if (
+      !gameToSave.stageId &&
       normalizeTaskDistributionMode(gameToSave.taskDistributionMode) ===
       'random'
     ) {
@@ -4264,6 +4410,7 @@ const GamesPage = ({
     try {
       const normalizedGame = await saveGameMutation.mutateAsync({
         game: gameToSave,
+        baseline: editingBaselineGame,
         fallbackMessage: 'Не удалось сохранить игру',
       })
 
@@ -4304,6 +4451,7 @@ const GamesPage = ({
   }, [
     applyPersistedGameUpdate,
     canEditSelectedGame,
+    editingBaselineGame,
     editingGame,
     saveGameMutation,
     selectedGame,
@@ -4322,7 +4470,7 @@ const GamesPage = ({
 
       let gameForPreview = gameToPreview
 
-      if (canEditSelectedGame && isDirty) {
+      if (canEditSelectedGameTasks && isDirty) {
         const validationIssues = validateTaskEditorRequirements(gameToPreview)
         const blockingIssues = validationIssues.filter(
           (issue) => issue?.isBlocking === true,
@@ -4447,7 +4595,7 @@ const GamesPage = ({
       )
     },
     [
-      canEditSelectedGame,
+      canEditSelectedGameTasks,
       editingGame,
       isDirty,
       applyPersistedGameUpdate,
@@ -7189,11 +7337,13 @@ const GamesPage = ({
                                 event.stopPropagation()
                                 handleEditTasksFromList(game)
                               }}
-                              label="Редактор заданий"
+                              label={game.stageId ? 'Просмотр заданий' : 'Редактор заданий'}
                               title={
-                                canManageThisGame
-                                  ? 'Открыть редактор заданий'
-                                  : 'Открыть редактор заданий (игра закрыта — только просмотр)'
+                                game.stageId
+                                  ? 'Задания общие для всего этапа. Доступен просмотр.'
+                                  : canManageThisGame
+                                    ? 'Открыть редактор заданий'
+                                    : 'Открыть редактор заданий (игра закрыта — только просмотр)'
                               }
                             >
                               <TargetCardIcon />
@@ -7796,11 +7946,13 @@ const GamesPage = ({
                               event.stopPropagation()
                               handleEditTasksFromList(game)
                             }}
-                            label="Редактор заданий"
+                            label={game.stageId ? 'Просмотр заданий' : 'Редактор заданий'}
                             title={
-                              canManageThisGame
-                                ? 'Открыть редактор заданий'
-                                : 'Открыть редактор заданий (игра закрыта — только просмотр)'
+                              game.stageId
+                                ? 'Задания общие для всего этапа. Доступен просмотр.'
+                                : canManageThisGame
+                                  ? 'Открыть редактор заданий'
+                                  : 'Открыть редактор заданий (игра закрыта — только просмотр)'
                             }
                           >
                             <TargetCardIcon />
@@ -8300,6 +8452,86 @@ const GamesPage = ({
   const balanceClass =
     financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
   const isCardsDisplay = gamesDisplayMode === 'cards'
+  const renderGameItem = isCardsDisplay ? renderGameTileItem : renderGameListItem
+  const renderGameEntry = ({
+    game,
+    stageId,
+    name,
+    location,
+    resultPublished,
+    occurrences,
+  }) => {
+    if (game) {
+      return renderGameItem(game)
+    }
+
+    const stageGames = Array.from(occurrences.values())
+    const canPublishStage =
+      canEditAllGames &&
+      !resultPublished &&
+      stageGames.some((occurrence) => occurrence.status === 'closed') &&
+      stageGames.every(
+        (occurrence) =>
+          occurrence.status === 'closed' || occurrence.status === 'canceled',
+      )
+    const isCurrentPublication = publishStageMutation.variables === stageId
+    const stageResultHref = `/${encodeURIComponent(location)}/game/stage-result/${encodeURIComponent(stageId)}`
+
+    return (
+      <li
+        key={`stage-${stageId}`}
+        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-900/60 sm:col-span-full"
+      >
+        <details open={occurrences.has(selectedGameId) || undefined}>
+          <summary className="cursor-pointer rounded-lg px-2 py-2 text-sm font-semibold text-slate-900 focus-visible:outline-2 focus-visible:outline-primary dark:text-slate-100">
+            {name}
+            <span className="ml-2 font-normal text-slate-500 dark:text-slate-400">
+              {getNoun(
+                occurrences.size,
+                'проведение',
+                'проведения',
+                'проведений',
+              )}{' '}
+              в списке
+            </span>
+          </summary>
+          <ul
+            className={
+              isCardsDisplay
+                ? 'mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
+                : 'mt-2 space-y-3'
+            }
+          >
+            {stageGames.map(renderGameItem)}
+          </ul>
+        </details>
+        {resultPublished ? (
+          <Link
+            href={stageResultHref}
+            className="mt-2 inline-flex rounded-lg px-2 py-1 text-sm font-semibold text-primary hover:underline dark:text-sky-300"
+          >
+            Общий результат
+          </Link>
+        ) : canPublishStage ? (
+          <button
+            type="button"
+            onClick={() => publishStageMutation.mutate(stageId)}
+            disabled={publishStageMutation.isPending}
+            className="mt-2 rounded-lg px-2 py-1 text-sm font-semibold text-primary hover:underline disabled:opacity-60 dark:text-sky-300"
+          >
+            {isCurrentPublication && publishStageMutation.isPending
+              ? 'Публикуем…'
+              : 'Опубликовать общий результат'}
+          </button>
+        ) : null}
+        {isCurrentPublication && publishStageMutation.isError ? (
+          <NoticeBanner tone="error" variant="neon">
+            {extractErrorMessage(publishStageMutation.error)}
+          </NoticeBanner>
+        ) : null}
+      </li>
+    )
+  }
   const pageTitle = isUpcomingView
     ? 'Предстоящие игры'
     : isPastView
@@ -8337,6 +8569,15 @@ const GamesPage = ({
                   Создать игру
                 </button>
               )}
+              {canEditAllGames && !isUpcomingView ? (
+                <button
+                  type="button"
+                  onClick={() => setIsStageMergeModalOpen(true)}
+                  className="inline-flex items-center justify-center rounded-xl border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-primary dark:border-slate-400 dark:text-slate-100 dark:hover:bg-slate-700"
+                >
+                  Объединить проведения
+                </button>
+              ) : null}
               <div className="inline-flex p-1 ml-auto border rounded-xl border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
@@ -8604,7 +8845,7 @@ const GamesPage = ({
               </div>
             ) : games.length > 0 ? (
               <div className="space-y-6">
-                {!isPastView && filteredUpcomingGames.length > 0 && (
+                {gameListEntries.upcoming.length > 0 && (
                   <div>
                     <h3 className="px-1 text-xs font-semibold tracking-wide uppercase text-slate-500">
                       Активные и запланированные
@@ -8616,15 +8857,11 @@ const GamesPage = ({
                           : 'mt-2 space-y-3'
                       }
                     >
-                      {filteredUpcomingGames.map((game) =>
-                        isCardsDisplay
-                          ? renderGameTileItem(game)
-                          : renderGameListItem(game),
-                      )}
+                      {gameListEntries.upcoming.map(renderGameEntry)}
                     </ul>
                   </div>
                 )}
-                {!isUpcomingView && pastGames.length > 0 && (
+                {gameListEntries.past.length > 0 && (
                   <div>
                     <h3 className="px-1 text-xs font-semibold tracking-wide uppercase text-slate-500">
                       {showCanceledGames
@@ -8638,16 +8875,12 @@ const GamesPage = ({
                           : 'mt-2 space-y-3'
                       }
                     >
-                      {pastGames.map((game) =>
-                        isCardsDisplay
-                          ? renderGameTileItem(game)
-                          : renderGameListItem(game),
-                      )}
+                      {gameListEntries.past.map(renderGameEntry)}
                     </ul>
                   </div>
                 )}
-                {((isUpcomingView && filteredUpcomingGames.length === 0) ||
-                  (isPastView && pastGames.length === 0)) && (
+                {((isUpcomingView && gameListEntries.upcoming.length === 0) ||
+                  (isPastView && gameListEntries.past.length === 0)) && (
                   <div className="p-6 text-sm text-center bg-white border shadow-sm text-slate-500 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
                     {isUpcomingView
                       ? 'Предстоящих игр пока нет.'
@@ -8691,6 +8924,14 @@ const GamesPage = ({
                   />
                 ) : null}
               </Modal>
+              {isStageMergeModalOpen ? (
+                <GameStageMergeModal
+                  initialLocation={location || 'all'}
+                  locations={gameLocationOptions}
+                  onClose={() => setIsStageMergeModalOpen(false)}
+                  onMerged={handleStagePublished}
+                />
+              ) : null}
               <GameModals
                 selectedGame={selectedGame}
                 editGame={taskEditorDraft ?? editingGame}
@@ -8823,9 +9064,12 @@ const GamesPage = ({
                 createGameType={createGameType}
                 setCreateGameType={setCreateGameType}
                 createGameMode={createGameMode}
-                setCreateGameMode={setCreateGameMode}
+                 setCreateGameMode={handleChangeCreateGameMode}
                 cloneSourceGameId={cloneSourceGameId}
-                setCloneSourceGameId={setCloneSourceGameId}
+                 setCloneSourceGameId={handleChangeCloneSourceGame}
+                 canAddCloneToStage={Boolean(canAddCloneToStage)}
+                 addCloneToStage={isCreatingStageOccurrence}
+                 setAddCloneToStage={setAddCloneToStage}
                 createGameCloneSourceOptions={createGameCloneSourceOptions}
                 isCloneSourceGamesLoading={isCloneSourceGamesLoading}
                 createGameLocation={createGameLocation}
@@ -9111,6 +9355,9 @@ GamesPage.propTypes = {
       dateStart: PropTypes.string,
       type: PropTypes.string,
       location: PropTypes.string,
+      stageId: PropTypes.string,
+      stageName: PropTypes.string,
+      stageResultPublished: PropTypes.bool,
       seasonId: PropTypes.string,
       seasonName: PropTypes.string,
       description: PropTypes.string,

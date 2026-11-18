@@ -1,5 +1,6 @@
 import { registerGameTeam } from './registerGameTeam.js'
 import { normalizeMaxTeams } from '../helpers/gameRegistration.js'
+import { toStringId } from '../helpers/idAndDate.js'
 import birthDateToAge from '@helpers/birthDateToAge'
 import { postData } from '@helpers/CRUD'
 import getUserFullName from '@helpers/getUserFullName'
@@ -338,6 +339,7 @@ export default async function handler(Schema, req, res, params = null) {
 
           if (Schema === 'Games') {
             delete clearedBody.registrationLock
+            delete clearedBody.stageId
             try { clearedBody.maxTeams = normalizeMaxTeams(clearedBody.maxTeams) } catch (error) {
               return res?.status(400).json({ success: false, error: error.message })
             }
@@ -411,7 +413,7 @@ export default async function handler(Schema, req, res, params = null) {
 
           const payload = { ...body.data }
           if (Schema === 'Games') {
-            if (Object.keys(payload).some((key) => key.startsWith('$') || key.includes('.') || key === 'registrationLock')) {
+            if (Object.keys(payload).some((key) => key.startsWith('$') || key.includes('.') || key === 'registrationLock' || key === 'stageId')) {
               return res?.status(400).json({ success: false, error: 'Некорректные поля игры' })
             }
             if (Object.prototype.hasOwnProperty.call(payload, 'maxTeams')) {
@@ -419,6 +421,14 @@ export default async function handler(Schema, req, res, params = null) {
                 return res?.status(400).json({ success: false, error: error.message })
               }
             }
+          }
+          if (Schema === 'GamesTeams') {
+            const registrationKeys = ['gameId', 'teamId']
+            if (Object.keys(payload).some((key) => key.startsWith('$') || key.includes('.')) ||
+              registrationKeys.some((key) => Object.hasOwn(payload, key) && toStringId(payload[key]) !== toStringId(data[key]))) {
+              return res?.status(400).json({ success: false, error: 'Нельзя менять команду или дату существующей регистрации' })
+            }
+            for (const key of registrationKeys) delete payload[key]
           }
           if (Schema === 'Teams') {
             if (data.kind === 'personal') {

@@ -28,7 +28,7 @@ export const copySnapshotFilter = (doc, fields) => ({
 export const copyGuardFields = [
   'tasks', 'taskCopyOperations', 'status', 'location', 'type',
   'creatorUserId', 'creatorTelegramId', 'moderators', 'agents', 'classicItems',
-  'taskDistributionMode', 'taskDistributionTemplate', 'updatedAt',
+  'taskDistributionMode', 'taskDistributionTemplate', 'stageId', 'registrationLock', 'updatedAt',
 ]
 
 export const taskCopyBlockReason = (task) => {

@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import { getGameStageSummary } from '@server/getGameStageSummaries'
 import {
   canExposeCabinetGamePlace,
   canViewCabinetGameRestrictedInfo,
@@ -202,8 +203,11 @@ export async function GET(request) {
         location: 1,
         seasonId: 1,
         seasonName: 1,
+        stageId: 1,
         'result.computed': 1,
         'result.teamsPlaces': 1,
+        'result.teams': 1,
+        'result.teamsUsers': 1,
       })
       .populate({
         path: 'moderators',
@@ -268,9 +272,12 @@ export async function GET(request) {
       })),
     })
     const hasUserParticipation = userParticipationTeams.length > 0
+    const stage = await getGameStageSummary(db, gameDoc)
+    const releaseStageContent = stage?.isReleased === true
     const userTeamPlace = canExposeCabinetGamePlace(gameDoc, {
       canViewRestrictedGameInfo,
       hasUserParticipation,
+      releaseStageContent,
     })
       ? resolveParticipationPlace({
           game: gameDoc,
@@ -330,7 +337,10 @@ export async function GET(request) {
       ...sanitizeCabinetGameForViewer(gameDoc, {
         canViewRestrictedGameInfo,
         hasUserParticipation,
+        releaseStageContent,
       }),
+      stageName: stage?.name,
+      stageResultPublished: releaseStageContent,
       tasksStats: buildGameTasksStats(gameDoc?.tasks),
       status: normalizedStatus,
       teamsCount,

@@ -10,6 +10,7 @@ import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import NeonCheckbox from '@components/NeonCheckbox'
+import NoticeBanner from '@components/NoticeBanner'
 import ModalSection from '@components/modals/ModalSection'
 import {
   REGISTERED_TEAMS_VISIBILITY,
@@ -93,6 +94,7 @@ const GameEditModal = ({
   const isClosedGame =
     String(selectedGame?.status || '').toLowerCase() === 'closed'
   const isStoryGame = selectedGame?.type === 'story'
+  const isStageOccurrence = Boolean(selectedGame?.stageId)
   const showTasksAudience =
     selectedGame?.showTasksAudience === 'participants' ? 'participants' : 'all'
   const registeredTeamsVisibility = normalizeRegisteredTeamsVisibility(
@@ -388,6 +390,12 @@ const GameEditModal = ({
         disabled={!canEditSelectedGame || isSaving}
         className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
       >
+        {isStageOccurrence ? (
+          <NoticeBanner tone="info" variant="neon">
+            Задания, правила, тип игры и сезон общие для всех проведений этапа.
+            Здесь можно изменить расписание и другие настройки этой даты.
+          </NoticeBanner>
+        ) : null}
         <GameBasicInfoSection
           selectedGame={selectedGame}
           canEditSelectedGame={canEditSelectedGame}
@@ -403,18 +411,20 @@ const GameEditModal = ({
           getCheckboxChecked={getCheckboxChecked}
         />
 
-        <GameSettingsSection
-          selectedGame={selectedGame}
-          canEditSelectedGame={canEditSelectedGame}
-          isSaving={isSaving}
-          updateSelectedGame={updateSelectedGame}
-          CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-          debugCheckboxUpdate={(source, checked, factory) => {
-            const payload = debugCheckboxUpdate(source, checked, factory)
-            if (payload) updateSelectedGame(payload)
-          }}
-          getCheckboxChecked={getCheckboxChecked}
-        />
+        {!isStageOccurrence ? (
+          <GameSettingsSection
+            selectedGame={selectedGame}
+            canEditSelectedGame={canEditSelectedGame}
+            isSaving={isSaving}
+            updateSelectedGame={updateSelectedGame}
+            CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
+            debugCheckboxUpdate={(source, checked, factory) => {
+              const payload = debugCheckboxUpdate(source, checked, factory)
+              if (payload) updateSelectedGame(payload)
+            }}
+            getCheckboxChecked={getCheckboxChecked}
+          />
+        ) : null}
 
         <GameModeratorsSection
           selectedGame={selectedGame}
@@ -446,6 +456,7 @@ const GameEditModal = ({
             <NeonCheckbox
               id="game-is-rated"
               checked={Boolean(selectedGame.isRated ?? true)}
+              disabled={isStageOccurrence}
               onChange={(eventOrChecked) => {
                 const payload = debugCheckboxUpdate(
                   'isRated',
@@ -463,7 +474,7 @@ const GameEditModal = ({
             <NeonCheckbox
               id="game-hidden"
               checked={Boolean(selectedGame.hidden)}
-              disabled={Boolean(selectedGame.isRated ?? true)}
+              disabled={!isStageOccurrence && Boolean(selectedGame.isRated ?? true)}
               onChange={(eventOrChecked) => {
                 const payload = debugCheckboxUpdate(
                   'hidden',
@@ -558,6 +569,7 @@ const GameEditModal = ({
               <NeonCheckbox
                 id="game-allow-join-after-start"
                 checked={Boolean(selectedGame.allowJoinAfterStart)}
+                disabled={isStageOccurrence && !selectedGame.individualStart}
                 onChange={(eventOrChecked) => {
                   const checked = getCheckboxChecked(eventOrChecked)
                   updateSelectedGame((currentGame) => ({
@@ -658,7 +670,7 @@ const GameEditModal = ({
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
-                    disabled={Number(selectedGame.teamsCount) > 0}
+                    disabled={isStageOccurrence || Number(selectedGame.teamsCount) > 0}
                     onClick={() =>
                       updateSelectedGame({
                         participationMode: option.value,
@@ -694,6 +706,7 @@ const GameEditModal = ({
               <NeonCheckbox
                 id="game-max-team-players-unlimited"
                 checked={selectedGame.maxTeamPlayers === null}
+                disabled={isStageOccurrence}
                 onChange={(eventOrChecked) => {
                   const payload = debugCheckboxUpdate(
                     'maxTeamPlayers',
@@ -718,6 +731,7 @@ const GameEditModal = ({
                     label="Максимум игроков в команде"
                     min={1}
                     step={1}
+                    disabled={isStageOccurrence}
                     value={Number(selectedGame.maxTeamPlayers) || ''}
                     onChange={(event) =>
                       updateSelectedGame({
@@ -762,7 +776,10 @@ const GameEditModal = ({
                     })
                   }}
                   disabled={
-                    isEditGameSeasonsLoading || !canEditSelectedGame || isSaving
+                    isStageOccurrence ||
+                    isEditGameSeasonsLoading ||
+                    !canEditSelectedGame ||
+                    isSaving
                   }
                   className="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
                 >
@@ -781,7 +798,10 @@ const GameEditModal = ({
                 <CabinetButton
                   onClick={handleCreateSeasonForEditGame}
                   disabled={
-                    !canEditSelectedGame || isEditGameSeasonCreating || isSaving
+                    isStageOccurrence ||
+                    !canEditSelectedGame ||
+                    isEditGameSeasonCreating ||
+                    isSaving
                   }
                   variant="secondary"
                   tone="brand"
@@ -943,6 +963,8 @@ const GameEditModal = ({
 GameEditModal.propTypes = {
   selectedGame: PropTypes.shape({
     id: PropTypes.string,
+    stageId: PropTypes.string,
+    individualStart: PropTypes.bool,
     showTasks: PropTypes.bool,
     showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showResultAudience: PropTypes.oneOf(['all', 'participants']),

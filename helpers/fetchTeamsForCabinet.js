@@ -2,6 +2,7 @@ import { canViewPublishedGameResults } from '@helpers/cabinetGameVisibility'
 import { collectSnapshotTeamIdsForUser } from '@helpers/gameParticipation'
 import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import { toStringId } from '@helpers/idAndDate'
+import { getGameStageSummaries } from '@server/getGameStageSummaries'
 
 const ensureArray = (value) => (Array.isArray(value) ? value : [])
 const DEFAULT_SORT = 'registration_desc'
@@ -315,6 +316,7 @@ const fetchTeamsForCabinet = async ({
           hidden: 1,
           hideResult: 1,
           showResultAudience: 1,
+          stageId: 1,
           'result.teamsUsers': 1,
           'result.teamsPlaces': 1,
         })
@@ -331,6 +333,7 @@ const fetchTeamsForCabinet = async ({
     return acc
   }, {})
 
+  const stageSummaries = await getGameStageSummaries(db, gamesDocs)
   const gamesByTeam = ensureArray(gamesTeamsDocs).reduce((acc, doc) => {
     const teamId = toStringId(doc?.teamId)
     const gameId = toStringId(doc?.gameId)
@@ -354,6 +357,7 @@ const fetchTeamsForCabinet = async ({
     const isResultPublished =
       canViewPublishedGameResults(game, {
         canViewRestrictedGameInfo: includeHiddenGameResults,
+        releaseStageContent: stageSummaries.get(toStringId(game.stageId))?.isReleased === true,
         hasUserParticipation: collectSnapshotTeamIdsForUser({ game, userId: currentUserId }).length > 0,
       })
 

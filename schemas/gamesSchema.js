@@ -617,6 +617,7 @@ const gamesSchema = {
     default: null,
     trim: true,
   },
+  stageId: { type: Schema.Types.ObjectId, default: null, index: true },
   image: {
     type: String,
     default: null,

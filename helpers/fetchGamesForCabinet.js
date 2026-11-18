@@ -4,6 +4,7 @@ import {
   sanitizeCabinetGameForViewer,
 } from '@helpers/cabinetGameVisibility'
 import { buildGameTasksStats } from '@helpers/gameTaskCounts'
+import { getGameStageSummaries } from '@server/getGameStageSummaries'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import {
   REGISTERED_TEAMS_VISIBILITY,
@@ -312,6 +313,7 @@ const fetchGamesForCabinet = async ({
       location: 1,
       seasonId: 1,
       seasonName: 1,
+      stageId: 1,
       'result.computed': 1,
       'result.teamsPlaces': 1,
       'result.teams': 1,
@@ -623,6 +625,7 @@ const fetchGamesForCabinet = async ({
     }
   }
 
+  const stageSummaries = await getGameStageSummaries(db, gamesDocs)
   const games = gamesDocs.map((game) => {
     const normalizedStatus =
       game?.status === 'closed' && !canSeeClosedStatus
@@ -642,6 +645,8 @@ const fetchGamesForCabinet = async ({
       currentParticipation,
     })
     const creatorUserId = toStringId(game?.creatorUserId)
+    const stage = stageSummaries.get(toStringId(game.stageId))
+    const releaseStageContent = stage?.isReleased === true
 
     const canViewRestrictedGameInfo = canViewCabinetGameRestrictedInfo({
       userRole,
@@ -659,6 +664,7 @@ const fetchGamesForCabinet = async ({
       canExposeCabinetGamePlace(game, {
         canViewRestrictedGameInfo,
         hasUserParticipation: resolvedParticipation.length > 0,
+        releaseStageContent,
       })
       ? resolveParticipationPlace({
           game,
@@ -691,10 +697,13 @@ const fetchGamesForCabinet = async ({
     return normalizeGameForCabinet({
       ...sanitizeCabinetGameForViewer(game, {
         canViewRestrictedGameInfo,
+        releaseStageContent,
         hasUserParticipation: gameId
           ? resolvedParticipation.length > 0
           : false,
       }),
+      stageName: stage?.name,
+      stageResultPublished: releaseStageContent,
       tasksStats: buildGameTasksStats(game?.tasks),
       status: normalizedStatus,
       teamsCount,

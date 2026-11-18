@@ -603,6 +603,9 @@ const normalizeGameForCabinet = (game) => {
     location: ensureString(game.location, ''),
     seasonId: ensureString(game.seasonId, ''),
     seasonName: ensureString(game.seasonName, ''),
+    stageId: game.stageId ? String(game.stageId) : '',
+    stageName: ensureString(game.stageName, ''),
+    stageResultPublished: Boolean(game.stageResultPublished),
     type: normalizeGameType(game?.type),
     storyConfig: {
       experienceMode:

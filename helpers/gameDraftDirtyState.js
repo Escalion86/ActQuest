@@ -45,7 +45,7 @@ export const applyGameDraftPatch = ({ prevGame, baselineGame, patch }) => {
 
   const nextGame = { ...prevGame, ...normalizedPatch }
   if (Boolean(nextGame.isRated ?? true)) {
-    nextGame.hidden = false
+    if (!nextGame.stageId) nextGame.hidden = false
   } else {
     nextGame.seasonId = ''
     nextGame.seasonName = ''

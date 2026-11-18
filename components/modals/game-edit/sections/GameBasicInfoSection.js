@@ -60,6 +60,7 @@ const GameBasicInfoSection = ({
     ).map((organizer) => [organizer.id, organizer]),
   )
   const isStoryGame = selectedGame?.type === 'story'
+  const isStageOccurrence = Boolean(selectedGame?.stageId)
   const hasIndividualStart = isStoryGame
     ? selectedGame?.storyConfig?.startMode === 'individual'
     : Boolean(selectedGame.individualStart)
@@ -93,6 +94,7 @@ const GameBasicInfoSection = ({
         <CabinetSelectField
           id="game-type"
           label="Тип игры"
+          disabled={isStageOccurrence}
           value={selectedGame.type}
           onChange={(event) => updateSelectedGame({ type: event.target.value })}
           labelClassName={fieldLabelClassName}
@@ -107,6 +109,7 @@ const GameBasicInfoSection = ({
         <CabinetSelectField
           id="game-location"
           label="Город"
+          disabled={isStageOccurrence}
           value={selectedGame.location || ''}
           onChange={(event) =>
             updateSelectedGame({ location: event.target.value || '' })
@@ -175,6 +178,7 @@ const GameBasicInfoSection = ({
       <NeonCheckbox
         id="game-individual-start"
         checked={hasIndividualStart}
+        disabled={isStageOccurrence}
         onChange={(eventOrChecked) => {
           const checked = getCheckboxChecked(eventOrChecked)
           updateSelectedGame((currentGame) => ({
@@ -362,6 +366,7 @@ GameBasicInfoSection.propTypes = {
   selectedGame: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
+    stageId: PropTypes.string,
     type: PropTypes.string,
     location: PropTypes.string,
     dateStart: PropTypes.string,

@@ -173,6 +173,9 @@ const GameModals = ({
   setCreateGameMode,
   cloneSourceGameId,
   setCloneSourceGameId,
+  canAddCloneToStage,
+  addCloneToStage,
+  setAddCloneToStage,
   createGameCloneSourceOptions,
   isCloneSourceGamesLoading,
   createGameLocation,
@@ -393,6 +396,9 @@ const GameModals = ({
         setCreateGameMode={setCreateGameMode}
         cloneSourceGameId={cloneSourceGameId}
         setCloneSourceGameId={setCloneSourceGameId}
+        canAddCloneToStage={canAddCloneToStage}
+        addCloneToStage={addCloneToStage}
+        setAddCloneToStage={setAddCloneToStage}
         cloneSourceGames={createGameCloneSourceOptions}
         isCloneSourceGamesLoading={isCloneSourceGamesLoading}
         createGameLocation={createGameLocation}
@@ -708,11 +714,18 @@ GameModals.propTypes = {
   setCreateGameMode: PropTypes.func.isRequired,
   cloneSourceGameId: PropTypes.string.isRequired,
   setCloneSourceGameId: PropTypes.func.isRequired,
+  canAddCloneToStage: PropTypes.bool.isRequired,
+  addCloneToStage: PropTypes.bool.isRequired,
+  setAddCloneToStage: PropTypes.func.isRequired,
   createGameCloneSourceOptions: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
       location: PropTypes.string,
+      status: PropTypes.string,
+      stageId: PropTypes.string,
+      stageName: PropTypes.string,
+      stageResultPublished: PropTypes.bool,
     }),
   ).isRequired,
   isCloneSourceGamesLoading: PropTypes.bool,

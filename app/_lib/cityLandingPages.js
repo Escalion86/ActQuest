@@ -11,6 +11,7 @@ import SeoSectionCard from '@components/public/seo/SeoSectionCard'
 import SeoTextSection from '@components/public/seo/SeoTextSection'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 import getSiteUrl from '@helpers/getSiteUrl'
+import groupPublicGameDates from '@app/_lib/groupPublicGameDates'
 
 const siteUrl = getSiteUrl()
 
@@ -168,6 +169,7 @@ async function getUpcomingGamesByLocation(locationKey) {
       .find(
         {
           hidden: { $ne: true },
+          isPrivate: { $ne: true },
           status: { $in: ['active', 'started'] },
           dateStart: { $gte: now },
           location: locationKey,
@@ -176,6 +178,7 @@ async function getUpcomingGamesByLocation(locationKey) {
           _id: 1,
           name: 1,
           dateStart: 1,
+          stageId: 1,
         },
       )
       .sort({ dateStart: 1 })
@@ -448,25 +451,21 @@ export async function CityLandingPage({ slug }) {
       <SeoSectionCard title={`Ближайшие игры в ${city.cityAccusative}`}>
         {upcomingGames.length > 0 ? (
           <ul className="space-y-2 text-[#cbe8ff]">
-            {upcomingGames.map((game) => (
-              <li key={String(game._id)}>
-                <MetrikaTrackedLink
-                  href={`/game/${game._id}`}
-                  goal="aq_click_schedule"
-                  params={{
-                    city: city.locationKey,
-                    page_type: 'city_page',
-                    placement: 'city_upcoming_game_link',
-                  }}
-                  className="font-medium text-[#eaf7ff] underline decoration-[#00D1FF]/60 underline-offset-2 hover:text-white"
-                >
-                  {game.name}
-                </MetrikaTrackedLink>
-                {game.dateStart ? (
-                  <span className="ml-2 text-[#9cc7e5]">
+            {groupPublicGameDates(upcomingGames).map((group) => (
+              <li key={group.key}>
+                {group.games.length > 1 && <span className="mr-2 font-medium">{group.name}</span>}
+                {group.games.map((game) => (
+                  <MetrikaTrackedLink
+                    key={String(game._id)}
+                    href={`/game/${game._id}`}
+                    goal="aq_click_schedule"
+                    params={{ city: city.locationKey, page_type: 'city_page', placement: 'city_upcoming_game_link' }}
+                    className="mr-3 font-medium text-[#eaf7ff] underline decoration-[#00D1FF]/60 underline-offset-2 hover:text-white"
+                  >
+                    {group.games.length === 1 && `${game.name} · `}
                     {new Date(game.dateStart).toLocaleDateString('ru-RU')}
-                  </span>
-                ) : null}
+                  </MetrikaTrackedLink>
+                ))}
               </li>
             ))}
           </ul>

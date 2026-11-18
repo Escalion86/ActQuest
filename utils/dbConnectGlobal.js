@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import usersSchema from '@schemas/usersSchema'
 import phoneVerificationsSchema from '@schemas/phoneVerificationsSchema'
 import gamesSchema from '@schemas/gamesSchema'
+import gameStagesSchema from '@schemas/gameStagesSchema'
 import gamesTeamsSchema from '@schemas/gamesTeamsSchema'
 import teamsSchema from '@schemas/teamsSchema'
 import teamsUsersSchema from '@schemas/teamsUsersSchema'
@@ -145,6 +146,9 @@ async function dbConnectGlobal() {
 
   ensureModel(globalConnections.global, 'Games', () =>
     mongoose.Schema(gamesSchema, { timestamps: true }),
+  )
+  ensureModel(globalConnections.global, 'GameStages', () =>
+    mongoose.Schema(gameStagesSchema, { timestamps: true }),
   )
   ensureModel(globalConnections.global, 'Seasons', () =>
     mongoose.Schema(seasonsSchema, { timestamps: true }),

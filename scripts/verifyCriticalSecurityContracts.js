@@ -196,7 +196,8 @@ requireText('app/api/[location]/gamesteams/process/[id]/route.js', [
   'canManageGame({ session: req.session',
 ])
 requireText('server/UsersInGame.js', [
-  'sanitizeGameForPublicRead(game)',
+  'getGameStageSummary(db, game)',
+  'sanitizeGameForPublicRead(game, { releaseStageContent: stage?.isReleased === true })',
   "select({ telegramId: 1, location: 1 })",
 ])
 forbidText('server/UsersInGame.js', ['return { ...user, team'])

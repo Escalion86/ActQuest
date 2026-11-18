@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import PropTypes from 'prop-types'
 import { useState } from 'react'
 
@@ -123,7 +124,14 @@ const RatingBreakdownModal = ({ item, type, initialPeriodId, onClose }) => {
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                        {game.gameName}
+                        {game.resultHref ? (
+                          <Link
+                            href={game.resultHref}
+                            className="text-cyan-700 underline underline-offset-2 dark:text-cyan-300"
+                          >
+                            {game.gameName}
+                          </Link>
+                        ) : game.gameName}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <span>{formatRatingDate(game.dateStart)}</span>
@@ -185,6 +193,7 @@ RatingBreakdownModal.propTypes = {
         PropTypes.shape({
           gameId: PropTypes.string.isRequired,
           gameName: PropTypes.string.isRequired,
+          resultHref: PropTypes.string,
           dateStart: PropTypes.string,
           place: PropTypes.number.isRequired,
           participantsCount: PropTypes.number.isRequired,

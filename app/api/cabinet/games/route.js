@@ -12,6 +12,8 @@ import {
   resolveGameOrganizerForCreate,
 } from '@helpers/gameOrganizer'
 import canCreateStoryGame from '@helpers/storyGameAccess'
+import { GameStageError } from '@server/buildGameStageResult'
+import { addGameStageDate } from '@server/gameStages'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -99,10 +101,12 @@ export async function POST(request) {
   }
 
   const rawBody = await request.json().catch(() => ({}))
-  const payload =
+  const submittedData =
     rawBody && typeof rawBody === 'object' && rawBody.data && typeof rawBody.data === 'object'
       ? rawBody.data
       : rawBody
+  const payload = { ...submittedData }
+  delete payload.stageId
 
   const name = normalizeStringOrNull(payload?.name)
   const location = normalizeStringOrNull(payload?.location)
@@ -168,7 +172,15 @@ export async function POST(request) {
       creatorTelegramId,
     }
 
-    const createdGame = await GamesModel.create(createData)
+    const createdGame = rawBody?.addToStage === true
+      ? await addGameStageDate({
+          db,
+          session,
+          sourceGameId: rawBody.sourceGameId,
+          dateStart: payload.dateStart,
+          maxTeams: payload.maxTeams,
+        })
+      : await GamesModel.create(createData)
     const createdJson = createdGame?.toObject ? createdGame.toObject() : createdGame
     const historyState = await fetchGameHistoryState({
       db,
@@ -204,6 +216,11 @@ export async function POST(request) {
       { status: 201 },
     )
   } catch (error) {
+    if (error instanceof GameStageError || error?.registrationStatus) {
+      return NextResponse.json({ success: false, error: error.message }, {
+        status: error.status ?? error.registrationStatus,
+      })
+    }
     console.error('Failed to create game via cabinet API (app)', error)
     if (
       error?.message === 'Организатор игры не найден' ||

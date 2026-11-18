@@ -1,13 +1,13 @@
-import normalizeTelegramId from '../helpers/normalizeTelegramId.js'
 import assertParticipantUserIds from '../helpers/assertParticipantUserIds.js'
 import { toStringId } from '../helpers/idAndDate.js'
 import { buildRatingRanksV2 } from '../helpers/ratingV2.js'
+import {
+  getRatingEntryTeamPlaces,
+  loadRatedGameEntries,
+} from './loadRatedGameEntries.js'
 
 const normalizeLocation = (value) =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
-
-const getObjectEntries = (value) =>
-  value instanceof Map ? Array.from(value.entries()) : Object.entries(value || {})
 
 const resolveParticipantRatingKey = (userId) => {
   if (userId) return `uid:${userId}`
@@ -38,19 +38,7 @@ const buildTimeline = (games) =>
     .map((game) => {
       const result =
         game?.result && typeof game.result === 'object' ? game.result : {}
-      const rawPlaces =
-        result?.teamsPlaces && typeof result.teamsPlaces === 'object'
-          ? result.teamsPlaces
-          : {}
-      const allTeamsPlaces = new Map()
-
-      getObjectEntries(rawPlaces).forEach(([teamId, place]) => {
-        const key = resolveTeamRatingKey(teamId)
-        const numericPlace = Number(place)
-        if (key && Number.isFinite(numericPlace)) {
-          allTeamsPlaces.set(key, numericPlace)
-        }
-      })
+      const allTeamsPlaces = getRatingEntryTeamPlaces(game)
 
       const participantsCount = allTeamsPlaces.size
       if (participantsCount < 2) return null
@@ -75,10 +63,8 @@ const buildTimeline = (games) =>
         : []
       teamsUsers.forEach((membership) => {
         const userId = toStringId(membership?.userId)
-        const telegramId = normalizeTelegramId(membership?.userTelegramId)
-        const participantKey = resolveParticipantRatingKey(userId, telegramId)
-        const teamKey = resolveTeamRatingKey(membership?.teamId)
-        const place = teamKey ? allTeamsPlaces.get(teamKey) : null
+        const participantKey = resolveParticipantRatingKey(userId)
+        const place = allTeamsPlaces.get(toStringId(membership?.teamId))
         if (!participantKey || !Number.isFinite(place)) return
 
         const previous = playersResults.get(participantKey)
@@ -89,8 +75,8 @@ const buildTimeline = (games) =>
 
       const teamsResults = new Map()
       if (game?.participationMode !== 'player') {
-        allTeamsPlaces.forEach((place, key) => {
-          teamsResults.set(key, buildResult(place))
+        allTeamsPlaces.forEach((place, teamId) => {
+          teamsResults.set(resolveTeamRatingKey(teamId), buildResult(place))
         })
       }
       if (!playersResults.size && !teamsResults.size) return null
@@ -271,59 +257,66 @@ const buildEntitySnapshots = ({
   return { rating, ratingsByLocation, ratingsBySeason }
 }
 
+const collectEntityRefs = (games) => {
+  const users = new Set()
+  const teams = new Set()
+  for (const game of games) {
+    const teamsUsers = game?.result?.teamsUsers
+    if (Array.isArray(teamsUsers)) {
+      teamsUsers.forEach((membership) => {
+        const userId = toStringId(membership?.userId)
+        if (userId) users.add(resolveParticipantRatingKey(userId))
+      })
+    }
+    if (game?.participationMode !== 'player') {
+      getRatingEntryTeamPlaces(game).forEach((_, teamId) => {
+        teams.add(resolveTeamRatingKey(teamId))
+      })
+    }
+  }
+  return { users, teams }
+}
+
+const buildRatingUpdate = (snapshots) => snapshots
+  ? { $set: snapshots }
+  : { $unset: { rating: '', ratingsByLocation: '', ratingsBySeason: '' } }
+
 const updateParticipantsRatings = async ({
   db,
   game,
   updateAllEntities = false,
+  affectedGames = [],
+  session,
 }) => {
   if (!db || !game) return { usersUpdated: 0, teamsUpdated: 0 }
   assertParticipantUserIds([game])
 
-  const gameId = toStringId(game?._id)
-  const result =
-    game?.result && typeof game.result === 'object' ? game.result : {}
-  const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
-  const teamsPlaces =
-    result?.teamsPlaces && typeof result.teamsPlaces === 'object'
-      ? result.teamsPlaces
-      : {}
-
-  const currentUserRefs = new Map()
-  teamsUsers.forEach((membership) => {
-    const userId = toStringId(membership?.userId)
-    const telegramId = normalizeTelegramId(membership?.userTelegramId)
-    const key = resolveParticipantRatingKey(userId, telegramId)
-    if (key && userId) currentUserRefs.set(key, { _id: userId })
-  })
-
-  const currentTeamRefs = new Map()
-  if (game?.participationMode !== 'player') {
-    getObjectEntries(teamsPlaces).forEach(([teamId]) => {
-      const key = resolveTeamRatingKey(teamId)
-      const normalizedTeamId = toStringId(teamId)
-      if (key && normalizedTeamId) currentTeamRefs.set(key, normalizedTeamId)
-    })
+  let previousStage = null
+  if (game.stageId && !session) {
+    const { refreshPublishedGameStage } = await import('./gameStages.js')
+    previousStage = await refreshPublishedGameStage({ db, stageId: game.stageId })
   }
-  if (!updateAllEntities && !currentUserRefs.size && !currentTeamRefs.size) {
+  const gamesToRefresh = previousStage ? [...affectedGames, previousStage] : affectedGames
+  const recalculateAllEntities = updateAllEntities || Boolean(previousStage)
+  const gameId = toStringId(game?._id)
+  const { users: currentUserRefs, teams: currentTeamRefs } = collectEntityRefs([game])
+  const { users: affectedUserRefs, teams: affectedTeamRefs } = collectEntityRefs(gamesToRefresh)
+
+  if (
+    !recalculateAllEntities &&
+    !currentUserRefs.size &&
+    !currentTeamRefs.size &&
+    !gamesToRefresh.length
+  ) {
     return { usersUpdated: 0, teamsUpdated: 0 }
   }
 
-  const ratedGames = await db
-    .model('Games')
-    .find({ status: 'closed', isRated: { $ne: false } })
-    .select({
-      _id: 1,
-      dateStart: 1,
-      location: 1,
-      seasonId: 1,
-      seasonName: 1,
-      participationMode: 1,
-      result: 1,
-    })
-    .lean()
+  const ratedGames = await loadRatedGameEntries({ db, session })
   assertParticipantUserIds(ratedGames)
   const timeline = buildTimeline(ratedGames)
-  if (!timeline.length) return { usersUpdated: 0, teamsUpdated: 0 }
+  if (!timeline.length && !gamesToRefresh.length) {
+    return { usersUpdated: 0, teamsUpdated: 0 }
+  }
 
   const globalPlayerRatings = buildRatingsForTimeline(
     timeline,
@@ -373,13 +366,12 @@ const updateParticipantsRatings = async ({
 
   const updatedAt = new Date().toISOString()
   const usersBulkOps = []
-  const userKeys = updateAllEntities
-    ? Array.from(globalPlayerRatings.keys())
-    : Array.from(currentUserRefs.keys())
+  const userKeys = new Set([
+    ...(recalculateAllEntities ? globalPlayerRatings.keys() : currentUserRefs),
+    ...affectedUserRefs,
+  ])
   userKeys.forEach((key) => {
-    const filter = updateAllEntities
-      ? resolveUserFilterByRatingKey(key)
-      : currentUserRefs.get(key)
+    const filter = resolveUserFilterByRatingKey(key)
     const snapshots = buildEntitySnapshots({
       key,
       globalRatings: globalPlayerRatings,
@@ -389,23 +381,22 @@ const updateParticipantsRatings = async ({
       entityType: 'player',
       updatedAt,
     })
-    if (!filter || !snapshots) return
+    if (!filter || (!snapshots && !affectedUserRefs.has(key))) return
     usersBulkOps.push({
-      [filter._id ? 'updateOne' : 'updateMany']: {
+      updateOne: {
         filter,
-        update: { $set: snapshots },
+        update: buildRatingUpdate(snapshots),
       },
     })
   })
 
   const teamsBulkOps = []
-  const teamKeys = updateAllEntities
-    ? Array.from(globalTeamRatings.keys())
-    : Array.from(currentTeamRefs.keys())
+  const teamKeys = new Set([
+    ...(recalculateAllEntities ? globalTeamRatings.keys() : currentTeamRefs),
+    ...affectedTeamRefs,
+  ])
   teamKeys.forEach((key) => {
-    const teamId = updateAllEntities
-      ? resolveTeamIdByRatingKey(key)
-      : currentTeamRefs.get(key)
+    const teamId = resolveTeamIdByRatingKey(key)
     const snapshots = buildEntitySnapshots({
       key,
       globalRatings: globalTeamRatings,
@@ -415,23 +406,27 @@ const updateParticipantsRatings = async ({
       entityType: 'team',
       updatedAt,
     })
-    if (!teamId || !snapshots) return
+    if (!teamId || (!snapshots && !affectedTeamRefs.has(key))) return
     teamsBulkOps.push({
       updateOne: {
         filter: { _id: teamId },
-        update: { $set: snapshots },
+        update: buildRatingUpdate(snapshots),
       },
     })
   })
 
-  await Promise.all([
-    usersBulkOps.length
-      ? db.model('Users').bulkWrite(usersBulkOps, { strict: false })
-      : Promise.resolve(),
-    teamsBulkOps.length
-      ? db.model('Teams').bulkWrite(teamsBulkOps, { strict: false })
-      : Promise.resolve(),
-  ])
+  const writeRatings = (modelName, operations) => operations.length
+    ? db.model(modelName).bulkWrite(operations, { strict: false, session })
+    : Promise.resolve()
+  if (session) {
+    await writeRatings('Users', usersBulkOps)
+    await writeRatings('Teams', teamsBulkOps)
+  } else {
+    await Promise.all([
+      writeRatings('Users', usersBulkOps),
+      writeRatings('Teams', teamsBulkOps),
+    ])
+  }
 
   return {
     usersUpdated: usersBulkOps.length,

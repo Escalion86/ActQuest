@@ -4,6 +4,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import { seoArticles } from '@app/_lib/seoArticles'
 import { cityPagesList } from '@app/_lib/cityLandingPages'
 import getSiteUrl from '@helpers/getSiteUrl'
+import groupPublicGameDates from '@app/_lib/groupPublicGameDates'
 
 const siteUrl = getSiteUrl()
 
@@ -21,10 +22,11 @@ async function getUpcomingGames() {
       .find(
         {
           hidden: { $ne: true },
+          isPrivate: { $ne: true },
           status: { $in: ['active', 'started'] },
           dateStart: { $gte: now },
         },
-        { name: 1, dateStart: 1, location: 1, image: 1 },
+        { name: 1, dateStart: 1, location: 1, image: 1, stageId: 1 },
       )
       .sort({ dateStart: 1 })
       .limit(10)
@@ -125,15 +127,15 @@ export default async function HomePage() {
           <>
             <h2>Ближайшие игры</h2>
             <ul>
-              {upcomingGames.map((game) => (
-                <li key={String(game._id)}>
-                  <a href={`/game/${game._id}`}>{game.name}</a>
-                  {game.dateStart && (
-                    <>
-                      {' '}
-                      — {new Date(game.dateStart).toLocaleDateString('ru-RU')}
-                    </>
-                  )}
+              {groupPublicGameDates(upcomingGames).map((group) => (
+                <li key={group.key}>
+                  {group.games.length > 1 && <span>{group.name} </span>}
+                  {group.games.map((game) => (
+                    <a key={String(game._id)} href={`/game/${game._id}`} className="mr-2">
+                      {group.games.length === 1 && `${game.name} — `}
+                      {new Date(game.dateStart).toLocaleDateString('ru-RU')}
+                    </a>
+                  ))}
                 </li>
               ))}
             </ul>

@@ -2,6 +2,10 @@ import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
 import { calculateRatingGameScore } from '@helpers/ratingV2'
+import {
+  getRatingEntryTeamPlaces,
+  loadRatedGameEntries,
+} from '@server/loadRatedGameEntries'
 import { LOCATIONS } from '@server/serverConstants'
 
 const TOP_LIMIT = 10
@@ -123,24 +127,27 @@ const compareRatingRows = (first, second) => {
   return first.name.localeCompare(second.name, 'ru', { sensitivity: 'base' })
 }
 
-const getObjectEntries = (value) =>
-  value instanceof Map ? Array.from(value.entries()) : Object.entries(value || {})
-
 const normalizeBreakdownDate = (value) => {
   if (value instanceof Date) return value.toISOString()
   return typeof value === 'string' ? value : null
 }
 
-const buildBreakdownItem = ({ game, place, participantsCount, teamName }) => ({
-  gameId: toStringId(game?._id) || '',
-  seasonId: toStringId(game?.seasonId) || null,
-  gameName: game?.name?.trim() || 'Игра ActQuest',
-  dateStart: normalizeBreakdownDate(game?.dateStart),
-  place,
-  participantsCount,
-  score: calculateRatingGameScore({ place, participantsCount }),
-  ...(teamName ? { teamName } : {}),
-})
+const buildBreakdownItem = ({ game, place, participantsCount, teamName }) => {
+  const stageId = toStringId(game?.stageId)
+  return {
+    gameId: toStringId(game?._id) || '',
+    seasonId: toStringId(game?.seasonId) || null,
+    gameName: game?.name?.trim() || 'Игра ActQuest',
+    dateStart: normalizeBreakdownDate(game?.dateStart),
+    place,
+    participantsCount,
+    score: calculateRatingGameScore({ place, participantsCount }),
+    ...(stageId && game?.location
+      ? { resultHref: `/${game.location}/game/stage-result/${stageId}` }
+      : {}),
+    ...(teamName ? { teamName } : {}),
+  }
+}
 
 export const loadTeamsRatingBreakdown = async ({
   db,
@@ -150,24 +157,12 @@ export const loadTeamsRatingBreakdown = async ({
 }) => {
   if (!teamIds.length) return new Map()
 
-  const games = await db
-    .model('Games')
-    .find({
-      status: 'closed',
-      isRated: { $ne: false },
-      participationMode: { $ne: 'player' },
-      ...(location ? { location } : {}),
-      ...(seasonId ? { seasonId } : {}),
-    })
-    .select({
-      _id: 1,
-      name: 1,
-      dateStart: 1,
-      seasonId: 1,
-      'result.teamsPlaces': 1,
-    })
-    .sort({ dateStart: 1, _id: 1 })
-    .lean()
+  const games = await loadRatedGameEntries({
+    db,
+    location,
+    seasonId,
+    resultFields: ['teamsPlaces'],
+  })
 
   const requestedTeamIds = new Set(teamIds)
   const breakdownByTeamId = new Map(
@@ -175,13 +170,12 @@ export const loadTeamsRatingBreakdown = async ({
   )
 
   games.forEach((game) => {
-    const validPlaces = getObjectEntries(game?.result?.teamsPlaces)
-      .map(([teamId, place]) => [toStringId(teamId), Number(place)])
-      .filter(([teamId, place]) => teamId && Number.isFinite(place))
-    const participantsCount = validPlaces.length
+    if (game.participationMode === 'player') return
+    const validPlaces = getRatingEntryTeamPlaces(game)
+    const participantsCount = validPlaces.size
     if (participantsCount < 2) return
 
-    validPlaces.forEach(([teamId, place]) => {
+    validPlaces.forEach((place, teamId) => {
       if (!requestedTeamIds.has(teamId)) return
       const item = buildBreakdownItem({ game, place, participantsCount })
       if (Number.isFinite(item.score)) {
@@ -218,34 +212,18 @@ export const loadPlayersRatingBreakdown = async ({
   const breakdownByPlayerId = new Map(
     normalizedPlayers.map((player) => [player.id, []]),
   )
-  const games = await db
-    .model('Games')
-    .find({
-      status: 'closed',
-      isRated: { $ne: false },
-      ...(location ? { location } : {}),
-      ...(seasonId ? { seasonId } : {}),
-    })
-    .select({
-      _id: 1,
-      name: 1,
-      dateStart: 1,
-      seasonId: 1,
-      'result.teams': 1,
-      'result.teamsPlaces': 1,
-      'result.teamsUsers': 1,
-    })
-    .sort({ dateStart: 1, _id: 1 })
-    .lean()
+  const games = await loadRatedGameEntries({
+    db,
+    location,
+    seasonId,
+    resultFields: ['teams', 'teamsPlaces', 'teamsUsers'],
+  })
 
   games.forEach((game) => {
-    const validPlaces = getObjectEntries(game?.result?.teamsPlaces)
-      .map(([teamId, place]) => [toStringId(teamId), Number(place)])
-      .filter(([teamId, place]) => teamId && Number.isFinite(place))
-    const participantsCount = validPlaces.length
+    const placeByTeamId = getRatingEntryTeamPlaces(game)
+    const participantsCount = placeByTeamId.size
     if (participantsCount < 2) return
 
-    const placeByTeamId = new Map(validPlaces)
     const teamNameById = new Map(
       (Array.isArray(game?.result?.teams) ? game.result.teams : [])
         .map((team) => [
@@ -537,19 +515,9 @@ const loadTeamsRating = async ({
 
 export const loadLocationSeasons = async ({ db, location }) => {
   if (!location) return []
-  const games = await db
-    .model('Games')
-    .find({
-      status: 'closed',
-      isRated: { $ne: false },
-      location,
-      seasonId: { $nin: [null, ''] },
-    })
-    .select({ seasonId: 1, seasonName: 1, dateStart: 1 })
-    .sort({ dateStart: -1, _id: -1 })
-    .lean()
+  const games = await loadRatedGameEntries({ db, location, resultFields: [] })
   const seasons = new Map()
-  games.forEach((game) => {
+  games.reverse().forEach((game) => {
     const id = toStringId(game?.seasonId)
     if (!id || seasons.has(id)) return
     seasons.set(id, {

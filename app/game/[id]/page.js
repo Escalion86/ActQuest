@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import fetchGame from '@server/fetchGame'
+import { getGameStageSummary } from '@server/getGameStageSummaries'
 import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 import {
   getGamePrequels,
@@ -98,7 +99,11 @@ export default async function GameEntryPage({ params }) {
       notFound()
     }
 
-    const serializedGame = JSON.parse(JSON.stringify(sanitizeGameForPublicRead(game)))
+    const db = await dbConnectGlobal()
+    const stage = db ? await getGameStageSummary(db, game) : null
+    const serializedGame = JSON.parse(JSON.stringify(sanitizeGameForPublicRead(game, {
+      releaseStageContent: stage?.isReleased === true,
+    })))
     serializedGame.prequel = normalizePrequelConfig(serializedGame.prequel, {
       includeCodes: false,
     })
@@ -116,7 +121,6 @@ export default async function GameEntryPage({ params }) {
     const isGameStarted = status === 'started'
     const isGameFinished = status === 'finished'
 
-    const db = await dbConnectGlobal()
     if (!db) {
       payload = {
         session,

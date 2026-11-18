@@ -2347,15 +2347,24 @@ export function ResultPageContent({ gameId, location }) {
           {isDarkTheme ? 'Светлая тема' : 'Тёмная тема'}
         </button>
       </div>
+      {game?.stageId && game.stageResultPublished && game.result && (
+        <div className="mx-auto mt-16 max-w-3xl px-4 text-center">
+          <Link className="font-semibold text-cyan-700 underline underline-offset-2 dark:text-cyan-300" href={`/${location}/game/stage-result/${game.stageId}`}>
+            Общий зачёт этапа
+          </Link>
+        </div>
+      )}
       {/* <StateLoader {...props}>
         <Header /> */}
       {game && !game.result ? (
         <p className="mx-auto mt-24 max-w-xl px-4 text-center text-slate-600 dark:text-slate-300">
           {game.hideResult
             ? 'Просмотр результатов отключён в настройках игры.'
-            : game.showResultAudience === 'participants'
-              ? 'Результаты доступны только участникам игры. Войдите в аккаунт участника.'
-              : 'Результаты игры ещё не сформированы.'}
+            : game.stageId && !game.stageResultPublished
+              ? 'Результаты будут доступны после публикации общего зачёта этапа.'
+              : game.showResultAudience === 'participants'
+                ? 'Результаты доступны только участникам игры. Войдите в аккаунт участника.'
+                : 'Результаты игры ещё не сформированы.'}
         </p>
       ) : game ? (
         <>

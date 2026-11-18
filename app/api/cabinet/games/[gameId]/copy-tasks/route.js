@@ -85,6 +85,7 @@ export async function POST(request, context) {
         updatedGame = target
         break
       }
+      if (target.stageId) throw new TaskCopyError('Задания всех проведений этапа должны совпадать.')
       if (target.status !== 'active') throw new TaskCopyError('Копировать можно только в предстоящую игру со статусом «Активна»')
       const wanted = new Set(taskIds.map((id) => id.toLowerCase()))
       const selected = (source.tasks || []).filter((task) => wanted.has(String(task._id)))

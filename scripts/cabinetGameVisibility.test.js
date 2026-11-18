@@ -32,6 +32,30 @@ test('результаты доступны согласно аудитории,
   }
 })
 
+test('задания и результат проведения закрыты для игроков до публикации общего зачёта', () => {
+  const game = {
+    stageId: 'stage',
+    status: 'closed',
+    showTasks: true,
+    showResultAudience: 'participants',
+    tasks: [{ id: 't1', task: 'Задание', howToSolve: 'Разбор' }],
+    result: { computed: { teams: [] } },
+  }
+  const participant = { hasUserParticipation: true }
+  for (const sanitize of [sanitizeGameForPublicRead, sanitizeCabinetGameForViewer]) {
+    assert.deepEqual(sanitize(game, participant).tasks, [])
+    assert.equal(sanitize(game, participant).result, null)
+
+    const published = { ...participant, releaseStageContent: true }
+    assert.equal(sanitize(game, published).tasks[0].howToSolve, 'Разбор')
+    assert.equal(sanitize(game, published).result, game.result)
+    assert.equal(sanitize(game, { releaseStageContent: true }).result, null)
+
+    const organizer = { canViewRestrictedGameInfo: true }
+    assert.equal(sanitize(game, organizer).result, game.result)
+  }
+})
+
 test('участие для результатов определяется по snapshot, независимо от текущего состава команды', () => {
   const game = {
     hideResult: false,
@@ -99,7 +123,7 @@ test('public cabinet game view keeps published tasks for finished games', () => 
   )
 
   assert.equal(sanitized.showTasks, true)
-  assert.deepEqual(sanitized.tasks, [{ id: 't1', task: 'Кодовое место' }])
+  assert.deepEqual(sanitized.tasks, [{ id: 't1', task: 'Кодовое место', triggerBlocks: [] }])
   assert.deepEqual(sanitized.finances, [])
 })
 
@@ -119,7 +143,7 @@ test('public cabinet game view keeps participant-only published tasks for partic
   )
 
   assert.equal(sanitized.showTasks, true)
-  assert.deepEqual(sanitized.tasks, [{ id: 't1', task: 'Финишный код' }])
+  assert.deepEqual(sanitized.tasks, [{ id: 't1', task: 'Финишный код', triggerBlocks: [] }])
   assert.deepEqual(sanitized.finances, [])
 })
 

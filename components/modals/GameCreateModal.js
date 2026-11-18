@@ -22,6 +22,9 @@ const GameCreateModal = ({
   setCreateGameMode,
   cloneSourceGameId,
   setCloneSourceGameId,
+  canAddCloneToStage,
+  addCloneToStage,
+  setAddCloneToStage,
   cloneSourceGames,
   isCloneSourceGamesLoading,
   createGameLocation,
@@ -44,6 +47,9 @@ const GameCreateModal = ({
   const organizerOptions = Array.isArray(availableOrganizersForSelect)
     ? availableOrganizersForSelect
     : []
+  const cloneSource = cloneSourceGames.find(
+    (game) => game.id === cloneSourceGameId,
+  )
 
   return (
   <Modal
@@ -66,7 +72,11 @@ const GameCreateModal = ({
           disabled={isCreatingGame || isCreateGameActionDisabled}
           className="aq-modal-btn aq-modal-btn-primary"
         >
-          {isCreatingGame ? 'Создание…' : 'Создать'}
+          {isCreatingGame
+            ? 'Создание…'
+            : addCloneToStage
+              ? 'Добавить проведение'
+              : 'Создать'}
         </button>
       </>
     }
@@ -107,7 +117,7 @@ const GameCreateModal = ({
           {createGameFeedback.message}
         </NoticeBanner>
       )}
-      <div className="space-y-2">
+      <div className="space-y-2" hidden={addCloneToStage}>
         <label
           htmlFor="new-game-location"
           className="block text-sm font-semibold text-slate-700 dark:text-slate-100"
@@ -128,7 +138,7 @@ const GameCreateModal = ({
           ))}
         </select>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2" hidden={addCloneToStage}>
         <label
           htmlFor="new-game-organizer"
           className="block text-sm font-semibold text-slate-700 dark:text-slate-100"
@@ -215,15 +225,67 @@ const GameCreateModal = ({
               ))}
             </select>
           </div>
-          <CabinetInputField
-            id="new-game-name-clone"
-            label="Название новой игры"
-            value={newGameName}
-            onChange={(event) => setNewGameName(event.target.value)}
-            placeholder="Например, Ночной квест"
-            inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
-          />
-          <div className="space-y-2">
+          {cloneSource ? (
+            <fieldset className="space-y-2 border-0 p-0">
+              <legend className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Как учесть новую игру
+              </legend>
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <input
+                  type="radio"
+                  name="clone-stage-mode"
+                  checked={!addCloneToStage}
+                  onChange={() => setAddCloneToStage(false)}
+                />
+                Создать отдельную игру
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <input
+                  type="radio"
+                  name="clone-stage-mode"
+                  disabled={!canAddCloneToStage}
+                  checked={addCloneToStage}
+                  onChange={() => setAddCloneToStage(true)}
+                />
+                Добавить проведение к этой игре
+              </label>
+              {addCloneToStage ? (
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  {cloneSource.stageId
+                    ? `Проведение войдёт в этап «${cloneSource.stageName || cloneSource.name}».`
+                    : 'Исходная игра и новая дата войдут в один этап.'}{' '}
+                  Город, сезон, задания и правила будут общими. Дату и лимит
+                  участников можно настроить в редакторе после создания.
+                </p>
+              ) : null}
+              {addCloneToStage && cloneSource.status === 'closed' ? (
+                <NoticeBanner tone="warning" variant="neon">
+                  Если исходная игра уже учтена в рейтинге, её вклад заменит
+                  общий результат после публикации этапа.
+                </NoticeBanner>
+              ) : null}
+              {!canAddCloneToStage ? (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {cloneSource.stageResultPublished
+                    ? 'Общий результат этапа уже опубликован.'
+                    : cloneSource.status === 'canceled'
+                      ? 'Исходная игра отменена.'
+                      : 'Проведения доступны для классических игр.'}
+                </p>
+              ) : null}
+            </fieldset>
+          ) : null}
+          {!addCloneToStage ? (
+            <CabinetInputField
+              id="new-game-name-clone"
+              label="Название новой игры"
+              value={newGameName}
+              onChange={(event) => setNewGameName(event.target.value)}
+              placeholder="Например, Ночной квест"
+              inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+            />
+          ) : null}
+          <div className="space-y-2" hidden={addCloneToStage}>
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
               Что клонировать
             </p>
@@ -312,9 +374,11 @@ const GameCreateModal = ({
           </div>
         </div>
       )}
-      <NoticeBanner tone="info" variant="neon">
-        Рейтинговость и сезон можно настроить после создания в редакторе игры.
-      </NoticeBanner>
+      {!addCloneToStage ? (
+        <NoticeBanner tone="info" variant="neon">
+          Рейтинговость и сезон можно настроить после создания в редакторе игры.
+        </NoticeBanner>
+      ) : null}
     </fieldset>
   </Modal>
   )
@@ -341,10 +405,18 @@ GameCreateModal.propTypes = {
   setCreateGameMode: PropTypes.func.isRequired,
   cloneSourceGameId: PropTypes.string.isRequired,
   setCloneSourceGameId: PropTypes.func.isRequired,
+  canAddCloneToStage: PropTypes.bool.isRequired,
+  addCloneToStage: PropTypes.bool.isRequired,
+  setAddCloneToStage: PropTypes.func.isRequired,
   cloneSourceGames: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
+      name: PropTypes.string,
+      status: PropTypes.string,
+      stageId: PropTypes.string,
+      stageName: PropTypes.string,
+      stageResultPublished: PropTypes.bool,
     }),
   ),
   isCloneSourceGamesLoading: PropTypes.bool,

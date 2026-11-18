@@ -2,6 +2,7 @@ import { toStringId } from '@helpers/idAndDate'
 import normalizeTelegramId from '@helpers/normalizeTelegramId'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
+import { getGameStageSummary } from '@server/getGameStageSummaries'
 import isUserAdmin from '@helpers/isUserAdmin'
 
 export default async function UsersInGame(req, res) {
@@ -71,10 +72,11 @@ export default async function UsersInGame(req, res) {
             roleInTeam: membership.role,
           }]
         })
+        const stage = await getGameStageSummary(db, game)
         return res?.status(200).json({
           success: true,
           data: {
-            game: sanitizeGameForPublicRead(game),
+            game: sanitizeGameForPublicRead(game, { releaseStageContent: stage?.isReleased === true }),
             teams: teams.map((team) => ({ _id: team._id, name: team.name || '' })),
             users: usersWithTeams,
           },
