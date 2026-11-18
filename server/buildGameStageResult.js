@@ -1,5 +1,6 @@
 import { toStringId } from '../helpers/idAndDate.js'
 import { calculateRatingGameScore } from '../helpers/ratingV2.js'
+import { CLOSED_GAME_IMMUTABLE_FIELD_LABELS } from '../helpers/closedGameUpdateProtection.js'
 import buildGameResultComputed from './buildGameResultComputed.js'
 
 export class GameStageError extends Error {
@@ -18,6 +19,21 @@ export const stageRuleFields = [
   'classicItemsAndVariantsEnabled', 'classicItems', 'classicTriggers', 'prequel',
   'prequels', 'maxTeamPlayers',
 ]
+
+const sharedStageRuleFields = stageRuleFields.filter((field) => field !== 'tasks')
+const stageRuleLabels = {
+  ...CLOSED_GAME_IMMUTABLE_FIELD_LABELS,
+  location: 'город',
+  seasonId: 'сезон',
+  isRated: 'учёт в рейтинге',
+  participationMode: 'режим участия',
+  classicItemsAndVariantsEnabled: 'режим предметов и вариантов',
+  classicItems: 'предметы',
+  classicTriggers: 'триггеры',
+  prequel: 'приквел',
+  prequels: 'приквелы',
+  maxTeamPlayers: 'максимальный размер команды',
+}
 
 // У копий могут отличаться служебные ID вложенных документов и даты открытия приквела.
 const normalizeRuleValue = (value) => {
@@ -46,10 +62,47 @@ export const assertGameStageCompatibility = (games) => {
     throw new GameStageError('Общий зачёт доступен для классических игр.')
   }
   for (const game of others) {
-    if (stageRuleFields.some((field) => !equalGameStageRule(field, first[field], game[field]))) {
-      throw new GameStageError(`У проведения «${game.name}» отличаются задания, правила, город или сезон.`)
+    const differentRules = sharedStageRuleFields.filter((field) => !equalGameStageRule(field, first[field], game[field]))
+    if (differentRules.length > 0) {
+      const labels = differentRules.map((field) => `«${stageRuleLabels[field]}»`).join(', ')
+      throw new GameStageError(`У проведения «${game.name}» отличаются настройки — ${labels}.`)
     }
   }
+}
+
+const taskTitle = (task) => task?.title?.trim() || task?.publicTitle?.trim() || ''
+
+export const compareGameStageTasks = (games) => {
+  const [reference, ...others] = games
+  if (!reference) return []
+  const referenceTasks = reference.tasks ?? []
+
+  return others.flatMap((game) => {
+    const currentTasks = game.tasks ?? []
+    const tasks = []
+    for (let index = 0; index < Math.max(referenceTasks.length, currentTasks.length); index += 1) {
+      const original = referenceTasks[index]
+      const current = currentTasks[index]
+      if (equalGameStageRule('tasks', original, current)) continue
+      tasks.push({
+        number: index + 1,
+        referenceTitle: taskTitle(original),
+        title: taskTitle(current),
+        kind: !original ? 'added' : !current ? 'removed' : 'changed',
+      })
+    }
+
+    if (!tasks.length) return []
+    return [{
+      gameId: toStringId(game._id),
+      gameName: game.name,
+      dateStart: game.dateStart,
+      referenceGameId: toStringId(reference._id),
+      referenceGameName: reference.name,
+      referenceDateStart: reference.dateStart,
+      tasks,
+    }]
+  })
 }
 
 const readComputedResult = async (game) => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import buildGameStageResult from '../server/buildGameStageResult.js'
+import buildGameStageResult, { compareGameStageTasks } from '../server/buildGameStageResult.js'
 
 const row = (teamId, finalSeconds, outOfCompetition = false) => ({
   teamId, finalSeconds, outOfCompetition, teamName: `Команда ${teamId}`,
@@ -50,16 +50,95 @@ test('отменённая дата не входит в зачёт, а неза
   await assert.rejects(buildGameStageResult([closed, upcoming]), /закройте все/i)
 })
 
-test('отклоняет разные регламенты и повторное участие', async () => {
+test('отклоняет повторное участие команды или игрока', async () => {
   const first = game('a', [row('a1', 142)])
-  await assert.rejects(buildGameStageResult([first, game('b', [row('b1', 139)], {
-    taskDuration: 1200,
-  })]), /отличаются задания, правила, город или сезон/)
   await assert.rejects(buildGameStageResult([first, game('b', [row('a1', 139)])]), /команда.*встречается/i)
 
   const second = game('b', [row('b1', 139)])
   second.result.teamsUsers[0].userId = first.result.teamsUsers[0].userId
   await assert.rejects(buildGameStageResult([first, second]), /игроков участвовал/i)
+})
+
+test('сравнивает содержимое заданий по порядку, игнорируя различия служебных ID', () => {
+  const tasks = (gameId) => ['Старый мост', 'Фонтан', 'Станция'].map((title, index) => ({
+    _id: `${gameId}-task-${index}`,
+    title,
+    codes: [`код ${index}`],
+    clues: [{ _id: `${gameId}-clue-${index}`, clue: `подсказка ${index}` }],
+  }))
+  const reference = game('a', [row('a1', 142)], {
+    dateStart: '2026-10-02T12:00:00.000Z',
+    tasks: tasks('a'),
+  })
+  const unchanged = game('b', [row('b1', 139)], {
+    dateStart: '2026-10-03T12:00:00.000Z',
+    tasks: tasks('b'),
+  })
+  assert.deepEqual(compareGameStageTasks([reference, unchanged]), [])
+
+  const changed = game('c', [row('c1', 140)], {
+    dateStart: '2026-10-04T12:00:00.000Z',
+    tasks: tasks('c'),
+  })
+  changed.tasks[0].title = 'Страый мост'
+  changed.tasks[1].codes = ['исправленный код']
+  changed.tasks.push({ title: 'Запасное задание' })
+  const shortened = game('d', [row('d1', 141)], {
+    dateStart: '2026-10-05T12:00:00.000Z',
+    tasks: tasks('d').slice(0, 2),
+  })
+
+  const [changedWarning, shortenedWarning] = compareGameStageTasks([
+    reference, unchanged, changed, shortened,
+  ])
+  assert.equal(changedWarning.gameId, 'c')
+  assert.equal(changedWarning.gameName, changed.name)
+  assert.equal(new Date(changedWarning.dateStart).toISOString(), changed.dateStart)
+  assert.equal(changedWarning.referenceGameId, 'a')
+  assert.equal(changedWarning.referenceGameName, reference.name)
+  assert.equal(new Date(changedWarning.referenceDateStart).toISOString(), reference.dateStart)
+  assert.deepEqual(changedWarning.tasks.map(({ number, kind }) => [number, kind]), [
+    [1, 'changed'], [2, 'changed'], [4, 'added'],
+  ])
+  assert.equal(changedWarning.tasks[0].referenceTitle, 'Старый мост')
+  assert.equal(changedWarning.tasks[0].title, 'Страый мост')
+  assert.equal(changedWarning.tasks[1].referenceTitle, 'Фонтан')
+  assert.equal(changedWarning.tasks[1].title, 'Фонтан')
+  assert.equal(changedWarning.tasks[2].title, 'Запасное задание')
+  assert.equal(shortenedWarning.gameId, 'd')
+  assert.deepEqual(shortenedWarning.tasks.map(({ number, kind }) => [number, kind]), [[3, 'removed']])
+  assert.equal(shortenedWarning.tasks[0].referenceTitle, 'Станция')
+})
+
+test('объединяет полные результаты при отличиях заданий', async () => {
+  const first = game('a', [row('a1', 142), row('a2', 160)])
+  const second = game('b', [row('b1', 139), row('b2', 155)], {
+    tasks: [{ title: 'Другое задание', codes: ['другой код'] }, { title: 'Дополнение' }],
+  })
+
+  assert.equal(compareGameStageTasks([first, second]).length, 1)
+  const result = await buildGameStageResult([first, second])
+  assert.deepEqual(result.teamsPlaces, { b1: 1, a1: 2, b2: 3, a2: 4 })
+  assert.deepEqual(result.rows.map((team) => team.score), [100, 200 / 3, 100 / 3, 0])
+  assert.equal(result.teamsUsers.length, 4)
+})
+
+test('различия правил, города и сезона блокируют общий зачёт', async () => {
+  const first = game('a', [row('a1', 142)], { breakDuration: 120 })
+  const second = game('b', [row('b1', 139)], { breakDuration: 120 })
+  const mismatches = [
+    [{ taskDuration: 1200 }, /длительность задания/i],
+    [{ breakDuration: 240 }, /перерыв/i],
+    [{ location: 'nsk' }, /город/i],
+    [{ seasonId: '2027' }, /сезон/i],
+    [{ isRated: false }, /рейтинг/i],
+    [{ participationMode: 'player' }, /участи/i],
+    [{ type: 'photo' }, /тип/i],
+  ]
+
+  for (const [change, message] of mismatches) {
+    await assert.rejects(buildGameStageResult([first, { ...second, ...change }]), message)
+  }
 })
 
 test('исторических мест недостаточно для восстановления результата', async () => {

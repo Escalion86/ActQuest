@@ -13,6 +13,15 @@ import secondsToTimeStr from '@helpers/secondsToTimeStr'
 const PAGE_SIZE = 50
 const scoreFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 })
 
+const formatTaskDifference = ({ kind, referenceTitle, title }) => {
+  if (kind === 'added') return `добавлено «${title || 'Без названия'}»`
+  if (kind === 'removed') return `отсутствует «${referenceTitle || 'Без названия'}»`
+  if (referenceTitle && title && referenceTitle !== title) {
+    return `изменено с «${referenceTitle}» на «${title}»`
+  }
+  return `изменено «${title || referenceTitle || 'Без названия'}»`
+}
+
 const submitStage = async (gameIds, preview) => {
   const { json } = await requestApiJson('/api/cabinet/game-stages', {
     method: 'POST',
@@ -62,6 +71,7 @@ const GameStageMergeModal = ({ initialLocation, locations, onClose, onMerged }) 
   })
 
   const preview = previewMutation.data
+  const taskDifferences = preview?.taskDifferences ?? []
   const isRated = selectedGames[0]?.isRated !== false
   const isBusy = previewMutation.isPending || mergeMutation.isPending
   const error = mergeMutation.error || previewMutation.error
@@ -69,6 +79,11 @@ const GameStageMergeModal = ({ initialLocation, locations, onClose, onMerged }) 
   const dateLabels = new Map(
     selectedGames.map((game) => [game.id, game.dateLabel]),
   )
+  const getPreviewDateLabel = (gameId, dateStart) =>
+    formatDateInLocationTimeZone(dateStart, selectedGames[0]?.location, {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }) || dateLabels.get(gameId) || 'Дата не указана'
   const searchKey = search.trim().toLocaleLowerCase('ru-RU')
   const visibleGames =
     gamesQuery.data?.pages.flatMap(({ games }) =>
@@ -148,6 +163,39 @@ const GameStageMergeModal = ({ initialLocation, locations, onClose, onMerged }) 
                 ? 'После публикации эти проведения войдут в рейтинг как один этап. Проверьте общие места и очки.'
                 : 'После публикации участники увидят общую таблицу. Проверьте места и итоговое время.'}
             </p>
+            {taskDifferences.length > 0 ? (
+              <NoticeBanner tone="warning">
+                <p className="font-semibold">Есть отличия в заданиях</p>
+                <p className="mt-1">
+                  Проверьте отличия перед публикацией общего результата.
+                </p>
+                <ul className="mt-3 space-y-3">
+                  {taskDifferences.map((difference) => (
+                    <li key={difference.gameId} className="break-words">
+                      <p className="font-semibold">
+                        {difference.gameName} ({getPreviewDateLabel(
+                          difference.gameId,
+                          difference.dateStart,
+                        )})
+                      </p>
+                      <p className="text-xs">
+                        Сравнение с «{difference.referenceGameName}» ({getPreviewDateLabel(
+                          difference.referenceGameId,
+                          difference.referenceDateStart,
+                        )})
+                      </p>
+                      <ul className="mt-1 list-disc space-y-1 pl-5">
+                        {difference.tasks.map((task) => (
+                          <li key={task.number}>
+                            Задание {task.number} — {formatTaskDifference(task)}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </NoticeBanner>
+            ) : null}
             <div className="overflow-x-auto">
               <table className="w-full min-w-max text-left">
                 <caption className="sr-only">Предпросмотр общего результата</caption>
@@ -192,8 +240,8 @@ const GameStageMergeModal = ({ initialLocation, locations, onClose, onMerged }) 
         ) : (
           <>
             <p className="text-slate-600 dark:text-slate-300">
-              Выберите закрытые классические игры с одинаковыми заданиями и
-              правилами зачёта.
+              Выберите закрытые классические игры с одинаковыми правилами зачёта.
+              Отличия в заданиях будут видны в предпросмотре.
             </p>
             <fieldset disabled={isBusy} className="space-y-3 border-0 p-0">
               <label className="block space-y-1 text-slate-700 dark:text-slate-200">

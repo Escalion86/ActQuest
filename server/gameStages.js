@@ -3,6 +3,7 @@ import { toStringId } from '../helpers/idAndDate.js'
 import buildGameStageResult, {
   GameStageError,
   assertGameStageCompatibility,
+  compareGameStageTasks,
   stageRuleFields,
 } from './buildGameStageResult.js'
 import { withGameRegistrationLock, withGameStageRegistrationLock } from './registerGameTeam.js'
@@ -151,7 +152,13 @@ export const combineClosedGames = async ({ db, session, gameIds, preview }) => {
   }
   if (preview) {
     const result = await validate(selectedGames)
-    return { name: selectedGames[0].name, teams: result.rows, teamsCount: Object.keys(result.teamsPlaces).length, gameIds: uniqueIds }
+    return {
+      name: selectedGames[0].name,
+      teams: result.rows,
+      teamsCount: Object.keys(result.teamsPlaces).length,
+      gameIds: uniqueIds,
+      taskDifferences: compareGameStageTasks(selectedGames),
+    }
   }
 
   const stageId = selectedGames[0].stageId
